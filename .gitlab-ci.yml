@@ -1,0 +1,108 @@
+# These variables can be overridden via secret variable.
+variables:
+  AWS_DEPLOYER_ROLE_ARN: $AWS_DEPLOYER_ROLE_ARN
+  NODE_VERSION: '20.19.0'
+  GITLAB_CI_REACT_WEB_DOCKER_IMAGE_BUILD: 'node:$NODE_VERSION'
+  PNPM_CACHE_FOLDER: '.pnpm-store'
+
+stages:
+  - build
+  - deploy
+
+# This folder is cached between builds
+# http://docs.gitlab.com/ce/ci/yaml/README.html#cache
+.cache_ci_scripts: &cache_ci_scripts
+  key: '$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME'
+  paths:
+    - $CI_PROJECT_BUILD_DIR/ci_scripts/
+  policy: pull-push
+
+.cache_pnpm: &cache_pnpm
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - $PNPM_CACHE_FOLDER
+    - $CI_PROJECT_BUILD_DIR/node_modules/
+  policy: pull-push
+
+# Utilize web identity federation to allow AWS to perform STS calls on our behalf
+.assume_role: &assume_role
+  - >
+    export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+    $(aws sts assume-role-with-web-identity
+    --role-arn ${AWS_DEPLOYER_ROLE_ARN}
+    --role-session-name "GitLabRunner-${CI_PROJECT_NAME}-${CI_PIPELINE_ID}"
+    --web-identity-token ${GITLAB_OIDC_TOKEN}
+    --duration-seconds 3600
+    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+    --output text))
+  - aws sts get-caller-identity
+
+.build_script:
+  image: $GITLAB_CI_REACT_WEB_DOCKER_IMAGE_BUILD
+  stage: build
+  tags:
+    - gitlab-org-docker
+  retry: 2
+  cache:
+    - <<: *cache_ci_scripts
+      policy: pull
+    - <<: *cache_pnpm
+      policy: pull
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest-10 --activate
+    - pnpm config set store-dir .pnpm-store
+  script:
+    - |
+      echo "Loading environment variables from DOTENV_FILE"
+      dotenvvar=$(echo "$DOTENV_FILE" | tr ' ' '\n')
+      echo "$dotenvvar" > .env
+      echo "Installing dependencies..."
+      pnpm install
+      echo "Building..."
+      pnpm build
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - dist/
+
+.deploy_script:
+  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
+  stage: deploy
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  tags:
+    - gitlab-org-docker
+  retry: 2
+  before_script:
+    - *assume_role
+  script:
+    - aws s3 sync dist/ s3://$S3_BUCKET --delete
+    - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"
+
+build_develop:
+  extends: .build_script
+  environment: develop
+  only:
+    - develop
+
+deploy_develop:
+  extends: .deploy_script
+  environment: develop
+  only:
+    - develop
+
+build_uat:
+  extends: .build_script
+  environment: uat
+  only:
+    - uat
+
+deploy_uat:
+  extends: .deploy_script
+  environment: uat
+  only:
+    - uat

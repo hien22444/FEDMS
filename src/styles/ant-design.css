@@ -1,0 +1,67 @@
+/*Carousel*/
+.custom-carousel .slick-dots li button {
+  @apply !bg-blue-700;
+}
+
+.custom-carousel .slick-dots li.slick-active button {
+  @apply !bg-blue-700;
+}
+.ant-carousel .slick-dots li::after {
+  @apply !bg-blue-700;
+}
+
+/*Select*/
+
+.custom-select .ant-select-selector {
+  @apply !border-none shadow-none !text-base !ring-0 !rounded-none !outline-none;
+}
+.custom-select-multi .ant-select-selector {
+  @apply min-h-12;
+}
+.custom-select .ant-select-selection-placeholder {
+  @apply text-sm xl:text-base;
+}
+
+/*Input*/
+.custom-input .ant-input {
+  @apply h-12;
+}
+
+/*table*/
+.custom-header .ant-table-thead .ant-table-cell {
+  @apply bg-gray-surface font-medium;
+}
+.ant-table-content {
+  @apply no-scrollbar;
+}
+
+/* form */
+.custom-form-label .ant-form-item-label > label {
+  @apply !font-medium !text-[13px];
+}
+.ant-form-item
+  .ant-form-item-label
+  > label.ant-form-item-required:not(
+    .ant-form-item-required-mark-optional
+  )::before {
+  display: none !important;
+}
+
+.ant-form-item
+  .ant-form-item-label
+  > label.ant-form-item-required:not(
+    .ant-form-item-required-mark-optional
+  )::after {
+  display: inline-block;
+  margin-inline-end: 4px;
+  color: #333;
+  content: '*';
+  padding-left: 2px;
+  visibility: visible !important;
+}
+
+/* collapse */
+
+.custom-header-label .ant-collapse-header-text {
+  @apply !text-sm !font-medium;
+}

@@ -1,0 +1,118 @@
+@import './animation.css';
+@import './scroll.css';
+@import './ant-design.css';
+@import './react-quill.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #17171d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter-tight);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  /* Opensans */
+  @font-face {
+    font-family: 'InterTight-Regular';
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('/fonts/InterTight-Regular.ttf');
+  }
+  @font-face {
+    font-family: 'InterTight-Medium';
+    src: url('/fonts/InterTight-Medium.ttf');
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'InterTight-SemiBold';
+    src: url('/fonts/InterTight-SemiBold.ttf');
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'InterTight-Bold';
+    src: url('/fonts/InterTight-Bold.ttf');
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Poppins-Bold';
+    src: url('/fonts/Poppins-Bold.ttf');
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+  }
+
+  h1 {
+    @apply text-4xl font-bold;
+  }
+  h2 {
+    @apply text-3xl font-semibold;
+  }
+  h3 {
+    @apply text-2xl font-medium;
+  }
+
+  html {
+    box-sizing: border-box;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: inherit;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    scroll-behavior: smooth;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  .max-w-heading {
+    @apply mx-auto px-10 max-md:px-6;
+  }
+  .max-w-layout {
+    @apply mx-auto px-10 max-md:px-6;
+  }
+}
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}

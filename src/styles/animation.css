@@ -1,0 +1,79 @@
+/* Animation */
+.transition-element {
+  opacity: 0.2;
+  transition: opacity var(--fade-delay) ease-out,
+    transform var(--fade-delay) ease-out;
+}
+
+.transition-element.fade-in {
+  transform: translateY(var(--translate-value));
+}
+
+.transition-element.fade-x {
+  transform: translateX(var(--translate-value));
+}
+
+.transition-element.zoom-in {
+  transform: scale(0.7);
+}
+
+.transition-element.visible {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+}
+
+/**/
+
+/*marqee slide*/
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-reverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee linear infinite;
+  animation-duration: 18s;
+}
+
+.animate-marquee-reverse {
+  animation: marquee-reverse linear infinite;
+  animation-duration: 18s;
+}
+
+.marquee-container:hover {
+  animation-play-state: paused;
+}
+
+@media (max-width: 1024px) {
+  .animate-marquee {
+    animation-duration: 12s;
+  }
+  .animate-marquee-reverse {
+    animation-duration: 12s;
+  }
+}
+
+@media (max-width: 768px) {
+  .animate-marquee {
+    animation-duration: 8s;
+  }
+  .animate-marquee-reverse {
+    animation-duration: 8s;
+  }
+}
+
+/**/

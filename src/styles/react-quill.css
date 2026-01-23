@@ -1,0 +1,58 @@
+.custom-edit-quill .ql-editor {
+  font-size: larger;
+  position: relative;
+  overflow-y: auto;
+  resize: vertical;
+  min-height: 280px;
+  max-height: 600px !important;
+  min-width: 300px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.custom-edit-quill .ql-editor::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  height: 16px;
+  background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"%3E%3Cg fill="none" stroke="%23ccc"%3E%3Cpath d="M15 9v6H9M13 1l2 2m-6 6l6 6m-4-8l4 4m-8-4l6 6m-6-2l2 2m-8-4l6 6M3 9l4 4m-6-2l2 2M1 1l2 2"/%3E%3C/g%3E%3C/svg%3E')
+    no-repeat;
+  background-size: contain;
+  cursor: se-resize;
+}
+
+.ql-toolbar {
+  @apply rounded-t-3xl bg-white;
+}
+.ql-container {
+  @apply rounded-b-3xl bg-white;
+}
+/* .ql-editor {
+  @apply !prose !max-h-[600px] prose-p:!my-0 !max-w-none prose-headings:!my-1;
+} */
+
+.quill-content ol[data-list='bullet'],
+.quill-content ul[data-list='bullet'] {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+}
+
+.quill-content ol[data-list='ordered'],
+.quill-content ul[data-list='ordered'] {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+}
+
+.quill-content li[data-list='bullet'] {
+  display: list-item !important;
+  list-style-type: disc !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.quill-content li[data-list='ordered'] {
+  display: list-item !important;
+  list-style-type: decimal !important;
+  margin-bottom: 0.5rem !important;
+}
