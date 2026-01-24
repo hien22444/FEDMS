@@ -1,16 +1,9 @@
-interface CircleProgressProps {
-  percentage?: number;
-  size?: number;
-  strokeWidth?: number;
-  className?: string;
-}
-
 export const CircleProgress = ({
   percentage = 60,
   size = 48,
   strokeWidth = 4,
   className = '',
-}: CircleProgressProps) => {
+}) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (percentage / 100) * circumference;

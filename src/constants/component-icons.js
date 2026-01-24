@@ -11,10 +11,7 @@ import {
   IcTextarea,
 } from './icons';
 
-export const NodeTypeIcons: Record<
-  NodeType,
-  React.FC<React.SVGProps<SVGSVGElement>>
-> = {
+export const NodeTypeIcons = {
   [NodeType.TEXT]: IcText,
   [NodeType.BUTTON]: IcButton,
   [NodeType.IMAGE]: IcImage,

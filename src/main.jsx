@@ -7,7 +7,7 @@ import { ConfigProvider } from 'antd';
 import theme from '@/themes/themeConfig';
 import { Toaster } from 'react-hot-toast';
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')).render(
   // <StrictMode>
   <ConfigProvider theme={theme}>
     <Toaster position='top-right' />

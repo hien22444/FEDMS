@@ -1,19 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { useContext } from 'react';
 
-interface IProps {
-  children: React.ReactNode;
-}
+const PrivateContext = React.createContext(null);
 
-interface IContextState {
-  value?: string; // đưa các state và hàm setState vào đây để truyền xuống các component con
-}
-
-const PrivateContext = React.createContext<IContextState | null>(
-  null,
-);
-
-export function PrivateProvider(props: IProps) {
+export function PrivateProvider(props) {
   const { children } = props;
 
   return (

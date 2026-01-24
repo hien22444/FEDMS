@@ -1,22 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable */
 
 import { ROUTES } from '@/constants';
 
 class ApiRequest {
-  private baseUrl: string;
-
   constructor() {
     this.baseUrl = import.meta.env.VITE_BASE_URL || '';
   }
 
-  private async request<T>(
-    url: string,
-    config: RequestInit = {},
-  ): Promise<T> {
-    const headers: HeadersInit = {
+  async request(url, config = {}) {
+    const headers = {
       Accept: 'application/json',
       'Accept-Language': 'en',
-      ...(config.headers as Record<string, string>),
+      ...(config.headers || {}),
     };
 
     if (
@@ -39,41 +34,38 @@ class ApiRequest {
 
       if (error.statusCode === 401) {
         window.location.href = ROUTES.SIGN_IN;
-
         return Promise.reject(error);
       }
 
       throw error;
     }
 
-    const response: { statusCode: number; data: T } =
-      await res.json();
-
+    const response = await res.json();
     return response.data;
   }
 
-  async get<T>(url: string, config: RequestInit = {}) {
-    return this.request<T>(url, { ...config, method: 'GET' });
+  async get(url, config = {}) {
+    return this.request(url, { ...config, method: 'GET' });
   }
 
-  async post<T>(url: string, body: any, config: RequestInit = {}) {
-    return this.request<T>(url, {
+  async post(url, body, config = {}) {
+    return this.request(url, {
       ...config,
       method: 'POST',
       body,
     });
   }
 
-  async put<T>(url: string, body: any, config: RequestInit = {}) {
-    return this.request<T>(url, {
+  async put(url, body, config = {}) {
+    return this.request(url, {
       ...config,
       method: 'PUT',
       body,
     });
   }
 
-  async delete<T>(url: string, config: RequestInit = {}) {
-    return this.request<T>(url, { ...config, method: 'DELETE' });
+  async delete(url, config = {}) {
+    return this.request(url, { ...config, method: 'DELETE' });
   }
 }
 

@@ -1,7 +1,6 @@
-import type { IUser } from '@/interfaces';
 import { makeAutoObservable } from 'mobx';
 
-const initValue: IUser.Response = {
+const initValue = {
   id: '',
   fullname: '',
   email: '',
@@ -11,8 +10,8 @@ const initValue: IUser.Response = {
 };
 
 export class UserStore {
-  private user: IUser.Response = initValue;
   constructor() {
+    this.user = initValue;
     makeAutoObservable(this);
   }
 
@@ -20,7 +19,7 @@ export class UserStore {
     return this.user;
   }
 
-  set(user: IUser.Response) {
+  set(user) {
     this.user = user;
   }
 

@@ -13,24 +13,12 @@ const variants = {
   text: 'text-sm hover:text-primary bg-transparent border-none shadow-none',
 };
 
-type VariantKey = keyof typeof variants;
-
 const sizes = {
   small: 'h-9 px-3.5 font-sans',
   large: 'h-12 px-5 font-medium',
 };
 
-type SizeType = keyof typeof sizes;
-
-interface Props extends React.PropsWithChildren {
-  variant?: VariantKey;
-  size?: SizeType;
-}
-
-export const Button = forwardRef<
-  HTMLButtonElement,
-  Props & Omit<React.ComponentProps<typeof ButtonAnt>, 'variant'>
->(
+export const Button = forwardRef(
   (
     {
       children,

@@ -10,22 +10,12 @@ import { cn } from '@/utils';
 import { observer } from 'mobx-react-lite';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-interface IProps {
-  title: string;
-  path: string;
-  icon: React.FunctionComponent<React.SVGProps<SVGSVGElement>>;
-  children: {
-    title: string;
-    path: string;
-  }[];
-}
-
-const ListItem = ({ children, icon: Icon, path, title }: IProps) => {
+const ListItem = ({ children, icon: Icon, path, title }) => {
   const [open, onToggle] = useToggle(true);
 
   const navigate = useNavigate();
 
-  const onClickItem = (path: string) => {
+  const onClickItem = (path) => {
     if (children.length) {
       return onToggle();
     }

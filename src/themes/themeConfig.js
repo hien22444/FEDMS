@@ -1,6 +1,4 @@
-import type { ThemeConfig } from 'antd';
-
-const theme: ThemeConfig = {
+const theme = {
   token: {
     colorPrimary: '#146EF5',
     fontSize: 14,

@@ -1,11 +1,11 @@
 /* eslint-disable no-useless-escape */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable */
 import { Upload } from 'antd';
 import toast from 'react-hot-toast';
 import { parse } from 'tldts';
 
 // Remove Vietnamese diacritics and convert to lowercase
-export const removeVietnameseTones = (str: string) => {
+export const removeVietnameseTones = (str) => {
   return str
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -13,10 +13,7 @@ export const removeVietnameseTones = (str: string) => {
 };
 
 // Validate image before uploading (type, size, dimensions)
-export const beforeUpload = async (
-  file: File,
-  dimensions: number = 1,
-) => {
+export const beforeUpload = async (file, dimensions = 1) => {
   const isImage = file.type.startsWith('image/');
   const isLt5MB = file.size / 1024 / 1024 < 5;
 
@@ -42,7 +39,7 @@ export const beforeUpload = async (
 };
 
 // Helper to get image width / height ratio
-const getImageDimensions = (file: File): Promise<number> => {
+const getImageDimensions = (file) => {
   return new Promise(resolve => {
     const reader = new FileReader();
     reader.onload = event => {
@@ -54,7 +51,7 @@ const getImageDimensions = (file: File): Promise<number> => {
         resolve(1);
       };
       if (event.target?.result) {
-        img.src = event.target.result as string;
+        img.src = event.target.result;
       }
     };
     reader.onerror = () => resolve(1);
@@ -63,9 +60,7 @@ const getImageDimensions = (file: File): Promise<number> => {
 };
 
 // Helper to get exact image dimensions (width and height)
-const getImageExactDimensions = (
-  file: File,
-): Promise<{ width: number; height: number } | null> => {
+const getImageExactDimensions = (file) => {
   return new Promise(resolve => {
     const reader = new FileReader();
     reader.onload = event => {
@@ -77,7 +72,7 @@ const getImageExactDimensions = (
         resolve(null);
       };
       if (event.target?.result) {
-        img.src = event.target.result as string;
+        img.src = event.target.result;
       }
     };
     reader.onerror = () => resolve(null);
@@ -87,7 +82,7 @@ const getImageExactDimensions = (
 
 // Validate file based on allowed extensions and max size
 export const beforeUploadFile = async (
-  file: File,
+  file,
   allowedExtensions = [
     '.jpg',
     '.jpeg',
@@ -100,7 +95,7 @@ export const beforeUploadFile = async (
     '.ico',
   ],
   maxSizeMB = 10,
-  dimensions?: { width: number; height: number },
+  dimensions,
 ) => {
   const fileExtension =
     '.' + file.name.split('.').pop()?.toLowerCase();
@@ -142,7 +137,7 @@ export const beforeUploadFile = async (
 };
 
 // Normalize Ant Design's file input event
-export const normFile = (e: any) => {
+export const normFile = (e) => {
   if (Array.isArray(e)) {
     return e;
   }
@@ -150,10 +145,7 @@ export const normFile = (e: any) => {
 };
 
 // Append empty arrays to FormData to ensure backend receives them
-export const ensureEmptyArrays = (
-  formData: FormData,
-  data: Record<string, any>,
-) => {
+export const ensureEmptyArrays = (formData, data) => {
   Object.entries(data).forEach(([key, value]) => {
     if (Array.isArray(value) && value.length === 0) {
       formData.append(`${key}[]`, '');
@@ -162,7 +154,7 @@ export const ensureEmptyArrays = (
 };
 
 // Convert text to URL-friendly slug
-export const createSlugSearch = (value: string) => {
+export const createSlugSearch = (value) => {
   return value
     .normalize('NFD')
     .trim()
@@ -173,19 +165,19 @@ export const createSlugSearch = (value: string) => {
 };
 
 // Format number string into Vietnamese money format (e.g. 1.000.000)
-export const formatVndMoney = (value: string) => {
+export const formatVndMoney = (value) => {
   return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
 
 // Check if URL is a valid YouTube embed link
-export const isYoutubeUrl = (url: string) => {
+export const isYoutubeUrl = (url) => {
   const youtubeEmbedRegex =
     /^https:\/\/www\.youtube\.com\/embed\/([A-Za-z0-9_-]+)/;
   return youtubeEmbedRegex.test(url);
 };
 
 // Convert YouTube watch URL to embed URL
-export function convertToEmbedUrl(url: string) {
+export function convertToEmbedUrl(url) {
   const regex =
     /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
   const match = url && url.match(regex);
@@ -203,24 +195,21 @@ export function convertToEmbedUrl(url: string) {
   return;
 }
 
-export function stripHtml(html: string): string {
+export function stripHtml(html) {
   if (!html) return '';
   return html.replace(/<[^>]+>/g, '').trim();
 }
 
-export const isRootDomain = (domain: string): boolean => {
+export const isRootDomain = (domain) => {
   const result = parse(domain);
-
   return (
     (!result.subdomain || result.subdomain === 'www') &&
     !!result.domain
   );
 };
 
-export const hexToRgba = (hex: string, opacity: number) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
-    hex,
-  );
+export const hexToRgba = (hex, opacity) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (result) {
     return `rgba(${parseInt(result[1], 16)}, ${parseInt(
       result[2],
@@ -230,7 +219,7 @@ export const hexToRgba = (hex: string, opacity: number) => {
   return hex;
 };
 
-export function rgbStringToHex(colorStr: string) {
+export function rgbStringToHex(colorStr) {
   if (typeof colorStr !== 'string') return '';
 
   if (colorStr.startsWith('#')) {

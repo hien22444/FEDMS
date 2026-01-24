@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const URL = import.meta.env.VITE_BASE_SOCKET_IO as string;
+const URL = import.meta.env.VITE_BASE_SOCKET_IO;
 
 export const socket = io(URL, {
   transports: ['websocket'],

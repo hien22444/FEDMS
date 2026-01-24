@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 
-export function useSearchDebounce<T>(
-  initialValue: T,
-  time: number = 500,
-): [T, T, React.Dispatch<T>] {
-  const [value, setValue] = useState<T>(initialValue);
-  const [debouncedValue, setDebouncedValue] =
-    useState<T>(initialValue);
+export function useSearchDebounce(initialValue, time = 500) {
+  const [value, setValue] = useState(initialValue);
+  const [debouncedValue, setDebouncedValue] = useState(initialValue);
 
   useEffect(() => {
     const debounce = setTimeout(() => {

@@ -2,12 +2,17 @@ import { ROUTES } from '@/constants';
 
 import { createBrowserRouter } from 'react-router-dom';
 
-import SignInPage from '@/pages/signin';
+import SignInPage from '@/pages/signin/login';
 import { AppProvider } from '@/contexts';
 // import { PrivateLayout } from '@/layouts';
-import SignUpPage from '@/pages/signup';
+import SignUpPage from '@/pages/signup/register';
+import LandingPage from '@/pages/landing/landingpage';
 
 const router = createBrowserRouter([
+  {
+    path: ROUTES.LANDING,
+    element: <LandingPage />,
+  },
   {
     path: '/*',
     element: <div></div>,

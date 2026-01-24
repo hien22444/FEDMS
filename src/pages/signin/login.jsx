@@ -1,42 +1,30 @@
 import { Button } from '@/components/unix';
-import {
-  IcArrowRight,
-  IcGoogle,
-  IcLogo,
-  PASSWORD_REGEX,
-  ROUTES,
-  UserType,
-} from '@/constants';
-import type { IError, IUser } from '@/interfaces';
-import { signUp } from '@/lib/actions';
+import { IcArrowRight, IcGoogle, IcLogo, ROUTES } from '@/constants';
+import { signIn } from '@/lib/actions';
 import { userStore } from '@/stores';
 import { useMutation } from '@tanstack/react-query';
-import { Form, Input } from 'antd';
+import { Checkbox, Form, Input } from 'antd';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 
-interface IForm extends IUser.SignupDto {
-  confirmPassword: string;
-}
-
-const SignUpPage = () => {
+const SignInPage = () => {
   const navigate = useNavigate();
-  const [form] = Form.useForm<IForm>();
+  const [form] = Form.useForm();
+
   const { mutateAsync, isPending } = useMutation({
-    mutationFn: signUp,
+    mutationFn: signIn,
   });
 
-  const onFinish = async (values: IUser.SignupDto) => {
-    values.userTypes = [UserType.USER];
+  const onFinish = async (values) => {
     await mutateAsync(values, {
       onSuccess: data => {
-        toast.success('Register successfully');
+        toast.success('Login successfully');
         form.resetFields();
         navigate(ROUTES.DASHBOARD);
         userStore.set(data.user);
       },
       onError: error => {
-        toast.error((error as IError).message[0]);
+        toast.error(error?.message?.[0] || 'An error occurred');
       },
     });
   };
@@ -85,32 +73,17 @@ const SignUpPage = () => {
             React Source
           </p>
           <p className='font-semibold text-2xl text-center my-6'>
-            Webcome to React Source
+            Log in to your account
           </p>
           <button className='flex items-center justify-center gap-2 border-gray-default border px-6 py-3 rounded-md my-4 w-full'>
             <IcGoogle className='flex-shrink-0' />
-            <p>Register with Google</p>
+            <p>Continue with Google</p>
           </button>
           <div className='flex gap-2 items-center mb-4'>
             <span className='h-[1px] bg-gray-default w-full' />
             <span className='text-gray-sub-title'>or</span>
             <span className='h-[1px] bg-gray-default w-full' />
           </div>
-          <Form.Item
-            name='fullname'
-            rules={[
-              {
-                required: true,
-                message: 'Please input fullname',
-              },
-            ]}
-          >
-            <Input
-              placeholder='Full name'
-              type='text'
-              className='h-12'
-            />
-          </Form.Item>
           <Form.Item
             name='email'
             rules={[
@@ -133,45 +106,22 @@ const SignUpPage = () => {
                 required: true,
                 message: 'Please input password!',
               },
-              {
-                pattern: PASSWORD_REGEX,
-                message:
-                  'Least 8 characters, an uppercase letter and a number.',
-              },
             ]}
           >
             <Input.Password placeholder='Password' className='h-12' />
           </Form.Item>
 
-          <Form.Item
-            name='confirmPassword'
-            dependencies={['password']}
-            rules={[
-              {
-                required: true,
-                message: 'Please input confirm password!',
-              },
-              {
-                validator: (_, value) => {
-                  if (
-                    !value ||
-                    form.getFieldValue('password') === value
-                  ) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(
-                    new Error('Confirm password does not match!'),
-                  );
-                },
-              },
-            ]}
-          >
-            <Input.Password
-              placeholder='Confirm Password'
-              className='h-12'
-            />
-          </Form.Item>
-
+          <div className='flex justify-between items-start -translate-y-2'>
+            <Form.Item name='rememberMe' valuePropName='checked'>
+              <Checkbox className='font-sans'>Remember me</Checkbox>
+            </Form.Item>
+            <button
+              type='button'
+              className='mt-2 underline underline-offset-2 font-sans'
+            >
+              Forgot password
+            </button>
+          </div>
           <Button
             loading={isPending}
             className='w-full'
@@ -180,21 +130,13 @@ const SignUpPage = () => {
             Continue
           </Button>
 
-          <div className='flex justify-between items-start my-4'>
-            <p className='text-center text-gray-sub-title px-6 text-xs'>
-              Signing up for a Webflow account means you agree to the{' '}
-              <a className='underline'>Privacy Policy</a> and{' '}
-              <a className='underline'>Terms of Service</a>
-            </p>
-          </div>
-
           <p className='text-center text-gray-sub-title mt-6'>
-            Already have an account?{' '}
+            Don't have an account?{' '}
             <Link
-              to={ROUTES.SIGN_IN}
-              className='underline underline-offset-2 cursor-pointer text-primary'
+              to={ROUTES.SIGN_UP}
+              className='underline font-sans underline-offset-2 cursor-pointer text-primary'
             >
-              Sign in
+              Sign up
             </Link>
           </p>
         </Form>
@@ -203,4 +145,4 @@ const SignUpPage = () => {
   );
 };
 
-export default SignUpPage;
+export default SignInPage;

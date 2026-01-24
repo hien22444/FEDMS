@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "format": "prettier --write 'src/**/*.{js,ts,tsx,css,md}'"
+    "format": "prettier --write 'src/**/*.{js,jsx,css,md}'"
   },
   "dependencies": {
     "@builder.io/react": "^8.2.8",
@@ -27,6 +27,7 @@
     "framer-motion": "^12.18.1",
     "froala-editor": "^4.7.0",
     "grapesjs": "^0.22.13",
+    "lucide-react": "^0.563.0",
     "mobx": "^6.15.0",
     "mobx-react-lite": "^4.1.1",
     "object-to-formdata": "^4.5.1",

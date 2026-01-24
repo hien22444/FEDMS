@@ -3,7 +3,7 @@
 import React, { use } from 'react';
 import { Outlet } from 'react-router-dom';
 
-const AppContext = React.createContext<null>(null);
+const AppContext = React.createContext(null);
 
 export function AppProvider() {
   return (
