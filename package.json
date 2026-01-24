@@ -39,7 +39,7 @@
     "react-infinite-scroll-component": "^6.1.1",
     "react-markdown": "^10.1.0",
     "react-quill-new": "^3.4.6",
-    "react-router-dom": "6",
+    "react-router-dom": "^6.30.3",
     "recharts": "^2.15.3",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
