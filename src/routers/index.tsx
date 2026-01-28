@@ -4,13 +4,18 @@ import { createBrowserRouter } from 'react-router-dom';
 
 import SignInPage from '@/pages/signin';
 import { AppProvider } from '@/contexts';
-// import { PrivateLayout } from '@/layouts';
 import SignUpPage from '@/pages/signup';
+import LandingPage from '@/pages/landing/landingpage';
+import SecurityLayout from '@/layouts/SecurityLayout';
+import DashboardPage from '@/pages/security/dashboard';
+import CameraCheckinPage from '@/pages/security/camera-checkin';
+import CheckoutRequestsPage from '@/pages/security/checkout-requests';
+import VisitorsPage from '@/pages/security/visitors';
 
 const router = createBrowserRouter([
   {
-    path: '/*',
-    element: <div></div>,
+    path: ROUTES.LANDING,
+    element: <LandingPage />,
   },
   {
     path: ROUTES.SIGN_IN,
@@ -20,23 +25,35 @@ const router = createBrowserRouter([
     path: ROUTES.SIGN_UP,
     element: <SignUpPage />,
   },
-
   {
     element: <AppProvider />,
-    // loader: getUserProfile, // tạm thời tắt để không bị lỗi khi chưa có backend
     children: [
       {
-        // element: <PrivateLayout />,
+        element: <SecurityLayout />,
         children: [
           {
-            index: true,
             path: ROUTES.DASHBOARD,
-            element: <SignInPage />,
-            // element: <DashboardPage />,
+            element: <DashboardPage />,
+          },
+          {
+            path: ROUTES.CAMERA_CHECKIN,
+            element: <CameraCheckinPage />,
+          },
+          {
+            path: ROUTES.CHECKOUT_REQUESTS,
+            element: <CheckoutRequestsPage />,
+          },
+          {
+            path: ROUTES.VISITORS,
+            element: <VisitorsPage />,
           },
         ],
       },
     ],
+  },
+  {
+    path: '/*',
+    element: <div></div>,
   },
 ]);
 export default router;
