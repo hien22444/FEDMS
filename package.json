@@ -36,6 +36,7 @@
     "react-dom": "^19.1.0",
     "react-froala-wysiwyg": "^4.7.0",
     "react-hot-toast": "^2.5.2",
+    "react-icons": "^5.5.0",
     "react-infinite-scroll-component": "^6.1.1",
     "react-markdown": "^10.1.0",
     "react-quill-new": "^3.4.6",
