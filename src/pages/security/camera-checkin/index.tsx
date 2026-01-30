@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Video, CheckCircle, XCircle, Settings, Eye } from 'lucide-react';
 import { cn } from '@/utils';
 

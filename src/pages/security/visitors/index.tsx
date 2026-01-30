@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Users, CheckCircle, XCircle, Plus, Clock } from 'lucide-react';
 import { cn } from '@/utils';
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Clock, CheckCircle, XCircle, Info, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { Clock, CheckCircle, Info } from 'lucide-react';
 import { cn } from '@/utils';
 
 const CheckoutRequestsPage = () => {

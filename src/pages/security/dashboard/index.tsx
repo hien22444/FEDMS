@@ -1,11 +1,10 @@
-import React from 'react';
+
 import {
   Clock,
   Users as UsersIcon,
   FileText,
   Video,
   CheckCircle,
-  XCircle,
   AlertCircle,
   Info,
   ChevronRight,
