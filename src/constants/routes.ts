@@ -1,7 +1,11 @@
 export const ROUTES = {
+  LANDING: '/',
   SIGN_IN: '/signin',
   SIGN_UP: '/signup',
-  DASHBOARD: '/',
+  DASHBOARD: '/dashboard',
+  CAMERA_CHECKIN: '/camera-checkin',
+  CHECKOUT_REQUESTS: '/checkout-requests',
+  VISITORS: '/visitors',
   PROJECTS: '/projects',
   RENDER: '/render',
 };
