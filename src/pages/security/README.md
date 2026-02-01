@@ -23,7 +23,7 @@ security/
 ## 🎯 Các Trang
 
 ### 1. Dashboard (`dashboard/index.tsx`)
-- **Route:** `/dashboard`
+- **Route:** `/security`
 - **Mô tả:** Trang tổng quan với các thống kê và thông báo
 - **Tính năng:**
   - 4 Summary Cards (Yêu Cầu Chưa Xử Lý, Khách Trong Ký Túc, Yêu Cầu Checkout, Camera Hoạt Động)
@@ -31,7 +31,7 @@ security/
   - Panel phải: Thông Báo Bảo Mật
 
 ### 2. Camera Checkin (`camera-checkin/index.tsx`)
-- **Route:** `/camera-checkin`
+- **Route:** `/security/camera-checkin`
 - **Mô tả:** Quản lý camera và check-in/check-out
 - **Tính năng:**
   - Summary cards (Hoạt Động, Ngoại Tuyến, Tổng Số, Chi Tiết Lưu)
@@ -40,7 +40,7 @@ security/
   - Recent Activity list
 
 ### 3. Checkout Requests (`checkout-requests/index.tsx`)
-- **Route:** `/checkout-requests`
+- **Route:** `/security/checkout-requests`
 - **Mô tả:** Quản lý các yêu cầu checkout của sinh viên
 - **Tính năng:**
   - Filter tabs (Tất Cả, Chờ Duyệt, Đã Duyệt, Hoàn Thành)
@@ -48,7 +48,7 @@ security/
   - Status indicators với icons và colors
 
 ### 4. Visitors (`visitors/index.tsx`)
-- **Route:** `/visitors`
+- **Route:** `/security/visitors`
 - **Mô tả:** Quản lý khách tham quan
 - **Tính năng:**
   - Active visitor count badge

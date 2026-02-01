@@ -16,6 +16,7 @@ import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/dashboard
 import { BedStatisticsPage } from '@/pages/manager/bed-statistics';
 import { ViolationListPage } from '@/pages/manager/violations';
 import { CreateViolationPage } from '@/pages/manager/violations/create';
+import NotFoundPage from '@/pages/not-found';
 
 const ComingSoon = ({ label }: { label: string }) => (
   <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
@@ -38,22 +39,23 @@ const router = createBrowserRouter([
     element: <AppProvider />,
     children: [
       {
+        path: 'security',
         element: <SecurityLayout />,
         children: [
           {
-            path: ROUTES.DASHBOARD,
+            index: true,
             element: <DashboardPage />,
           },
           {
-            path: ROUTES.CAMERA_CHECKIN,
+            path: 'camera-checkin',
             element: <CameraCheckinPage />,
           },
           {
-            path: ROUTES.CHECKOUT_REQUESTS,
+            path: 'checkout-requests',
             element: <CheckoutRequestsPage />,
           },
           {
-            path: ROUTES.VISITORS,
+            path: 'visitors',
             element: <VisitorsPage />,
           },
         ],
@@ -168,8 +170,8 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: '/*',
-    element: <div></div>,
+    path: '*',
+    element: <NotFoundPage />,
   },
 ]);
 export default router;
