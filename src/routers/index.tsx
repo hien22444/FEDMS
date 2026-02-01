@@ -1,67 +1,166 @@
 import { ROUTES } from '@/constants';
-
 import { createBrowserRouter } from 'react-router-dom';
 
+// Auth pages
 import SignInPage from '@/pages/signin';
-import { AppProvider } from '@/contexts';
 import SignUpPage from '@/pages/signup';
+import GoogleCallbackPage from '@/pages/auth/google-callback';
 import LandingPage from '@/pages/landing/landingpage';
+import NotFoundPage from '@/pages/not-found';
+
+// Layouts
+import { StudentLayout, AuthLayout } from '@/layouts';
 import SecurityLayout from '@/layouts/SecurityLayout';
+import { ManagerLayout } from '@/layouts/manager';
+import PrivateRoute from '@/components/PrivateRoute';
+
+// Security pages
 import DashboardPage from '@/pages/security/dashboard';
 import CameraCheckinPage from '@/pages/security/camera-checkin';
 import CheckoutRequestsPage from '@/pages/security/checkout-requests';
 import VisitorsPage from '@/pages/security/visitors';
-import { ManagerLayout } from '@/layouts/manager';
+
+// Manager pages
 import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/dashboard';
 import { BedStatisticsPage } from '@/pages/manager/bed-statistics';
 import { ViolationListPage } from '@/pages/manager/violations';
 import { CreateViolationPage } from '@/pages/manager/violations/create';
-import NotFoundPage from '@/pages/not-found';
 
+// Student pages
+import StudentDashboard from '@/pages/student/dashboard';
+import NewsPage from '@/pages/student/news';
+import SchedulePage from '@/pages/student/schedule';
+import BookingPage from '@/pages/student/booking';
+import UtilitiesPage from '@/pages/student/utilities';
+import PaymentPage from '@/pages/student/payment';
+import RequestsPage from '@/pages/student/requests';
+import MaintenancePage from '@/pages/student/maintenance';
+import CFDPage from '@/pages/student/cfd-points';
+import GuidelinesPage from '@/pages/student/guidelines';
+import FAQPage from '@/pages/student/faq';
+import NotificationsPage from '@/pages/student/notifications';
+import DormRulesPage from '@/pages/student/dorm-rules';
+
+// Coming Soon placeholder
 const ComingSoon = ({ label }: { label: string }) => (
   <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
 );
 
 const router = createBrowserRouter([
+  // Landing page
   {
     path: ROUTES.LANDING,
     element: <LandingPage />,
   },
+
+  // Auth routes with AuthLayout (provides AuthContext)
   {
-    path: ROUTES.SIGN_IN,
-    element: <SignInPage />,
-  },
-  {
-    path: ROUTES.SIGN_UP,
-    element: <SignUpPage />,
-  },
-  {
-    element: <AppProvider />,
+    element: <AuthLayout />,
     children: [
+      // Public auth routes
       {
-        path: 'security',
-        element: <SecurityLayout />,
+        path: ROUTES.SIGN_IN,
+        element: <SignInPage />,
+      },
+      {
+        path: ROUTES.SIGN_UP,
+        element: <SignUpPage />,
+      },
+      {
+        path: ROUTES.GOOGLE_CALLBACK,
+        element: <GoogleCallbackPage />,
+      },
+
+      // Protected Student routes
+      {
+        element: <PrivateRoute allowedRoles={['student']} />,
         children: [
           {
-            index: true,
-            element: <DashboardPage />,
-          },
-          {
-            path: 'camera-checkin',
-            element: <CameraCheckinPage />,
-          },
-          {
-            path: 'checkout-requests',
-            element: <CheckoutRequestsPage />,
-          },
-          {
-            path: 'visitors',
-            element: <VisitorsPage />,
+            element: <StudentLayout />,
+            children: [
+              {
+                path: ROUTES.STUDENT_DASHBOARD,
+                element: <StudentDashboard />,
+              },
+              {
+                path: ROUTES.STUDENT_NEWS,
+                element: <NewsPage />,
+              },
+              {
+                path: ROUTES.STUDENT_SCHEDULE,
+                element: <SchedulePage />,
+              },
+              {
+                path: ROUTES.STUDENT_BOOKING,
+                element: <BookingPage />,
+              },
+              {
+                path: ROUTES.STUDENT_UTILITIES,
+                element: <UtilitiesPage />,
+              },
+              {
+                path: ROUTES.STUDENT_PAYMENT,
+                element: <PaymentPage />,
+              },
+              {
+                path: ROUTES.STUDENT_REQUESTS,
+                element: <RequestsPage />,
+              },
+              {
+                path: ROUTES.STUDENT_MAINTENANCE,
+                element: <MaintenancePage />,
+              },
+              {
+                path: '/student/cfd-points',
+                element: <CFDPage />,
+              },
+              {
+                path: '/student/guidelines',
+                element: <GuidelinesPage />,
+              },
+              {
+                path: '/student/faq',
+                element: <FAQPage />,
+              },
+              {
+                path: '/student/dorm-rules',
+                element: <DormRulesPage />,
+              },
+              {
+                path: '/student/notifications',
+                element: <NotificationsPage />,
+              },
+            ],
           },
         ],
       },
     ],
   },
+
+  // Security Routes
+  {
+    path: 'security',
+    element: <SecurityLayout />,
+    children: [
+      {
+        index: true,
+        element: <DashboardPage />,
+      },
+      {
+        path: 'camera-checkin',
+        element: <CameraCheckinPage />,
+      },
+      {
+        path: 'checkout-requests',
+        element: <CheckoutRequestsPage />,
+      },
+      {
+        path: 'visitors',
+        element: <VisitorsPage />,
+      },
+    ],
+  },
+
   // Manager Routes
   {
     path: ROUTES.MANAGER,
@@ -169,9 +268,12 @@ const router = createBrowserRouter([
       },
     ],
   },
+
+  // 404 Not Found
   {
     path: '*',
     element: <NotFoundPage />,
   },
 ]);
+
 export default router;
