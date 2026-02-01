@@ -22,10 +22,10 @@ Layout này wrap các trang Security sau:
 
 ### Navigation Tabs
 4 tabs chính với icons:
-1. **Tổng Quan** (LayoutDashboard icon) - Route: `/dashboard`
-2. **Camera Checkin** (Camera icon) - Route: `/camera-checkin`
-3. **Yêu Cầu Checkout** (FileText icon) - Route: `/checkout-requests`
-4. **Khách Tham Quan** (Users icon) - Route: `/visitors`
+1. **Tổng Quan** (LayoutDashboard icon) - Route: `/security`
+2. **Camera Checkin** (Camera icon) - Route: `/security/camera-checkin`
+3. **Yêu Cầu Checkout** (FileText icon) - Route: `/security/checkout-requests`
+4. **Khách Tham Quan** (Users icon) - Route: `/security/visitors`
 
 - Active tab được highlight với màu cam và underline
 - Hover effects trên các tabs
