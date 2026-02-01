@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Row, Col, Typography, theme, Progress } from 'antd';
+import { Card, Row, Col, Typography, theme } from 'antd';
 import {
   ThunderboltOutlined,
   DropboxOutlined,

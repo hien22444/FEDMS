@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card, Button, Typography, Space, theme } from 'antd';
 import {
-  BellOutlined,
   DeleteOutlined,
   CheckOutlined,
 } from '@ant-design/icons';

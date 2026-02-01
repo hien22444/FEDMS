@@ -1,6 +1,5 @@
 import { Card, Row, Col, Space, Button, Typography, Tag, Avatar, theme } from 'antd';
 import {
-  FileTextOutlined,
   CalendarOutlined,
   UserOutlined,
 } from '@ant-design/icons';
