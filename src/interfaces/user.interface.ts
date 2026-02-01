@@ -10,6 +10,7 @@ export namespace IUser {
     last_login?: string;
     fullname?: string; // For Google OAuth users
     google_id?: string;
+    avatarUrl?: string;
   }
 
   export interface StudentProfile {

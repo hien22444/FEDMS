@@ -61,7 +61,7 @@ const FAQ: React.FC = () => {
           {/* Conversations List */}
           <Card
             bodyStyle={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column' }}
-            style={{ display: 'none', '@media (min-width: 992px)': { display: 'flex' } }}
+            style={{ display: 'flex' }}
           >
             <div style={{ padding: '16px', borderBottom: `1px solid ${token.colorBorder}` }}>
               <Text strong>Conversations</Text>

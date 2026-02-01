@@ -1,10 +1,8 @@
 import React from 'react';
 import { Card, Button, Row, Col, Typography, Tag, Space, theme } from 'antd';
 import {
-  WifiOutlined,
   TeamOutlined,
   DollarOutlined,
-  EnvironmentOutlined,
   HomeOutlined,
   ArrowRightOutlined,
 } from '@ant-design/icons';
