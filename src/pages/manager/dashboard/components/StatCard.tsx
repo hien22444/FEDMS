@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { RiArrowUpLine, RiArrowDownLine } from 'react-icons/ri';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
@@ -7,7 +7,16 @@ interface StatCardProps {
   subtitle?: string;
   icon: ReactNode;
   change?: number;
-  variant?: 'default' | 'success' | 'warning' | 'orange' | 'danger' | 'blue' | 'purple' | 'cyan' | 'pink';
+  variant?:
+  | 'default'
+  | 'success'
+  | 'warning'
+  | 'orange'
+  | 'danger'
+  | 'blue'
+  | 'purple'
+  | 'cyan'
+  | 'pink';
 }
 
 const variantStyles = {
@@ -17,7 +26,6 @@ const variantStyles = {
     iconBg: 'bg-orange-100',
     iconColor: 'text-orange-500',
   },
-  // Pastel variants for stats row 1
   blue: {
     cardBg: 'bg-blue-50',
     cardBorder: 'border-blue-100',
@@ -42,7 +50,6 @@ const variantStyles = {
     iconBg: 'bg-pink-100',
     iconColor: 'text-pink-600',
   },
-  // Action variants for stats row 2
   orange: {
     cardBg: 'bg-orange-50',
     cardBorder: 'border-orange-200',
@@ -80,16 +87,24 @@ export default function StatCard({
   const styles = variantStyles[variant];
 
   return (
-    <div className={`${styles.cardBg} border ${styles.cardBorder} rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow`}>
+    <div
+      className={`${styles.cardBg} border ${styles.cardBorder} rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow`}
+    >
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <p className="text-sm text-gray-500 font-medium">{title}</p>
           <h3 className="text-3xl font-bold text-gray-900 mt-1">{value}</h3>
           {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
           {change !== undefined && (
-            <div className={`flex items-center gap-1 mt-2 text-xs font-medium ${change >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-              {change >= 0 ? <RiArrowUpLine size={14} /> : <RiArrowDownLine size={14} />}
-              <span>{change >= 0 ? '+' : ''}{change}% from last month</span>
+            <div
+              className={`flex items-center gap-1 mt-2 text-xs font-medium ${change >= 0 ? 'text-emerald-600' : 'text-rose-500'
+                }`}
+            >
+              {change >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+              <span>
+                {change >= 0 ? '+' : ''}
+                {change}% from last month
+              </span>
             </div>
           )}
         </div>

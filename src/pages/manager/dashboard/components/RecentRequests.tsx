@@ -1,6 +1,6 @@
 import { Table, Tag, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { RiArrowRightLine } from 'react-icons/ri';
+import { ArrowRight } from 'lucide-react';
 import { RequestStatus } from '@/constants/manager.constant';
 import type { IRecentRequest } from '@/interfaces/manager.interface';
 
@@ -27,7 +27,9 @@ const columns: ColumnsType<IRecentRequest> = [
     dataIndex: 'room',
     key: 'room',
     width: 100,
-    render: (room: string) => <span className="text-blue-600 hover:underline cursor-pointer">{room}</span>,
+    render: (room: string) => (
+      <span className="text-blue-600 hover:underline cursor-pointer">{room}</span>
+    ),
   },
   {
     title: 'Type',
@@ -73,7 +75,7 @@ export default function RecentRequests({ data }: RecentRequestsProps) {
           <p className="text-xs text-gray-500">Latest facility requests from students</p>
         </div>
         <Button type="link" className="text-gray-600 hover:text-orange-500 p-0 flex items-center gap-1">
-          View all <RiArrowRightLine />
+          View all <ArrowRight size={16} />
         </Button>
       </div>
 

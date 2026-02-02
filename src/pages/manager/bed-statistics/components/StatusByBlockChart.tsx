@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { RiStackLine } from 'react-icons/ri';
+import { Layers } from 'lucide-react';
 import type { IBlockStatistics } from '@/interfaces/manager.interface';
 
 interface StatusByBlockChartProps {
@@ -18,7 +18,7 @@ export default function StatusByBlockChart({ data }: StatusByBlockChartProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
-        <RiStackLine className="text-violet-500" size={20} />
+        <Layers className="text-violet-500" size={20} />
         <div>
           <h3 className="font-semibold text-gray-900">Status by Block</h3>
           <p className="text-xs text-gray-500">Bed status distribution per block</p>
@@ -54,10 +54,7 @@ export default function StatusByBlockChart({ data }: StatusByBlockChartProps) {
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
             />
-            <Legend
-              wrapperStyle={{ paddingTop: '10px' }}
-              iconType="circle"
-            />
+            <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="circle" />
             <Bar
               dataKey="occupied"
               name="Occupied"

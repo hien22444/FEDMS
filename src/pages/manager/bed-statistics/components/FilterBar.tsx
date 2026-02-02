@@ -1,5 +1,5 @@
 import { Select, DatePicker } from 'antd';
-import { RiFilterLine } from 'react-icons/ri';
+import { Filter } from 'lucide-react';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
@@ -42,7 +42,7 @@ export default function FilterBar({
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap items-center gap-4">
       <div className="flex items-center gap-2 text-gray-600">
-        <RiFilterLine size={20} />
+        <Filter size={20} />
         <span className="font-medium text-sm">Filters:</span>
       </div>
 

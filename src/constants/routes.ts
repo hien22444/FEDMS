@@ -1,9 +1,26 @@
 export const ROUTES = {
+  LANDING: '/',
   SIGN_IN: '/signin',
   SIGN_UP: '/signup',
-  DASHBOARD: '/',
-  PROJECTS: '/projects',
-  RENDER: '/render',
+  GOOGLE_CALLBACK: '/auth/google/callback',
+
+  // Student routes
+  STUDENT_DASHBOARD: '/student/dashboard',
+  STUDENT_NEWS: '/student/news',
+  STUDENT_SCHEDULE: '/student/schedule',
+  STUDENT_BOOKING: '/student/booking',
+  STUDENT_UTILITIES: '/student/utilities',
+  STUDENT_PAYMENT: '/student/payment',
+  STUDENT_REQUESTS: '/student/requests',
+  STUDENT_MAINTENANCE: '/student/maintenance',
+  STUDENT_PROFILE: '/student/profile',
+
+  // Security routes
+  SECURITY_DASHBOARD: '/security',
+  CAMERA_CHECKIN: '/security/camera-checkin',
+  CHECKOUT_REQUESTS: '/security/checkout-requests',
+  VISITORS: '/security/visitors',
+
   // Manager routes
   MANAGER: '/manager',
   MANAGER_DORMS: '/manager/dorms',

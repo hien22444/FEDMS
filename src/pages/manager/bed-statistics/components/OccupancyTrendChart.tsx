@@ -8,7 +8,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { RiLineChartLine } from 'react-icons/ri';
+import { TrendingUp } from 'lucide-react';
 import type { IOccupancyTrend } from '@/interfaces/manager.interface';
 
 interface OccupancyTrendChartProps {
@@ -19,7 +19,7 @@ export default function OccupancyTrendChart({ data }: OccupancyTrendChartProps) 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
-        <RiLineChartLine className="text-blue-500" size={20} />
+        <TrendingUp className="text-blue-500" size={20} />
         <div>
           <h3 className="font-semibold text-gray-900">Occupancy Trend</h3>
           <p className="text-xs text-gray-500">Daily bed occupancy over the past week</p>
@@ -49,10 +49,7 @@ export default function OccupancyTrendChart({ data }: OccupancyTrendChartProps) 
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
             />
-            <Legend
-              wrapperStyle={{ paddingTop: '20px' }}
-              iconType="circle"
-            />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
             <Line
               type="monotone"
               dataKey="occupied"

@@ -1,9 +1,13 @@
+<<<<<<< HEAD
 import {
   RiHotelBedLine,
   RiCheckboxCircleLine,
   RiTimeLine,
   RiToolsLine,
 } from 'react-icons/ri';
+=======
+import { Bed, CheckCircle, Clock, Wrench } from 'lucide-react';
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
 import { StatCard } from '../dashboard/components';
 import {
   FilterBar,
@@ -19,7 +23,10 @@ import type {
   IRoomOccupancy,
 } from '@/interfaces/manager.interface';
 
+<<<<<<< HEAD
 // Mock data - replace with API calls
+=======
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
 const bedStatsSummary: IBedStatsSummary = {
   totalBeds: 2315,
   occupiedBeds: 1847,
@@ -40,11 +47,54 @@ const occupancyTrendData: IOccupancyTrend[] = [
 ];
 
 const blockStatisticsData: IBlockStatistics[] = [
+<<<<<<< HEAD
   { block: 'Block A', totalBeds: 500, occupied: 460, available: 35, maintenance: 5, occupancyRate: 92 },
   { block: 'Block B', totalBeds: 450, occupied: 351, available: 90, maintenance: 9, occupancyRate: 78 },
   { block: 'Block C', totalBeds: 480, occupied: 456, available: 19, maintenance: 5, occupancyRate: 95 },
   { block: 'Block D', totalBeds: 420, occupied: 344, available: 67, maintenance: 9, occupancyRate: 82 },
   { block: 'Block E', totalBeds: 465, occupied: 409, available: 39, maintenance: 17, occupancyRate: 88 },
+=======
+  {
+    block: 'Block A',
+    totalBeds: 500,
+    occupied: 460,
+    available: 35,
+    maintenance: 5,
+    occupancyRate: 92,
+  },
+  {
+    block: 'Block B',
+    totalBeds: 450,
+    occupied: 351,
+    available: 90,
+    maintenance: 9,
+    occupancyRate: 78,
+  },
+  {
+    block: 'Block C',
+    totalBeds: 480,
+    occupied: 456,
+    available: 19,
+    maintenance: 5,
+    occupancyRate: 95,
+  },
+  {
+    block: 'Block D',
+    totalBeds: 420,
+    occupied: 344,
+    available: 67,
+    maintenance: 9,
+    occupancyRate: 82,
+  },
+  {
+    block: 'Block E',
+    totalBeds: 465,
+    occupied: 409,
+    available: 39,
+    maintenance: 17,
+    occupancyRate: 88,
+  },
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
 ];
 
 const roomOccupancyData: IRoomOccupancy[] = [
@@ -65,22 +115,34 @@ const roomOccupancyData: IRoomOccupancy[] = [
 export default function BedStatisticsPage() {
   return (
     <div className="space-y-6">
+<<<<<<< HEAD
       {/* Page Header */}
+=======
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Bed Usage Statistics</h1>
         <p className="text-sm text-gray-500">Detailed analysis of bed occupancy and trends</p>
       </div>
 
+<<<<<<< HEAD
       {/* Filter Bar */}
       <FilterBar />
 
       {/* Stats Row */}
+=======
+      <FilterBar />
+
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Beds"
           value={bedStatsSummary.totalBeds.toLocaleString()}
           subtitle="Across all blocks"
+<<<<<<< HEAD
           icon={<RiHotelBedLine size={24} />}
+=======
+          icon={<Bed size={24} />}
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
           variant="blue"
         />
         <StatCard
@@ -88,32 +150,50 @@ export default function BedStatisticsPage() {
           value={bedStatsSummary.occupiedBeds.toLocaleString()}
           subtitle={`${bedStatsSummary.occupancyRate}% occupancy rate`}
           change={bedStatsSummary.changeFromLastWeek}
+<<<<<<< HEAD
           icon={<RiCheckboxCircleLine size={24} />}
+=======
+          icon={<CheckCircle size={24} />}
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
           variant="success"
         />
         <StatCard
           title="Available Beds"
           value={bedStatsSummary.availableBeds}
           subtitle="Ready for booking"
+<<<<<<< HEAD
           icon={<RiTimeLine size={24} />}
+=======
+          icon={<Clock size={24} />}
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
           variant="warning"
         />
         <StatCard
           title="Maintenance"
           value={bedStatsSummary.maintenanceBeds}
           subtitle="Under repair"
+<<<<<<< HEAD
           icon={<RiToolsLine size={24} />}
+=======
+          icon={<Wrench size={24} />}
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
           variant="orange"
         />
       </div>
 
+<<<<<<< HEAD
       {/* Charts Row 1 */}
+=======
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <OccupancyTrendChart data={occupancyTrendData} />
         <BlockComparisonChart data={blockStatisticsData} />
       </div>
 
+<<<<<<< HEAD
       {/* Charts Row 2 */}
+=======
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StatusByBlockChart data={blockStatisticsData} />
         <RoomOccupancyTable data={roomOccupancyData} />

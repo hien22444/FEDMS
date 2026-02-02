@@ -2,6 +2,7 @@ export * from './icons';
 export * from './routes';
 export * from './static-menu';
 export * from './dayjs';
+export * from './manager.constant';
 
 export enum UserType {
   USER = 'USER',

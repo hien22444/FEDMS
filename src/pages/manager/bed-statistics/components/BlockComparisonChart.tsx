@@ -8,7 +8,7 @@ import {
   Cell,
   LabelList,
 } from 'recharts';
-import { RiBarChartHorizontalLine } from 'react-icons/ri';
+import { BarChart2 } from 'lucide-react';
 import type { IBlockStatistics } from '@/interfaces/manager.interface';
 
 interface BlockComparisonChartProps {
@@ -19,7 +19,7 @@ export default function BlockComparisonChart({ data }: BlockComparisonChartProps
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
-        <RiBarChartHorizontalLine className="text-orange-500" size={20} />
+        <BarChart2 className="text-orange-500" size={20} />
         <div>
           <h3 className="font-semibold text-gray-900">Block Comparison</h3>
           <p className="text-xs text-gray-500">Occupancy rate by dormitory block</p>
@@ -58,15 +58,17 @@ export default function BlockComparisonChart({ data }: BlockComparisonChartProps
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
             />
-            <Bar
-              dataKey="occupancyRate"
-              radius={[0, 6, 6, 0]}
-              barSize={28}
-            >
+            <Bar dataKey="occupancyRate" radius={[0, 6, 6, 0]} barSize={28}>
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={entry.occupancyRate >= 90 ? '#EF4444' : entry.occupancyRate >= 70 ? '#F97316' : '#10B981'}
+                  fill={
+                    entry.occupancyRate >= 90
+                      ? '#EF4444'
+                      : entry.occupancyRate >= 70
+                        ? '#F97316'
+                        : '#10B981'
+                  }
                 />
               ))}
               <LabelList
@@ -80,7 +82,6 @@ export default function BlockComparisonChart({ data }: BlockComparisonChartProps
         </ResponsiveContainer>
       </div>
 
-      {/* Legend */}
       <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-gray-100">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-emerald-500" />

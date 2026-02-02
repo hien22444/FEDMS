@@ -13,7 +13,11 @@ import {
   Tag,
   Space,
 } from 'antd';
+<<<<<<< HEAD
 import { RiSearchLine, RiArrowLeftLine, RiUserLine } from 'react-icons/ri';
+=======
+import { Search, ArrowLeft, User } from 'lucide-react';
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { createViolationReport, searchStudentByCode } from '@/lib/actions/violation';
@@ -37,7 +41,9 @@ export default function CreateViolationPage() {
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [studentCode, setStudentCode] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<IViolation.SearchStudentResult | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<IViolation.SearchStudentResult | null>(
+    null
+  );
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const handleSearchStudent = async () => {
@@ -104,23 +110,19 @@ export default function CreateViolationPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center gap-4">
         <Button
           type="text"
-          icon={<RiArrowLeftLine />}
+          icon={<ArrowLeft size={20} />}
           onClick={() => navigate('/manager/violations')}
         />
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tạo vi phạm mới</h1>
-          <p className="text-sm text-gray-500">
-            Tạo báo cáo vi phạm nội quy cho sinh viên
-          </p>
+          <p className="text-sm text-gray-500">Tạo báo cáo vi phạm nội quy cho sinh viên</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Student Search */}
         <Card title="Tìm sinh viên" className="lg:col-span-1">
           <div className="space-y-4">
             <div>
@@ -133,11 +135,11 @@ export default function CreateViolationPage() {
                   value={studentCode}
                   onChange={(e) => setStudentCode(e.target.value.toUpperCase())}
                   onPressEnter={handleSearchStudent}
-                  prefix={<RiUserLine className="text-gray-400" />}
+                  prefix={<User className="w-4 h-4 text-gray-400" />}
                 />
                 <Button
                   type="primary"
-                  icon={<RiSearchLine />}
+                  icon={<Search size={16} />}
                   loading={searchLoading}
                   onClick={handleSearchStudent}
                 >
@@ -152,16 +154,12 @@ export default function CreateViolationPage() {
               </div>
             )}
 
-            {searchError && (
-              <Alert type="error" message={searchError} showIcon />
-            )}
+            {searchError && <Alert type="error" message={searchError} showIcon />}
 
             {selectedStudent && (
               <div className="border rounded-lg p-4 bg-green-50 border-green-200">
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-sm font-medium text-green-700">
-                    Sinh viên được chọn
-                  </span>
+                  <span className="text-sm font-medium text-green-700">Sinh viên được chọn</span>
                   <Button type="link" danger size="small" onClick={handleClearStudent}>
                     Xóa
                   </Button>
@@ -182,7 +180,11 @@ export default function CreateViolationPage() {
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Vi phạm kỳ này">
-                    <Tag color={selectedStudent.violations_current_semester > 0 ? 'orange' : 'blue'}>
+                    <Tag
+                      color={
+                        selectedStudent.violations_current_semester > 0 ? 'orange' : 'blue'
+                      }
+                    >
                       {selectedStudent.violations_current_semester} lần
                     </Tag>
                   </Descriptions.Item>
@@ -192,7 +194,6 @@ export default function CreateViolationPage() {
           </div>
         </Card>
 
-        {/* Violation Form */}
         <Card title="Thông tin vi phạm" className="lg:col-span-2">
           <Form
             form={form}

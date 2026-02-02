@@ -1,5 +1,9 @@
 import { useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 import { RiDoorLine, RiHotelBedLine, RiFileList3Line, RiListCheck2 } from 'react-icons/ri';
+=======
+import { DoorOpen, Bed, FileText, ListChecks } from 'lucide-react';
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
 
 interface QuickAction {
   title: string;
@@ -12,25 +16,25 @@ const quickActions: QuickAction[] = [
   {
     title: 'Room Management',
     description: 'View and manage rooms',
-    icon: <RiDoorLine size={20} className="text-orange-500" />,
+    icon: <DoorOpen size={20} className="text-orange-500" />,
     path: '/manager/rooms',
   },
   {
     title: 'Bed Management',
     description: 'Assign and update beds',
-    icon: <RiHotelBedLine size={20} className="text-orange-500" />,
+    icon: <Bed size={20} className="text-orange-500" />,
     path: '/manager/beds',
   },
   {
     title: 'Create Invoice',
     description: 'Generate new invoice',
-    icon: <RiFileList3Line size={20} className="text-orange-500" />,
+    icon: <FileText size={20} className="text-orange-500" />,
     path: '/manager/invoices/create',
   },
   {
     title: 'View Requests',
     description: 'Handle pending requests',
-    icon: <RiListCheck2 size={20} className="text-orange-500" />,
+    icon: <ListChecks size={20} className="text-orange-500" />,
     path: '/manager/requests',
   },
 ];
