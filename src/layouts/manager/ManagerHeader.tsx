@@ -1,5 +1,5 @@
 import { Input, Button, Avatar, Badge, Dropdown } from 'antd';
-import { Search, Bell, ChevronDown } from 'lucide-react';
+import { RiSearchLine, RiNotification3Line, RiArrowDownSLine } from 'react-icons/ri';
 import type { MenuProps } from 'antd';
 
 const userMenuItems: MenuProps['items'] = [
@@ -15,7 +15,7 @@ export default function ManagerHeader() {
       <div className="flex items-center gap-4">
         <Input
           placeholder="Search rooms, students, invoices..."
-          prefix={<Search className="w-4 h-4 text-gray-400" />}
+          prefix={<RiSearchLine className="w-4 h-4 text-gray-400" />}
           className="w-80"
           size="middle"
         />
@@ -25,7 +25,7 @@ export default function ManagerHeader() {
         <Badge count={5} size="small">
           <Button
             type="text"
-            icon={<Bell size={20} className="text-gray-600" />}
+            icon={<RiNotification3Line size={20} className="text-gray-600" />}
             className="flex items-center justify-center"
           />
         </Badge>
@@ -42,7 +42,7 @@ export default function ManagerHeader() {
               <p className="text-sm font-medium text-gray-900 leading-tight">Admin User</p>
               <p className="text-xs text-gray-500">Manager</p>
             </div>
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            <RiArrowDownSLine className="w-4 h-4 text-gray-400" />
           </div>
         </Dropdown>
       </div>
