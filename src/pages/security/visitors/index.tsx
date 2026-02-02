@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, CheckCircle, XCircle, Plus, Clock } from 'lucide-react';
+import { RiGroupLine, RiCheckboxCircleLine, RiCloseCircleLine, RiAddLine, RiTimeLine } from 'react-icons/ri';
 import { cn } from '@/utils';
 
 const VisitorsPage = () => {
@@ -49,7 +49,7 @@ const VisitorsPage = () => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Users className="w-6 h-6 text-[#FF5C00]" />
+          <RiGroupLine className="w-6 h-6 text-[#FF5C00]" />
           <h1 className="text-2xl font-bold text-gray-900">Khách Tham Quan</h1>
         </div>
         <span className="bg-[#FF5C00] text-white px-3 py-1 rounded-full text-sm font-medium">
@@ -86,7 +86,7 @@ const VisitorsPage = () => {
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-gray-400" />
+                    <RiTimeLine className="w-4 h-4 text-gray-400" />
                     <div>
                       <p className="text-xs text-gray-500">Vào:</p>
                       <p className="text-sm font-medium text-gray-900">
@@ -95,7 +95,7 @@ const VisitorsPage = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-gray-400" />
+                    <RiTimeLine className="w-4 h-4 text-gray-400" />
                     <div>
                       <p className="text-xs text-gray-500">Dự kiến:</p>
                       <p className="text-sm font-medium text-gray-900">
@@ -109,14 +109,14 @@ const VisitorsPage = () => {
                 <div className="flex items-center gap-2">
                   {visitor.status === 'active' ? (
                     <>
-                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <RiCheckboxCircleLine className="w-5 h-5 text-green-500" />
                       <span className="text-sm font-medium text-green-600">
                         Đang ở
                       </span>
                     </>
                   ) : (
                     <>
-                      <XCircle className="w-5 h-5 text-gray-400" />
+                      <RiCloseCircleLine className="w-5 h-5 text-gray-400" />
                       <span className="text-sm font-medium text-gray-500">
                         Đã Rời
                       </span>
@@ -138,7 +138,7 @@ const VisitorsPage = () => {
 
       {/* Add New Visitor Button */}
       <button className="w-full border-2 border-[#FF5C00] border-dashed rounded-xl p-6 flex items-center justify-center gap-2 text-[#FF5C00] font-medium hover:bg-orange-50 transition-colors">
-        <Plus className="w-5 h-5" />
+        <RiAddLine className="w-5 h-5" />
         Thêm Khách Mới
       </button>
     </div>
