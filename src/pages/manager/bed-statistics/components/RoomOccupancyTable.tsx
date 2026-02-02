@@ -1,6 +1,6 @@
 import { Table, Tag, Progress } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { RiTableLine } from 'react-icons/ri';
+import { Table as TableIcon } from 'lucide-react';
 import type { IRoomOccupancy } from '@/interfaces/manager.interface';
 
 interface RoomOccupancyTableProps {
@@ -20,9 +20,7 @@ const columns: ColumnsType<IRoomOccupancy> = [
     key: 'room',
     width: 100,
     sorter: (a, b) => a.room.localeCompare(b.room),
-    render: (room: string) => (
-      <span className="font-medium text-gray-900">{room}</span>
-    ),
+    render: (room: string) => <span className="font-medium text-gray-900">{room}</span>,
   },
   {
     title: 'Block',
@@ -37,9 +35,7 @@ const columns: ColumnsType<IRoomOccupancy> = [
       { text: 'Block E', value: 'E' },
     ],
     onFilter: (value, record) => record.block === value,
-    render: (block: string) => (
-      <span className="text-gray-600">Block {block}</span>
-    ),
+    render: (block: string) => <span className="text-gray-600">Block {block}</span>,
   },
   {
     title: 'Capacity',
@@ -111,7 +107,7 @@ export default function RoomOccupancyTable({ data }: RoomOccupancyTableProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
-        <RiTableLine className="text-cyan-500" size={20} />
+        <TableIcon className="text-cyan-500" size={20} />
         <div>
           <h3 className="font-semibold text-gray-900">Room Occupancy Details</h3>
           <p className="text-xs text-gray-500">Detailed view of all rooms</p>

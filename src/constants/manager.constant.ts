@@ -120,8 +120,6 @@ export const MANAGER_MENU = [
     group: 'SYSTEM SETTINGS',
     items: [
       { key: 'config', label: 'Data Configuration', icon: 'settings', path: '/manager/config' },
-      // { key: 'import', label: 'Import Data', icon: 'import', path: '/manager/import' },
-      // { key: 'export', label: 'Export Data', icon: 'export', path: '/manager/export' },
       { key: 'settings', label: 'Settings', icon: 'gear', path: '/manager/settings' },
     ],
   },

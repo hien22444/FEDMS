@@ -1,12 +1,12 @@
 import {
-  RiBuildingLine,
-  RiGridLine,
-  RiDoorLine,
-  RiHotelBedLine,
-  RiCheckboxCircleLine,
-  RiTimeLine,
-  RiFileList3Line,
-} from 'react-icons/ri';
+  Building2,
+  LayoutGrid,
+  DoorOpen,
+  Bed,
+  CheckCircle,
+  Clock,
+  FileText,
+} from 'lucide-react';
 import { StatCard, BedUsageChart, BedStatusChart, QuickActions, RecentRequests } from './components';
 import { RequestStatus } from '@/constants/manager.constant';
 import type {
@@ -16,7 +16,6 @@ import type {
   IRecentRequest,
 } from '@/interfaces/manager.interface';
 
-// Mock data - replace with API calls
 const dashboardStats: IDashboardStats = {
   totalDorms: 5,
   totalBlocks: 25,
@@ -46,11 +45,41 @@ const bedStatusData: IBedStatusDistribution = {
 };
 
 const recentRequests: IRecentRequest[] = [
-  { id: 'REQ-001', room: 'A101', type: 'Maintenance', status: RequestStatus.PENDING, date: '2026-01-24' },
-  { id: 'REQ-002', room: 'B205', type: 'Cleaning', status: RequestStatus.IN_PROGRESS, date: '2026-01-23' },
-  { id: 'REQ-003', room: 'C304', type: 'AC Repair', status: RequestStatus.COMPLETED, date: '2026-01-22' },
-  { id: 'REQ-004', room: 'D102', type: 'Plumbing', status: RequestStatus.PENDING, date: '2026-01-22' },
-  { id: 'REQ-005', room: 'E401', type: 'Electrical', status: RequestStatus.PENDING, date: '2026-01-21' },
+  {
+    id: 'REQ-001',
+    room: 'A101',
+    type: 'Maintenance',
+    status: RequestStatus.PENDING,
+    date: '2026-01-24',
+  },
+  {
+    id: 'REQ-002',
+    room: 'B205',
+    type: 'Cleaning',
+    status: RequestStatus.IN_PROGRESS,
+    date: '2026-01-23',
+  },
+  {
+    id: 'REQ-003',
+    room: 'C304',
+    type: 'AC Repair',
+    status: RequestStatus.COMPLETED,
+    date: '2026-01-22',
+  },
+  {
+    id: 'REQ-004',
+    room: 'D102',
+    type: 'Plumbing',
+    status: RequestStatus.PENDING,
+    date: '2026-01-22',
+  },
+  {
+    id: 'REQ-005',
+    room: 'E401',
+    type: 'Electrical',
+    status: RequestStatus.PENDING,
+    date: '2026-01-21',
+  },
 ];
 
 export default function DashboardPage() {
@@ -60,83 +89,80 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-        <p className="text-sm text-gray-500">Welcome back! Here is an overview of your dormitory system.</p>
+        <p className="text-sm text-gray-500">
+          Welcome back! Here is an overview of your dormitory system.
+        </p>
       </div>
 
-      {/* Stats Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Dorms"
           value={dashboardStats.totalDorms}
           subtitle="Active dormitories"
-          icon={<RiBuildingLine size={24} />}
+          icon={<Building2 size={24} />}
           variant="blue"
         />
         <StatCard
           title="Total Blocks"
           value={dashboardStats.totalBlocks}
           subtitle="Across all dorms"
-          icon={<RiGridLine size={24} />}
+          icon={<LayoutGrid size={24} />}
           variant="purple"
         />
         <StatCard
           title="Total Rooms"
           value={dashboardStats.totalRooms}
           subtitle="Including all types"
-          icon={<RiDoorLine size={24} />}
+          icon={<DoorOpen size={24} />}
           variant="cyan"
         />
         <StatCard
           title="Total Beds"
           value={dashboardStats.totalBeds.toLocaleString()}
           subtitle="Capacity"
-          icon={<RiHotelBedLine size={24} />}
+          icon={<Bed size={24} />}
           variant="pink"
         />
       </div>
 
-      {/* Stats Row 2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Occupied Beds"
           value={dashboardStats.occupiedBeds.toLocaleString()}
           change={dashboardStats.occupiedChange}
-          icon={<RiCheckboxCircleLine size={24} />}
+          icon={<CheckCircle size={24} />}
           variant="success"
         />
         <StatCard
           title="Available Beds"
           value={dashboardStats.availableBeds}
           change={dashboardStats.availableChange}
-          icon={<RiTimeLine size={24} />}
+          icon={<Clock size={24} />}
           variant="warning"
         />
         <StatCard
           title="Pending Requests"
           value={dashboardStats.pendingRequests}
           subtitle="Requires attention"
-          icon={<RiFileList3Line size={24} />}
+          icon={<FileText size={24} />}
           variant="orange"
         />
         <StatCard
           title="Unpaid Invoices"
           value={dashboardStats.unpaidInvoices}
           subtitle={`Total: ${formatMoney(dashboardStats.unpaidAmount)}`}
-          icon={<RiFileList3Line size={24} />}
+          icon={<FileText size={24} />}
           variant="danger"
         />
       </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BedUsageChart data={bedUsageData} />
         <BedStatusChart data={bedStatusData} />
       </div>
 
-      {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <QuickActions />
         <RecentRequests data={recentRequests} />

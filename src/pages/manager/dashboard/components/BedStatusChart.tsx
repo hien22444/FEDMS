@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { RiPieChartLine } from 'react-icons/ri';
+import { PieChart as PieChartIcon } from 'lucide-react';
 
 interface BedStatusData {
   name: string;
@@ -29,7 +29,7 @@ export default function BedStatusChart({ data }: BedStatusChartProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
-        <RiPieChartLine className="text-gray-600" size={20} />
+        <PieChartIcon className="text-gray-600" size={20} />
         <div>
           <h3 className="font-semibold text-gray-900">Bed Status Distribution</h3>
           <p className="text-xs text-gray-500">Current bed allocation status</p>
@@ -67,7 +67,6 @@ export default function BedStatusChart({ data }: BedStatusChartProps) {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="flex justify-center gap-6 mt-4">
         {chartData.map((item) => (
           <div key={item.name} className="flex items-center gap-2">

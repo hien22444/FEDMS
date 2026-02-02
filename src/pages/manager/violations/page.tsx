@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Table, Tag, Button, Input, Select, DatePicker, Space, Modal, message, Tooltip, Card, Row, Col, Statistic } from 'antd';
 import {
-  RiSearchLine,
-  RiAddLine,
-  RiEyeLine,
-  RiDeleteBinLine,
-  RiAlertLine,
-  RiCheckLine,
-  RiCloseLine,
-  RiTimeLine,
-} from 'react-icons/ri';
+  Table,
+  Tag,
+  Button,
+  Input,
+  Select,
+  DatePicker,
+  Space,
+  Modal,
+  message,
+  Tooltip,
+  Card,
+  Row,
+  Col,
+  Statistic,
+} from 'antd';
+import { Search, Plus, Eye, Trash2, AlertTriangle, Clock, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -49,13 +55,19 @@ export default function ViolationListPage() {
   });
   const [statistics, setStatistics] = useState<IViolation.ViolationStatistics | null>(null);
 
+<<<<<<< HEAD
   // Filters
+=======
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
   const [searchCode, setSearchCode] = useState('');
   const [statusFilter, setStatusFilter] = useState<ViolationStatus | undefined>();
   const [typeFilter, setTypeFilter] = useState<ViolationType | undefined>();
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
+<<<<<<< HEAD
   // Modal states
+=======
+>>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<IViolation.ViolationReport | null>(null);
 
@@ -207,7 +219,7 @@ export default function ViolationListPage() {
           <Tooltip title="Xem chi tiết">
             <Button
               type="text"
-              icon={<RiEyeLine />}
+              icon={<Eye size={16} />}
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
@@ -216,7 +228,7 @@ export default function ViolationListPage() {
               <Button
                 type="text"
                 danger
-                icon={<RiDeleteBinLine />}
+                icon={<Trash2 size={16} />}
                 onClick={() => handleDelete(record.id)}
               />
             </Tooltip>
@@ -228,7 +240,6 @@ export default function ViolationListPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý vi phạm</h1>
@@ -238,14 +249,13 @@ export default function ViolationListPage() {
         </div>
         <Button
           type="primary"
-          icon={<RiAddLine />}
+          icon={<Plus size={16} />}
           onClick={() => navigate('/manager/violations/create')}
         >
           Tạo vi phạm mới
         </Button>
       </div>
 
-      {/* Statistics Cards */}
       {statistics && (
         <Row gutter={16}>
           <Col span={6}>
@@ -253,7 +263,7 @@ export default function ViolationListPage() {
               <Statistic
                 title="Tổng báo cáo"
                 value={statistics.totalReports}
-                prefix={<RiAlertLine className="text-blue-500" />}
+                prefix={<AlertTriangle className="text-blue-500" size={20} />}
               />
             </Card>
           </Col>
@@ -262,7 +272,7 @@ export default function ViolationListPage() {
               <Statistic
                 title="Chờ xử lý"
                 value={statistics.byStatus.new + statistics.byStatus.under_review}
-                prefix={<RiTimeLine className="text-orange-500" />}
+                prefix={<Clock className="text-orange-500" size={20} />}
                 valueStyle={{ color: '#fa8c16' }}
               />
             </Card>
@@ -272,7 +282,7 @@ export default function ViolationListPage() {
               <Statistic
                 title="Đã xử phạt"
                 value={statistics.byStatus.resolved_penalized}
-                prefix={<RiCheckLine className="text-red-500" />}
+                prefix={<Check className="text-red-500" size={20} />}
                 valueStyle={{ color: '#cf1322' }}
               />
             </Card>
@@ -282,19 +292,18 @@ export default function ViolationListPage() {
               <Statistic
                 title={`Xử phạt ${statistics.currentSemester}`}
                 value={statistics.totalPenaltiesThisSemester}
-                prefix={<RiCloseLine className="text-gray-500" />}
+                prefix={<X className="text-gray-500" size={20} />}
               />
             </Card>
           </Col>
         </Row>
       )}
 
-      {/* Filters */}
       <Card>
         <div className="flex flex-wrap gap-4">
           <Input
             placeholder="Tìm theo mã sinh viên"
-            prefix={<RiSearchLine className="text-gray-400" />}
+            prefix={<Search className="w-4 h-4 text-gray-400" />}
             value={searchCode}
             onChange={(e) => setSearchCode(e.target.value)}
             style={{ width: 200 }}
@@ -337,7 +346,6 @@ export default function ViolationListPage() {
         </div>
       </Card>
 
-      {/* Data Table */}
       <Card>
         <Table
           columns={columns}
@@ -352,14 +360,13 @@ export default function ViolationListPage() {
             showSizeChanger: true,
             showTotal: (total) => `Tổng ${total} báo cáo`,
             onChange: (page, pageSize) => {
-              setPagination((prev) => ({ ...prev, limit: pageSize }));
+              setPagination((prev) => ({ ...prev, limit: pageSize ?? prev.limit }));
               fetchData(page);
             },
           }}
         />
       </Card>
 
-      {/* Detail Modal */}
       <ViolationDetailModal
         open={detailModalOpen}
         report={selectedReport}

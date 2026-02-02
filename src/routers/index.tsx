@@ -1,34 +1,166 @@
 import { ROUTES } from '@/constants';
 import { createBrowserRouter } from 'react-router-dom';
 
+// Auth pages
 import SignInPage from '@/pages/signin';
 import SignUpPage from '@/pages/signup';
-import { AppProvider } from '@/contexts';
+import GoogleCallbackPage from '@/pages/auth/google-callback';
+import LandingPage from '@/pages/landing/landingpage';
+import NotFoundPage from '@/pages/not-found';
+
+// Layouts
+import { StudentLayout, AuthLayout } from '@/layouts';
+import SecurityLayout from '@/layouts/SecurityLayout';
 import { ManagerLayout } from '@/layouts/manager';
-import { DashboardPage } from '@/pages/manager/dashboard';
+import PrivateRoute from '@/components/PrivateRoute';
+
+// Security pages
+import DashboardPage from '@/pages/security/dashboard';
+import CameraCheckinPage from '@/pages/security/camera-checkin';
+import CheckoutRequestsPage from '@/pages/security/checkout-requests';
+import VisitorsPage from '@/pages/security/visitors';
+
+// Manager pages
+import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/dashboard';
 import { BedStatisticsPage } from '@/pages/manager/bed-statistics';
 import { ViolationListPage } from '@/pages/manager/violations';
 import { CreateViolationPage } from '@/pages/manager/violations/create';
 
+// Student pages
+import StudentDashboard from '@/pages/student/dashboard';
+import NewsPage from '@/pages/student/news';
+import SchedulePage from '@/pages/student/schedule';
+import BookingPage from '@/pages/student/booking';
+import UtilitiesPage from '@/pages/student/utilities';
+import PaymentPage from '@/pages/student/payment';
+import RequestsPage from '@/pages/student/requests';
+import MaintenancePage from '@/pages/student/maintenance';
+import CFDPage from '@/pages/student/cfd-points';
+import GuidelinesPage from '@/pages/student/guidelines';
+import FAQPage from '@/pages/student/faq';
+import NotificationsPage from '@/pages/student/notifications';
+import DormRulesPage from '@/pages/student/dorm-rules';
+
+// Coming Soon placeholder
+const ComingSoon = ({ label }: { label: string }) => (
+  <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
+);
+
 const router = createBrowserRouter([
+  // Landing page
   {
-    path: ROUTES.SIGN_IN,
-    element: <SignInPage />,
+    path: ROUTES.LANDING,
+    element: <LandingPage />,
   },
+
+  // Auth routes with AuthLayout (provides AuthContext)
   {
-    path: ROUTES.SIGN_UP,
-    element: <SignUpPage />,
-  },
-  {
-    element: <AppProvider />,
+    element: <AuthLayout />,
     children: [
+      // Public auth routes
       {
-        index: true,
-        path: ROUTES.DASHBOARD,
+        path: ROUTES.SIGN_IN,
         element: <SignInPage />,
+      },
+      {
+        path: ROUTES.SIGN_UP,
+        element: <SignUpPage />,
+      },
+      {
+        path: ROUTES.GOOGLE_CALLBACK,
+        element: <GoogleCallbackPage />,
+      },
+
+      // Protected Student routes
+      {
+        element: <PrivateRoute allowedRoles={['student']} />,
+        children: [
+          {
+            element: <StudentLayout />,
+            children: [
+              {
+                path: ROUTES.STUDENT_DASHBOARD,
+                element: <StudentDashboard />,
+              },
+              {
+                path: ROUTES.STUDENT_NEWS,
+                element: <NewsPage />,
+              },
+              {
+                path: ROUTES.STUDENT_SCHEDULE,
+                element: <SchedulePage />,
+              },
+              {
+                path: ROUTES.STUDENT_BOOKING,
+                element: <BookingPage />,
+              },
+              {
+                path: ROUTES.STUDENT_UTILITIES,
+                element: <UtilitiesPage />,
+              },
+              {
+                path: ROUTES.STUDENT_PAYMENT,
+                element: <PaymentPage />,
+              },
+              {
+                path: ROUTES.STUDENT_REQUESTS,
+                element: <RequestsPage />,
+              },
+              {
+                path: ROUTES.STUDENT_MAINTENANCE,
+                element: <MaintenancePage />,
+              },
+              {
+                path: '/student/cfd-points',
+                element: <CFDPage />,
+              },
+              {
+                path: '/student/guidelines',
+                element: <GuidelinesPage />,
+              },
+              {
+                path: '/student/faq',
+                element: <FAQPage />,
+              },
+              {
+                path: '/student/dorm-rules',
+                element: <DormRulesPage />,
+              },
+              {
+                path: '/student/notifications',
+                element: <NotificationsPage />,
+              },
+            ],
+          },
+        ],
       },
     ],
   },
+
+  // Security Routes
+  {
+    path: 'security',
+    element: <SecurityLayout />,
+    children: [
+      {
+        index: true,
+        element: <DashboardPage />,
+      },
+      {
+        path: 'camera-checkin',
+        element: <CameraCheckinPage />,
+      },
+      {
+        path: 'checkout-requests',
+        element: <CheckoutRequestsPage />,
+      },
+      {
+        path: 'visitors',
+        element: <VisitorsPage />,
+      },
+    ],
+  },
+
   // Manager Routes
   {
     path: ROUTES.MANAGER,
@@ -36,43 +168,43 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <DashboardPage />,
+        element: <ManagerDashboardPage />,
       },
       {
         path: 'dorms',
-        element: <div className="p-8 text-center text-gray-500">Dorm List Page - Coming Soon</div>,
+        element: <ComingSoon label="Dorm List Page" />,
       },
       {
         path: 'blocks',
-        element: <div className="p-8 text-center text-gray-500">Block List Page - Coming Soon</div>,
+        element: <ComingSoon label="Block List Page" />,
       },
       {
         path: 'rooms',
-        element: <div className="p-8 text-center text-gray-500">Room List Page - Coming Soon</div>,
+        element: <ComingSoon label="Room List Page" />,
       },
       {
         path: 'beds',
-        element: <div className="p-8 text-center text-gray-500">Bed Management Page - Coming Soon</div>,
+        element: <ComingSoon label="Bed Management Page" />,
       },
       {
         path: 'beds/status',
-        element: <div className="p-8 text-center text-gray-500">Update Bed Status - Coming Soon</div>,
+        element: <ComingSoon label="Update Bed Status" />,
       },
       {
         path: 'beds/assignment',
-        element: <div className="p-8 text-center text-gray-500">Change Assignment - Coming Soon</div>,
+        element: <ComingSoon label="Change Assignment" />,
       },
       {
         path: 'bookings',
-        element: <div className="p-8 text-center text-gray-500">Booking History Page - Coming Soon</div>,
+        element: <ComingSoon label="Booking History Page" />,
       },
       {
         path: 'checkout',
-        element: <div className="p-8 text-center text-gray-500">Checkout Management - Coming Soon</div>,
+        element: <ComingSoon label="Checkout Management" />,
       },
       {
         path: 'login-student',
-        element: <div className="p-8 text-center text-gray-500">Login as Student - Coming Soon</div>,
+        element: <ComingSoon label="Login as Student" />,
       },
       {
         path: 'violations',
@@ -84,59 +216,51 @@ const router = createBrowserRouter([
       },
       {
         path: 'facilities',
-        element: <div className="p-8 text-center text-gray-500">Facilities Management - Coming Soon</div>,
+        element: <ComingSoon label="Facilities Management" />,
       },
       {
         path: 'requests',
-        element: <div className="p-8 text-center text-gray-500">Request List - Coming Soon</div>,
+        element: <ComingSoon label="Request List" />,
       },
       {
         path: 'electricity',
-        element: <div className="p-8 text-center text-gray-500">Electricity Management - Coming Soon</div>,
+        element: <ComingSoon label="Electricity Management" />,
       },
       {
         path: 'electricity/import',
-        element: <div className="p-8 text-center text-gray-500">Import Electricity Data - Coming Soon</div>,
+        element: <ComingSoon label="Import Electricity Data" />,
       },
       {
         path: 'electricity/create',
-        element: <div className="p-8 text-center text-gray-500">Create Electricity Record - Coming Soon</div>,
+        element: <ComingSoon label="Create Electricity Record" />,
       },
       {
         path: 'invoices',
-        element: <div className="p-8 text-center text-gray-500">Invoice List - Coming Soon</div>,
+        element: <ComingSoon label="Invoice List" />,
       },
       {
         path: 'news',
-        element: <div className="p-8 text-center text-gray-500">News Management - Coming Soon</div>,
+        element: <ComingSoon label="News Management" />,
       },
       {
         path: 'chat',
-        element: <div className="p-8 text-center text-gray-500">Chat with Students - Coming Soon</div>,
+        element: <ComingSoon label="Chat with Students" />,
       },
       {
         path: 'email',
-        element: <div className="p-8 text-center text-gray-500">Send Email - Coming Soon</div>,
+        element: <ComingSoon label="Send Email" />,
       },
       {
         path: 'notifications',
-        element: <div className="p-8 text-center text-gray-500">Notifications - Coming Soon</div>,
+        element: <ComingSoon label="Notifications" />,
       },
       {
         path: 'config',
-        element: <div className="p-8 text-center text-gray-500">Data Configuration - Coming Soon</div>,
-      },
-      {
-        path: 'import',
-        element: <div className="p-8 text-center text-gray-500">Import Data - Coming Soon</div>,
-      },
-      {
-        path: 'export',
-        element: <div className="p-8 text-center text-gray-500">Export Data - Coming Soon</div>,
+        element: <ComingSoon label="Data Configuration" />,
       },
       {
         path: 'settings',
-        element: <div className="p-8 text-center text-gray-500">Settings - Coming Soon</div>,
+        element: <ComingSoon label="Settings" />,
       },
       {
         path: 'bed-statistics',
@@ -144,9 +268,11 @@ const router = createBrowserRouter([
       },
     ],
   },
+
+  // 404 Not Found
   {
     path: '*',
-    element: <div className="p-8 text-center text-gray-500">404 - Page Not Found</div>,
+    element: <NotFoundPage />,
   },
 ]);
 

@@ -54,7 +54,8 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
   const [isReviewing, setIsReviewing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<ViolationStatus | null>(null);
 
-  const canReview = report?.status === ViolationStatus.NEW || report?.status === ViolationStatus.UNDER_REVIEW;
+  const canReview =
+    report?.status === ViolationStatus.NEW || report?.status === ViolationStatus.UNDER_REVIEW;
 
   const handleStartReview = () => {
     setIsReviewing(true);
@@ -159,9 +160,8 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
         </Descriptions.Item>
         <Descriptions.Item label="Điểm hành vi hiện tại" span={1}>
           <span
-            className={`font-medium ${
-              (report.reported_student.behavioral_score ?? 10) < 5 ? 'text-red-500' : 'text-green-500'
-            }`}
+            className={`font-medium ${(report.reported_student.behavioral_score ?? 10) < 5 ? 'text-red-500' : 'text-green-500'
+              }`}
           >
             {report.reported_student.behavioral_score ?? 10}/10
           </span>
@@ -227,7 +227,6 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
         )}
       </Descriptions>
 
-      {/* Review Form */}
       {isReviewing && (
         <>
           <Divider>Xử lý vi phạm</Divider>
@@ -283,10 +282,7 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
                 </Form.Item>
 
                 <Form.Item name="penalty_reason" label="Lý do xử phạt">
-                  <Input.TextArea
-                    rows={2}
-                    placeholder="Nhập lý do xử phạt (tùy chọn)"
-                  />
+                  <Input.TextArea rows={2} placeholder="Nhập lý do xử phạt (tùy chọn)" />
                 </Form.Item>
               </>
             )}

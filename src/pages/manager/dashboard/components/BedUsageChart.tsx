@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
-import { RiBarChartLine } from 'react-icons/ri';
+import { BarChart3 } from 'lucide-react';
 
 interface BedUsageData {
   block: string;
@@ -14,7 +14,7 @@ export default function BedUsageChart({ data }: BedUsageChartProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
-        <RiBarChartLine className="text-gray-600" size={20} />
+        <BarChart3 className="text-gray-600" size={20} />
         <div>
           <h3 className="font-semibold text-gray-900">Bed Usage by Block</h3>
           <p className="text-xs text-gray-500">Occupancy rate per block</p>
