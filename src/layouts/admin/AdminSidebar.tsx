@@ -1,12 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
+  Building2,
   FolderCog,
   UserCog,
   BarChart3,
   Database,
   LogOut,
 } from 'lucide-react';
+import { ROUTES } from '@/constants';
 
 type NavItem = {
   label: string;
@@ -15,11 +17,12 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={18} /> },
-  { label: 'Facility Management', path: '/admin/facilities', icon: <FolderCog size={18} /> },
-  { label: 'User Management', path: '/admin/users', icon: <UserCog size={18} /> },
-  { label: 'Reports & Monitoring', path: '/admin/reports', icon: <BarChart3 size={18} /> },
-  { label: 'Data Management', path: '/admin/data', icon: <Database size={18} /> },
+  { label: 'Dashboard', path: ROUTES.ADMIN, icon: <LayoutDashboard size={18} /> },
+  { label: 'Dorm Management', path: ROUTES.ADMIN_DORMS, icon: <Building2 size={18} /> },
+  { label: 'Facility Management', path: ROUTES.ADMIN_FACILITIES, icon: <FolderCog size={18} /> },
+  { label: 'User Management', path: ROUTES.ADMIN_USERS, icon: <UserCog size={18} /> },
+  { label: 'Reports & Monitoring', path: ROUTES.ADMIN_REPORTS, icon: <BarChart3 size={18} /> },
+  { label: 'Data Management', path: ROUTES.ADMIN_DATA, icon: <Database size={18} /> },
 ];
 
 export default function AdminSidebar() {
@@ -72,7 +75,13 @@ export default function AdminSidebar() {
       <div className="p-4 border-t border-orange-700">
         <button
           type="button"
-          onClick={() => navigate('/signin')}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('token');
+              localStorage.removeItem('admin-role');
+            }
+            navigate(ROUTES.ADMIN_LOGIN);
+          }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/95 hover:bg-white/10 transition-colors"
         >
           <LogOut size={18} />
