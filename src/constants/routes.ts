@@ -10,8 +10,10 @@ export const ROUTES = {
   PROJECTS: '/projects',
   RENDER: '/render',
   // Admin routes
+  ADMIN_LOGIN: '/admin/login',
   ADMIN: '/admin',
-  ADMIN_FACILITIES: '/admin/facilities',
+  ADMIN_DORMS: '/admin/dorms',
+  ADMIN_FACILITIES: '/admin/facilities', // sẽ dùng cho quản lý CSVC sau
   ADMIN_USERS: '/admin/users',
   ADMIN_REPORTS: '/admin/reports',
   ADMIN_DATA: '/admin/data',

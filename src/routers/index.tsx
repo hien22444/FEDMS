@@ -18,6 +18,8 @@ import { ViolationListPage } from '@/pages/manager/violations';
 import { CreateViolationPage } from '@/pages/manager/violations/create';
 import { AdminLayout } from '@/layouts/admin';
 import AdminDashboardPage from '@/pages/admin/dashboard';
+import AdminLoginPage from '@/pages/admin/login';
+import AdminDormsPage from '@/pages/admin/facilities';
 import NotFoundPage from '@/pages/not-found';
 
 const ComingSoon = ({ label }: { label: string }) => (
@@ -36,6 +38,10 @@ const router = createBrowserRouter([
   {
     path: ROUTES.SIGN_UP,
     element: <SignUpPage />,
+  },
+  {
+    path: ROUTES.ADMIN_LOGIN,
+    element: <AdminLoginPage />,
   },
   {
     element: <AppProvider />,
@@ -74,8 +80,8 @@ const router = createBrowserRouter([
         element: <AdminDashboardPage />,
       },
       {
-        path: 'facilities',
-        element: <ComingSoon label="Facility Management" />,
+        path: 'dorms',
+        element: <AdminDormsPage />,
       },
       {
         path: 'users',

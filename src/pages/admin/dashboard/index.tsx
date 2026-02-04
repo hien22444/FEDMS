@@ -7,8 +7,10 @@ import {
   UserCog,
   ClipboardList,
   HardDrive,
-  Activity,
 } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/constants';
 
 type MetricCardProps = {
   title: string;
@@ -37,12 +39,14 @@ function MetricCard({ title, value, icon, iconBgClass, iconTextClass }: MetricCa
 type QuickActionProps = {
   label: string;
   icon: React.ReactNode;
+  onClick?: () => void;
 };
 
-function QuickActionCard({ label, icon }: QuickActionProps) {
+function QuickActionCard({ label, icon, onClick }: QuickActionProps) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center justify-center gap-3 text-center"
     >
       <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
@@ -53,21 +57,15 @@ function QuickActionCard({ label, icon }: QuickActionProps) {
   );
 }
 
-const activityItems = [
-  { dot: 'bg-red-500', title: 'Facility Maintenance Scheduled', time: '2 hours ago' },
-  { dot: 'bg-green-500', title: 'New User Account Created', time: '4 hours ago' },
-  { dot: 'bg-green-500', title: 'System Backup Completed', time: '1 day ago' },
-  { dot: 'bg-red-500', title: 'Facility Inspection Report Submitted', time: '2 days ago' },
-];
-
-const systemStatus = [
-  { label: 'Database', status: 'Online' },
-  { label: 'API Server', status: 'Online' },
-  { label: 'File Storage', status: 'Online' },
-  { label: 'Backup Service', status: 'Online' },
-];
-
 export default function AdminDashboardPage() {
+  const [metrics] = useState({
+    totalFacilities: 24,
+    activeUsers: 156,
+    pendingTasks: 8,
+  });
+
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
       {/* Title */}
@@ -84,14 +82,14 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <MetricCard
           title="Total Facilities"
-          value="24"
+          value={metrics.totalFacilities}
           icon={<Building size={18} />}
           iconBgClass="bg-orange-50"
           iconTextClass="text-orange-600"
         />
         <MetricCard
           title="Active Users"
-          value="156"
+          value={metrics.activeUsers}
           icon={<Users size={18} />}
           iconBgClass="bg-blue-50"
           iconTextClass="text-blue-600"
@@ -105,7 +103,7 @@ export default function AdminDashboardPage() {
         />
         <MetricCard
           title="Pending Tasks"
-          value="8"
+          value={metrics.pendingTasks}
           icon={<AlertCircle size={18} />}
           iconBgClass="bg-orange-50"
           iconTextClass="text-orange-600"
@@ -116,7 +114,11 @@ export default function AdminDashboardPage() {
       <div className="space-y-3">
         <div className="text-base font-semibold text-gray-900">Quick Actions</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <QuickActionCard label="Create New Facility" icon={<Plus size={18} />} />
+          <QuickActionCard
+            label="Create New Dorm"
+            icon={<Plus size={18} />}
+            onClick={() => navigate(ROUTES.ADMIN_DORMS)}
+          />
           <QuickActionCard label="Manage Users" icon={<UserCog size={18} />} />
           <QuickActionCard label="View Reports" icon={<ClipboardList size={18} />} />
           <QuickActionCard label="Backup Data" icon={<HardDrive size={18} />} />
@@ -124,32 +126,23 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Bottom panels */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Recent Activity */}
-        <div className="xl:col-span-2 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity size={18} className="text-orange-600" />
-            <div className="font-semibold text-gray-900">Recent Activity</div>
-          </div>
-
-          <div className="divide-y divide-gray-100">
-            {activityItems.map((item) => (
-              <div key={item.title} className="py-4 flex items-start gap-3">
-                <div className={`w-2 h-2 rounded-full mt-2 ${item.dot}`} />
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">{item.title}</div>
-                  <div className="text-xs text-gray-500 mt-1">{item.time}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+          <div className="font-semibold text-gray-900 mb-2">System Overview</div>
+          <p className="text-sm text-gray-500">
+            Tổng quan nhanh về trạng thái hệ thống và dịch vụ liên quan đến ký túc xá.
+          </p>
         </div>
 
-        {/* System status */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="font-semibold text-gray-900 mb-4">System Status</div>
           <div className="space-y-4">
-            {systemStatus.map((s) => (
+            {[
+              { label: 'Database', status: 'Online' },
+              { label: 'API Server', status: 'Online' },
+              { label: 'File Storage', status: 'Online' },
+              { label: 'Backup Service', status: 'Online' },
+            ].map((s) => (
               <div key={s.label} className="flex items-center justify-between">
                 <div className="text-sm text-gray-700">{s.label}</div>
                 <div className="flex items-center gap-2">
