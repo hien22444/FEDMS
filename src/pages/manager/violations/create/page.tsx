@@ -22,14 +22,14 @@ import type { IViolation } from '@/interfaces';
 import { ViolationType, ReporterType } from '@/interfaces';
 
 const violationTypeOptions = [
-  { value: ViolationType.POLICY_VIOLATION, label: 'Vi phạm nội quy' },
-  { value: ViolationType.OTHER, label: 'Khác' },
+  { value: ViolationType.POLICY_VIOLATION, label: 'Policy Violation' },
+  { value: ViolationType.OTHER, label: 'Other' },
 ];
 
 const reporterTypeOptions = [
-  { value: ReporterType.MANAGER, label: 'Quản lý' },
-  { value: ReporterType.SECURITY, label: 'Bảo vệ' },
-  { value: ReporterType.STUDENT, label: 'Sinh viên' },
+  { value: ReporterType.MANAGER, label: 'Manager' },
+  { value: ReporterType.SECURITY, label: 'Security' },
+  { value: ReporterType.STUDENT, label: 'Student' },
 ];
 
 export default function CreateViolationPage() {
@@ -45,7 +45,7 @@ export default function CreateViolationPage() {
 
   const handleSearchStudent = async () => {
     if (!studentCode.trim()) {
-      message.warning('Vui lòng nhập mã sinh viên');
+      message.warning('Please enter student code');
       return;
     }
 
@@ -59,11 +59,11 @@ export default function CreateViolationPage() {
         setSelectedStudent(student);
         form.setFieldsValue({ student_code: student.student_code });
       } else {
-        setSearchError(`Không tìm thấy sinh viên với mã "${studentCode}"`);
+        setSearchError(`Student not found with code "${studentCode}"`);
       }
     } catch (error) {
       console.error('Error searching student:', error);
-      setSearchError('Có lỗi xảy ra khi tìm kiếm sinh viên');
+      setSearchError('An error occurred while searching for student');
     } finally {
       setSearchLoading(false);
     }
@@ -71,7 +71,7 @@ export default function CreateViolationPage() {
 
   const handleSubmit = async (values: IViolation.CreateViolationDto) => {
     if (!selectedStudent) {
-      message.error('Vui lòng tìm và chọn sinh viên');
+      message.error('Please search and select a student');
       return;
     }
 
@@ -88,11 +88,11 @@ export default function CreateViolationPage() {
       };
 
       await createViolationReport(data);
-      message.success('Tạo báo cáo vi phạm thành công');
+      message.success('Violation report created successfully');
       navigate('/manager/violations');
     } catch (error) {
       console.error('Error creating violation:', error);
-      message.error('Không thể tạo báo cáo vi phạm');
+      message.error('Failed to create violation report');
     } finally {
       setLoading(false);
     }
@@ -114,21 +114,21 @@ export default function CreateViolationPage() {
           onClick={() => navigate('/manager/violations')}
         />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tạo vi phạm mới</h1>
-          <p className="text-sm text-gray-500">Tạo báo cáo vi phạm nội quy cho sinh viên</p>
+          <h1 className="text-2xl font-bold text-gray-900">Create New Violation</h1>
+          <p className="text-sm text-gray-500">Create a policy violation report for a student</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card title="Tìm sinh viên" className="lg:col-span-1">
+        <Card title="Search Student" className="lg:col-span-1">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mã sinh viên
+                Student Code
               </label>
               <Space.Compact style={{ width: '100%' }}>
                 <Input
-                  placeholder="VD: DE180775"
+                  placeholder="E.g: DE180775"
                   value={studentCode}
                   onChange={(e) => setStudentCode(e.target.value.toUpperCase())}
                   onPressEnter={handleSearchStudent}
@@ -140,14 +140,14 @@ export default function CreateViolationPage() {
                   loading={searchLoading}
                   onClick={handleSearchStudent}
                 >
-                  Tìm
+                  Search
                 </Button>
               </Space.Compact>
             </div>
 
             {searchLoading && (
               <div className="flex justify-center py-4">
-                <Spin tip="Đang tìm kiếm..." />
+                <Spin tip="Searching..." />
               </div>
             )}
 
@@ -156,33 +156,33 @@ export default function CreateViolationPage() {
             {selectedStudent && (
               <div className="border rounded-lg p-4 bg-green-50 border-green-200">
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-sm font-medium text-green-700">Sinh viên được chọn</span>
+                  <span className="text-sm font-medium text-green-700">Selected Student</span>
                   <Button type="link" danger size="small" onClick={handleClearStudent}>
-                    Xóa
+                    Clear
                   </Button>
                 </div>
                 <Descriptions column={1} size="small">
-                  <Descriptions.Item label="Họ tên">
+                  <Descriptions.Item label="Full Name">
                     <span className="font-medium">{selectedStudent.full_name}</span>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Mã SV">
+                  <Descriptions.Item label="Student Code">
                     <span className="font-mono">{selectedStudent.student_code}</span>
                   </Descriptions.Item>
-                  <Descriptions.Item label="SĐT">
+                  <Descriptions.Item label="Phone">
                     {selectedStudent.phone || 'N/A'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Điểm hành vi">
+                  <Descriptions.Item label="Behavioral Score">
                     <Tag color={selectedStudent.behavioral_score < 5 ? 'red' : 'green'}>
                       {selectedStudent.behavioral_score}/10
                     </Tag>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Vi phạm kỳ này">
+                  <Descriptions.Item label="Violations This Semester">
                     <Tag
                       color={
                         selectedStudent.violations_current_semester > 0 ? 'orange' : 'blue'
                       }
                     >
-                      {selectedStudent.violations_current_semester} lần
+                      {selectedStudent.violations_current_semester} times
                     </Tag>
                   </Descriptions.Item>
                 </Descriptions>
@@ -191,7 +191,7 @@ export default function CreateViolationPage() {
           </div>
         </Card>
 
-        <Card title="Thông tin vi phạm" className="lg:col-span-2">
+        <Card title="Violation Information" className="lg:col-span-2">
           <Form
             form={form}
             layout="vertical"
@@ -209,71 +209,71 @@ export default function CreateViolationPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Form.Item
                 name="reporter_type"
-                label="Người báo cáo"
-                rules={[{ required: true, message: 'Vui lòng chọn loại người báo cáo' }]}
+                label="Reporter"
+                rules={[{ required: true, message: 'Please select reporter type' }]}
               >
-                <Select options={reporterTypeOptions} placeholder="Chọn loại người báo cáo" />
+                <Select options={reporterTypeOptions} placeholder="Select reporter type" />
               </Form.Item>
 
               <Form.Item
                 name="violation_type"
-                label="Loại vi phạm"
-                rules={[{ required: true, message: 'Vui lòng chọn loại vi phạm' }]}
+                label="Violation Type"
+                rules={[{ required: true, message: 'Please select violation type' }]}
               >
-                <Select options={violationTypeOptions} placeholder="Chọn loại vi phạm" />
+                <Select options={violationTypeOptions} placeholder="Select violation type" />
               </Form.Item>
 
               <Form.Item
                 name="violation_date"
-                label="Ngày vi phạm"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày vi phạm' }]}
+                label="Violation Date"
+                rules={[{ required: true, message: 'Please select violation date' }]}
               >
                 <DatePicker
                   format="DD/MM/YYYY"
                   style={{ width: '100%' }}
-                  placeholder="Chọn ngày vi phạm"
+                  placeholder="Select violation date"
                   disabledDate={(current) => current && current > dayjs().endOf('day')}
                 />
               </Form.Item>
 
-              <Form.Item name="location" label="Địa điểm vi phạm">
-                <Input placeholder="VD: Tòa A, Phòng 101" />
+              <Form.Item name="location" label="Location">
+                <Input placeholder="E.g: Building A, Room 101" />
               </Form.Item>
             </div>
 
             <Form.Item
               name="description"
-              label="Mô tả vi phạm"
+              label="Description"
               rules={[
-                { required: true, message: 'Vui lòng nhập mô tả vi phạm' },
-                { min: 10, message: 'Mô tả phải có ít nhất 10 ký tự' },
+                { required: true, message: 'Please enter violation description' },
+                { min: 10, message: 'Description must be at least 10 characters' },
               ]}
             >
               <Input.TextArea
                 rows={4}
-                placeholder="Mô tả chi tiết hành vi vi phạm của sinh viên..."
+                placeholder="Describe the student's violation in detail..."
                 showCount
                 maxLength={1000}
               />
             </Form.Item>
 
-            <Form.Item name="evidence_urls" label="Link bằng chứng (hình ảnh)">
+            <Form.Item name="evidence_urls" label="Evidence Links (images)">
               <Select
                 mode="tags"
-                placeholder="Nhập URL hình ảnh và nhấn Enter"
+                placeholder="Enter image URL and press Enter"
                 tokenSeparators={[',']}
               />
             </Form.Item>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button onClick={() => navigate('/manager/violations')}>Hủy</Button>
+              <Button onClick={() => navigate('/manager/violations')}>Cancel</Button>
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={loading}
                 disabled={!selectedStudent}
               >
-                Tạo vi phạm
+                Create Violation
               </Button>
             </div>
           </Form>

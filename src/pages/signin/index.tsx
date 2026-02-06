@@ -29,9 +29,16 @@ const SignInPage = () => {
     mutationFn: signIn,
   });
 
+  // Helper function to get redirect path based on role
+  const getRedirectPath = (role: string) => {
+    if (role === 'manager') return ROUTES.MANAGER;
+    if (role === 'security') return ROUTES.SECURITY_DASHBOARD;
+    return ROUTES.STUDENT_DASHBOARD;
+  };
+
   // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to={ROUTES.STUDENT_DASHBOARD} replace />;
+    return <Navigate to={ROUTES.LANDING} replace />;
   }
 
   const onFinish = async (values: IUser.SignInDto) => {
@@ -41,7 +48,7 @@ const SignInPage = () => {
         login(data.token, data.user, data.profile);
         toast.success('Đăng nhập thành công');
         form.resetFields();
-        navigate(ROUTES.STUDENT_DASHBOARD);
+        navigate(getRedirectPath(data.user.role));
       },
       onError: error => {
         const err = error as IError;

@@ -31,16 +31,16 @@ import ViolationDetailModal from './components/ViolationDetailModal';
 const { RangePicker } = DatePicker;
 
 const statusConfig: Record<ViolationStatus, { color: string; label: string }> = {
-  [ViolationStatus.NEW]: { color: 'blue', label: 'Mới' },
-  [ViolationStatus.UNDER_REVIEW]: { color: 'orange', label: 'Đang xử lý' },
-  [ViolationStatus.RESOLVED_PENALIZED]: { color: 'red', label: 'Đã xử phạt' },
-  [ViolationStatus.RESOLVED_NO_ACTION]: { color: 'green', label: 'Không xử phạt' },
-  [ViolationStatus.REJECTED]: { color: 'gray', label: 'Từ chối' },
+  [ViolationStatus.NEW]: { color: 'blue', label: 'New' },
+  [ViolationStatus.UNDER_REVIEW]: { color: 'orange', label: 'Under Review' },
+  [ViolationStatus.RESOLVED_PENALIZED]: { color: 'red', label: 'Penalized' },
+  [ViolationStatus.RESOLVED_NO_ACTION]: { color: 'green', label: 'No Action' },
+  [ViolationStatus.REJECTED]: { color: 'gray', label: 'Rejected' },
 };
 
 const violationTypeConfig: Record<ViolationType, { label: string }> = {
-  [ViolationType.POLICY_VIOLATION]: { label: 'Vi phạm nội quy' },
-  [ViolationType.OTHER]: { label: 'Khác' },
+  [ViolationType.POLICY_VIOLATION]: { label: 'Policy Violation' },
+  [ViolationType.OTHER]: { label: 'Other' },
 };
 
 export default function ViolationListPage() {
@@ -81,7 +81,7 @@ export default function ViolationListPage() {
       setPagination(response.pagination);
     } catch (error) {
       console.error('Error fetching violations:', error);
-      message.error('Không thể tải danh sách vi phạm');
+      message.error('Failed to load violations list');
     } finally {
       setLoading(false);
     }
@@ -120,18 +120,18 @@ export default function ViolationListPage() {
 
   const handleDelete = async (id: string) => {
     Modal.confirm({
-      title: 'Xác nhận xóa',
-      content: 'Bạn có chắc chắn muốn xóa báo cáo vi phạm này?',
-      okText: 'Xóa',
-      cancelText: 'Hủy',
+      title: 'Confirm Delete',
+      content: 'Are you sure you want to delete this violation report?',
+      okText: 'Delete',
+      cancelText: 'Cancel',
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await deleteViolationReport(id);
-          message.success('Xóa báo cáo vi phạm thành công');
+          message.success('Violation report deleted successfully');
           fetchData(pagination.page);
         } catch (error) {
-          message.error('Không thể xóa báo cáo vi phạm');
+          message.error('Failed to delete violation report');
         }
       },
     });
@@ -148,7 +148,7 @@ export default function ViolationListPage() {
 
   const columns: ColumnsType<IViolation.ViolationReport> = [
     {
-      title: 'Mã báo cáo',
+      title: 'Report Code',
       dataIndex: 'report_code',
       key: 'report_code',
       width: 140,
@@ -157,7 +157,7 @@ export default function ViolationListPage() {
       ),
     },
     {
-      title: 'Sinh viên',
+      title: 'Student',
       key: 'student',
       width: 200,
       render: (_, record) => (
@@ -168,14 +168,14 @@ export default function ViolationListPage() {
       ),
     },
     {
-      title: 'Loại vi phạm',
+      title: 'Violation Type',
       dataIndex: 'violation_type',
       key: 'violation_type',
       width: 140,
       render: (type: ViolationType) => violationTypeConfig[type]?.label || type,
     },
     {
-      title: 'Mô tả',
+      title: 'Description',
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
@@ -186,14 +186,14 @@ export default function ViolationListPage() {
       ),
     },
     {
-      title: 'Ngày vi phạm',
+      title: 'Violation Date',
       dataIndex: 'violation_date',
       key: 'violation_date',
       width: 120,
       render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
     },
     {
-      title: 'Trạng thái',
+      title: 'Status',
       dataIndex: 'status',
       key: 'status',
       width: 130,
@@ -202,13 +202,13 @@ export default function ViolationListPage() {
       ),
     },
     {
-      title: 'Hành động',
+      title: 'Actions',
       key: 'actions',
       width: 120,
       fixed: 'right',
       render: (_, record) => (
         <Space>
-          <Tooltip title="Xem chi tiết">
+          <Tooltip title="View Details">
             <Button
               type="text"
               icon={<Eye size={16} />}
@@ -216,7 +216,7 @@ export default function ViolationListPage() {
             />
           </Tooltip>
           {record.status === ViolationStatus.NEW && (
-            <Tooltip title="Xóa">
+            <Tooltip title="Delete">
               <Button
                 type="text"
                 danger
@@ -234,9 +234,9 @@ export default function ViolationListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản lý vi phạm</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Violation Management</h1>
           <p className="text-sm text-gray-500">
-            Quản lý và xử lý các báo cáo vi phạm nội quy ký túc xá
+            Manage and process dormitory policy violation reports
           </p>
         </div>
         <Button
@@ -244,7 +244,7 @@ export default function ViolationListPage() {
           icon={<Plus size={16} />}
           onClick={() => navigate('/manager/violations/create')}
         >
-          Tạo vi phạm mới
+          Create New Violation
         </Button>
       </div>
 
@@ -253,7 +253,7 @@ export default function ViolationListPage() {
           <Col span={6}>
             <Card>
               <Statistic
-                title="Tổng báo cáo"
+                title="Total Reports"
                 value={statistics.totalReports}
                 prefix={<AlertTriangle className="text-blue-500" size={20} />}
               />
@@ -262,7 +262,7 @@ export default function ViolationListPage() {
           <Col span={6}>
             <Card>
               <Statistic
-                title="Chờ xử lý"
+                title="Pending"
                 value={statistics.byStatus.new + statistics.byStatus.under_review}
                 prefix={<Clock className="text-orange-500" size={20} />}
                 valueStyle={{ color: '#fa8c16' }}
@@ -272,7 +272,7 @@ export default function ViolationListPage() {
           <Col span={6}>
             <Card>
               <Statistic
-                title="Đã xử phạt"
+                title="Penalized"
                 value={statistics.byStatus.resolved_penalized}
                 prefix={<Check className="text-red-500" size={20} />}
                 valueStyle={{ color: '#cf1322' }}
@@ -282,7 +282,7 @@ export default function ViolationListPage() {
           <Col span={6}>
             <Card>
               <Statistic
-                title={`Xử phạt ${statistics.currentSemester}`}
+                title={`Penalties ${statistics.currentSemester}`}
                 value={statistics.totalPenaltiesThisSemester}
                 prefix={<X className="text-gray-500" size={20} />}
               />
@@ -294,7 +294,7 @@ export default function ViolationListPage() {
       <Card>
         <div className="flex flex-wrap gap-4">
           <Input
-            placeholder="Tìm theo mã sinh viên"
+            placeholder="Search by student code"
             prefix={<Search className="w-4 h-4 text-gray-400" />}
             value={searchCode}
             onChange={(e) => setSearchCode(e.target.value)}
@@ -302,7 +302,7 @@ export default function ViolationListPage() {
             onPressEnter={handleSearch}
           />
           <Select
-            placeholder="Trạng thái"
+            placeholder="Status"
             allowClear
             value={statusFilter}
             onChange={setStatusFilter}
@@ -313,7 +313,7 @@ export default function ViolationListPage() {
             }))}
           />
           <Select
-            placeholder="Loại vi phạm"
+            placeholder="Violation Type"
             allowClear
             value={typeFilter}
             onChange={setTypeFilter}
@@ -327,13 +327,13 @@ export default function ViolationListPage() {
             value={dateRange}
             onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
             format="DD/MM/YYYY"
-            placeholder={['Từ ngày', 'Đến ngày']}
+            placeholder={['From Date', 'To Date']}
           />
           <Space>
             <Button type="primary" onClick={handleSearch}>
-              Tìm kiếm
+              Search
             </Button>
-            <Button onClick={handleReset}>Đặt lại</Button>
+            <Button onClick={handleReset}>Reset</Button>
           </Space>
         </div>
       </Card>
@@ -350,7 +350,7 @@ export default function ViolationListPage() {
             pageSize: pagination.limit,
             total: pagination.total,
             showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} báo cáo`,
+            showTotal: (total) => `Total ${total} reports`,
             onChange: (page, pageSize) => {
               setPagination((prev) => ({ ...prev, limit: pageSize ?? prev.limit }));
               fetchData(page);
