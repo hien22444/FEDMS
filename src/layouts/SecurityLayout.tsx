@@ -16,7 +16,7 @@ const SecurityLayout = () => {
   const navigate = useNavigate();
 
   const navItems = [
-    { path: ROUTES.DASHBOARD, label: 'Tổng Quan', icon: LayoutDashboard },
+    { path: ROUTES.SECURITY_DASHBOARD, label: 'Tổng Quan', icon: LayoutDashboard },
     { path: ROUTES.CAMERA_CHECKIN, label: 'Camera Checkin', icon: Camera },
     { path: ROUTES.CHECKOUT_REQUESTS, label: 'Yêu Cầu Checkout', icon: FileText },
     { path: ROUTES.VISITORS, label: 'Khách Tham Quan', icon: Users },
