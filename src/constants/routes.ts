@@ -9,6 +9,18 @@ export const ROUTES = {
   VISITORS: '/security/visitors',
   PROJECTS: '/projects',
   RENDER: '/render',
+
+  // Student routes
+  STUDENT_DASHBOARD: '/student/dashboard',
+  STUDENT_NEWS: '/student/news',
+  STUDENT_SCHEDULE: '/student/schedule',
+  STUDENT_BOOKING: '/student/booking',
+  STUDENT_UTILITIES: '/student/utilities',
+  STUDENT_PAYMENT: '/student/payment',
+  STUDENT_REQUESTS: '/student/requests',
+  STUDENT_MAINTENANCE: '/student/maintenance',
+  STUDENT_PROFILE: '/student/profile',
+  
   // Admin routes
   ADMIN_LOGIN: '/admin/login',
   ADMIN: '/admin',
