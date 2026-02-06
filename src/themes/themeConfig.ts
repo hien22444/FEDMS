@@ -2,14 +2,9 @@ import type { ThemeConfig } from 'antd';
 
 const theme: ThemeConfig = {
   token: {
-    colorPrimary: '#FF6C00',    // FPT Orange (màu cam chính thức)
-    colorSuccess: '#00CC66',
-    colorWarning: '#FBBF24',
-    colorError: '#DC2626',
-    colorInfo: '#3B82F6',
-    borderRadius: 6,
+    colorPrimary: '#146EF5',
     fontSize: 14,
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: 'InterTight-Regular',
   },
   components: {
     Button: {

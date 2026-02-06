@@ -13,13 +13,9 @@ class ApiRequest {
     url: string,
     config: RequestInit = {},
   ): Promise<T> {
-    // Get token from localStorage
-    const token = localStorage.getItem('token');
-
     const headers: HeadersInit = {
       Accept: 'application/json',
-      'Accept-Language': 'vi',
-      ...(token && { Authorization: `Bearer ${token}` }),
+      'Accept-Language': 'en',
       ...(config.headers as Record<string, string>),
     };
 
@@ -34,26 +30,26 @@ class ApiRequest {
     const res = await fetch(`${this.baseUrl}/${url}`, {
       ...config,
       headers,
+      credentials: 'include',
     });
 
-    const response = await res.json();
+    if (!res.ok) {
+      const text = await res.text();
+      const error = JSON.parse(text);
 
-    if (!res.ok || response.success === false) {
-      const error = {
-        statusCode: res.status,
-        message: response.message || ['Có lỗi xảy ra'],
-      };
-
-      if (res.status === 401) {
+      if (error.statusCode === 401) {
         window.location.href = ROUTES.SIGN_IN;
+
         return Promise.reject(error);
       }
 
       throw error;
     }
 
-    // Handle both formats: { data: T } and { success: true, data: T }
-    return response.data as T;
+    const response: { statusCode: number; data: T } =
+      await res.json();
+
+    return response.data;
   }
 
   async get<T>(url: string, config: RequestInit = {}) {

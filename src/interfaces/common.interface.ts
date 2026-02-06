@@ -13,10 +13,10 @@ export interface IMeta {
 }
 
 export interface IError {
-  message: string | string[];
+  message: string[];
   statusCode: number;
-  path?: string;
-  timestamp?: string;
+  path: string;
+  timestamp: string;
 }
 
 export interface IQuery {

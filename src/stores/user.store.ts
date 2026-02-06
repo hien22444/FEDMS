@@ -3,11 +3,11 @@ import { makeAutoObservable } from 'mobx';
 
 const initValue: IUser.Response = {
   id: '',
-  email: '',
-  role: '',
-  is_active: false,
   fullname: '',
+  email: '',
   avatarUrl: '',
+  createdAt: new Date(),
+  updatedAt: new Date(),
 };
 
 export class UserStore {
