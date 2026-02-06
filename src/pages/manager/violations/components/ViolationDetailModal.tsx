@@ -25,27 +25,27 @@ interface Props {
 }
 
 const statusConfig: Record<ViolationStatus, { color: string; label: string }> = {
-  [ViolationStatus.NEW]: { color: 'blue', label: 'Mới' },
-  [ViolationStatus.UNDER_REVIEW]: { color: 'orange', label: 'Đang xử lý' },
-  [ViolationStatus.RESOLVED_PENALIZED]: { color: 'red', label: 'Đã xử phạt' },
-  [ViolationStatus.RESOLVED_NO_ACTION]: { color: 'green', label: 'Không xử phạt' },
-  [ViolationStatus.REJECTED]: { color: 'gray', label: 'Từ chối' },
+  [ViolationStatus.NEW]: { color: 'blue', label: 'New' },
+  [ViolationStatus.UNDER_REVIEW]: { color: 'orange', label: 'Under Review' },
+  [ViolationStatus.RESOLVED_PENALIZED]: { color: 'red', label: 'Penalized' },
+  [ViolationStatus.RESOLVED_NO_ACTION]: { color: 'green', label: 'No Action' },
+  [ViolationStatus.REJECTED]: { color: 'gray', label: 'Rejected' },
 };
 
 const violationTypeConfig: Record<ViolationType, { label: string }> = {
-  [ViolationType.POLICY_VIOLATION]: { label: 'Vi phạm nội quy' },
-  [ViolationType.OTHER]: { label: 'Khác' },
+  [ViolationType.POLICY_VIOLATION]: { label: 'Policy Violation' },
+  [ViolationType.OTHER]: { label: 'Other' },
 };
 
 const reporterTypeConfig: Record<ReporterType, { label: string }> = {
-  [ReporterType.STUDENT]: { label: 'Sinh viên' },
-  [ReporterType.SECURITY]: { label: 'Bảo vệ' },
-  [ReporterType.MANAGER]: { label: 'Quản lý' },
+  [ReporterType.STUDENT]: { label: 'Student' },
+  [ReporterType.SECURITY]: { label: 'Security' },
+  [ReporterType.MANAGER]: { label: 'Manager' },
 };
 
 const penaltyTypeConfig: Record<PenaltyType, { label: string; maxPoints: number }> = {
-  [PenaltyType.MINOR]: { label: 'Nhẹ', maxPoints: 2 },
-  [PenaltyType.SEVERE]: { label: 'Nặng', maxPoints: 5 },
+  [PenaltyType.MINOR]: { label: 'Minor', maxPoints: 2 },
+  [PenaltyType.SEVERE]: { label: 'Severe', maxPoints: 5 },
 };
 
 export default function ViolationDetailModal({ open, report, onClose }: Props) {
@@ -94,12 +94,12 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
       }
 
       await reviewViolationReport(report!.id, reviewData);
-      message.success('Cập nhật trạng thái thành công');
+      message.success('Status updated successfully');
       handleCancelReview();
       onClose(true);
     } catch (error) {
       console.error('Error reviewing violation:', error);
-      message.error('Không thể cập nhật trạng thái');
+      message.error('Failed to update status');
     } finally {
       setLoading(false);
     }
@@ -116,7 +116,7 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
     <Modal
       title={
         <div className="flex items-center gap-3">
-          <span>Chi tiết vi phạm</span>
+          <span>Violation Details</span>
           <Tag color={statusConfig[report.status]?.color}>
             {statusConfig[report.status]?.label}
           </Tag>
@@ -127,17 +127,17 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
       width={800}
       footer={
         <div className="flex justify-end gap-2">
-          <Button onClick={handleClose}>Đóng</Button>
+          <Button onClick={handleClose}>Close</Button>
           {canReview && !isReviewing && (
             <Button type="primary" onClick={handleStartReview}>
-              Xử lý vi phạm
+              Process Violation
             </Button>
           )}
           {isReviewing && (
             <>
-              <Button onClick={handleCancelReview}>Hủy</Button>
+              <Button onClick={handleCancelReview}>Cancel</Button>
               <Button type="primary" loading={loading} onClick={handleSubmitReview}>
-                Lưu
+                Save
               </Button>
             </>
           )}
@@ -145,20 +145,20 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
       }
     >
       <Descriptions bordered column={2} size="small" className="mb-4">
-        <Descriptions.Item label="Mã báo cáo" span={1}>
+        <Descriptions.Item label="Report Code" span={1}>
           <span className="font-mono font-medium text-blue-600">{report.report_code}</span>
         </Descriptions.Item>
-        <Descriptions.Item label="Ngày tạo" span={1}>
+        <Descriptions.Item label="Created Date" span={1}>
           {dayjs(report.createdAt).format('DD/MM/YYYY HH:mm')}
         </Descriptions.Item>
 
-        <Descriptions.Item label="Sinh viên vi phạm" span={1}>
+        <Descriptions.Item label="Violating Student" span={1}>
           <div>
             <div className="font-medium">{report.reported_student.full_name}</div>
             <div className="text-xs text-gray-500">{report.reported_student.student_code}</div>
           </div>
         </Descriptions.Item>
-        <Descriptions.Item label="Điểm hành vi hiện tại" span={1}>
+        <Descriptions.Item label="Current Behavioral Score" span={1}>
           <span
             className={`font-medium ${(report.reported_student.behavioral_score ?? 10) < 5 ? 'text-red-500' : 'text-green-500'
               }`}
@@ -167,18 +167,18 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
           </span>
         </Descriptions.Item>
 
-        <Descriptions.Item label="Loại vi phạm" span={1}>
+        <Descriptions.Item label="Violation Type" span={1}>
           {violationTypeConfig[report.violation_type]?.label}
         </Descriptions.Item>
-        <Descriptions.Item label="Ngày vi phạm" span={1}>
+        <Descriptions.Item label="Violation Date" span={1}>
           {dayjs(report.violation_date).format('DD/MM/YYYY')}
         </Descriptions.Item>
 
-        <Descriptions.Item label="Địa điểm" span={2}>
-          {report.location || 'Không xác định'}
+        <Descriptions.Item label="Location" span={2}>
+          {report.location || 'Not specified'}
         </Descriptions.Item>
 
-        <Descriptions.Item label="Người báo cáo" span={1}>
+        <Descriptions.Item label="Reporter" span={1}>
           <div>
             <div className="font-medium">{report.reporter.fullname}</div>
             <div className="text-xs text-gray-500">
@@ -186,16 +186,16 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
             </div>
           </div>
         </Descriptions.Item>
-        <Descriptions.Item label="Email người báo cáo" span={1}>
+        <Descriptions.Item label="Reporter Email" span={1}>
           {report.reporter.email}
         </Descriptions.Item>
 
-        <Descriptions.Item label="Mô tả vi phạm" span={2}>
+        <Descriptions.Item label="Description" span={2}>
           {report.description}
         </Descriptions.Item>
 
         {report.evidence_urls && report.evidence_urls.length > 0 && (
-          <Descriptions.Item label="Bằng chứng" span={2}>
+          <Descriptions.Item label="Evidence" span={2}>
             <Image.PreviewGroup>
               <Space wrap>
                 {report.evidence_urls.map((url, index) => (
@@ -214,13 +214,13 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
 
         {report.reviewed_by && (
           <>
-            <Descriptions.Item label="Người xử lý" span={1}>
+            <Descriptions.Item label="Reviewed By" span={1}>
               {report.reviewed_by.full_name}
             </Descriptions.Item>
-            <Descriptions.Item label="Ngày xử lý" span={1}>
+            <Descriptions.Item label="Review Date" span={1}>
               {report.reviewed_at ? dayjs(report.reviewed_at).format('DD/MM/YYYY HH:mm') : '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="Ghi chú xử lý" span={2}>
+            <Descriptions.Item label="Review Notes" span={2}>
               {report.review_notes || '-'}
             </Descriptions.Item>
           </>
@@ -229,21 +229,21 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
 
       {isReviewing && (
         <>
-          <Divider>Xử lý vi phạm</Divider>
+          <Divider>Process Violation</Divider>
           <Form form={form} layout="vertical">
             <Form.Item
               name="status"
-              label="Trạng thái xử lý"
-              rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
+              label="Processing Status"
+              rules={[{ required: true, message: 'Please select a status' }]}
             >
               <Select
-                placeholder="Chọn trạng thái"
+                placeholder="Select status"
                 onChange={(value) => setSelectedStatus(value)}
                 options={[
-                  { value: ViolationStatus.UNDER_REVIEW, label: 'Đang xử lý' },
-                  { value: ViolationStatus.RESOLVED_PENALIZED, label: 'Xử phạt' },
-                  { value: ViolationStatus.RESOLVED_NO_ACTION, label: 'Không xử phạt' },
-                  { value: ViolationStatus.REJECTED, label: 'Từ chối báo cáo' },
+                  { value: ViolationStatus.UNDER_REVIEW, label: 'Under Review' },
+                  { value: ViolationStatus.RESOLVED_PENALIZED, label: 'Penalize' },
+                  { value: ViolationStatus.RESOLVED_NO_ACTION, label: 'No Action' },
+                  { value: ViolationStatus.REJECTED, label: 'Reject Report' },
                 ]}
               />
             </Form.Item>
@@ -252,24 +252,24 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
               <>
                 <Form.Item
                   name="penalty_type"
-                  label="Mức độ vi phạm"
-                  rules={[{ required: true, message: 'Vui lòng chọn mức độ' }]}
+                  label="Severity Level"
+                  rules={[{ required: true, message: 'Please select severity level' }]}
                 >
                   <Select
-                    placeholder="Chọn mức độ"
+                    placeholder="Select severity"
                     options={Object.entries(penaltyTypeConfig).map(([value, config]) => ({
                       value,
-                      label: `${config.label} (tối đa -${config.maxPoints} điểm)`,
+                      label: `${config.label} (max -${config.maxPoints} points)`,
                     }))}
                   />
                 </Form.Item>
 
                 <Form.Item
                   name="points_deducted"
-                  label="Số điểm trừ"
+                  label="Points to Deduct"
                   rules={[
-                    { required: true, message: 'Vui lòng nhập số điểm trừ' },
-                    { type: 'number', min: 0.5, max: 5, message: 'Điểm trừ từ 0.5 đến 5' },
+                    { required: true, message: 'Please enter points to deduct' },
+                    { type: 'number', min: 0.5, max: 5, message: 'Points must be between 0.5 and 5' },
                   ]}
                 >
                   <InputNumber
@@ -277,18 +277,18 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
                     max={5}
                     step={0.5}
                     style={{ width: '100%' }}
-                    placeholder="Nhập số điểm trừ"
+                    placeholder="Enter points to deduct"
                   />
                 </Form.Item>
 
-                <Form.Item name="penalty_reason" label="Lý do xử phạt">
-                  <Input.TextArea rows={2} placeholder="Nhập lý do xử phạt (tùy chọn)" />
+                <Form.Item name="penalty_reason" label="Penalty Reason">
+                  <Input.TextArea rows={2} placeholder="Enter penalty reason (optional)" />
                 </Form.Item>
               </>
             )}
 
-            <Form.Item name="review_notes" label="Ghi chú xử lý">
-              <Input.TextArea rows={3} placeholder="Nhập ghi chú xử lý" />
+            <Form.Item name="review_notes" label="Review Notes">
+              <Input.TextArea rows={3} placeholder="Enter review notes" />
             </Form.Item>
           </Form>
         </>
