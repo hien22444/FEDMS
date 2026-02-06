@@ -13,11 +13,8 @@ import {
   Tag,
   Space,
 } from 'antd';
-<<<<<<< HEAD
 import { RiSearchLine, RiArrowLeftLine, RiUserLine } from 'react-icons/ri';
-=======
 import { Search, ArrowLeft, User } from 'lucide-react';
->>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { createViolationReport, searchStudentByCode } from '@/lib/actions/violation';
