@@ -23,7 +23,7 @@ const SignInPage = () => {
   const [form] = Form.useForm<IUser.SignInDto>();
   const { token } = theme.useToken();
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: signIn,
@@ -35,6 +35,15 @@ const SignInPage = () => {
     if (role === 'security') return ROUTES.SECURITY_DASHBOARD;
     return ROUTES.STUDENT_DASHBOARD;
   };
+
+  // Show loading while checking auth state
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div>Đang tải...</div>
+      </div>
+    );
+  }
 
   // Redirect if already authenticated
   if (isAuthenticated) {
