@@ -1,9 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
 import { RiDoorLine, RiHotelBedLine, RiFileList3Line, RiListCheck2 } from 'react-icons/ri';
-=======
 import { DoorOpen, Bed, FileText, ListChecks } from 'lucide-react';
->>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
 
 interface QuickAction {
   title: string;
