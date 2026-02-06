@@ -55,19 +55,11 @@ export default function ViolationListPage() {
   });
   const [statistics, setStatistics] = useState<IViolation.ViolationStatistics | null>(null);
 
-<<<<<<< HEAD
-  // Filters
-=======
->>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
   const [searchCode, setSearchCode] = useState('');
   const [statusFilter, setStatusFilter] = useState<ViolationStatus | undefined>();
   const [typeFilter, setTypeFilter] = useState<ViolationType | undefined>();
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 
-<<<<<<< HEAD
-  // Modal states
-=======
->>>>>>> b08cf52a5d072614a43cfae62aa76e7efed1071d
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<IViolation.ViolationReport | null>(null);
 
