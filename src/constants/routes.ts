@@ -2,7 +2,13 @@ export const ROUTES = {
   LANDING: '/',
   SIGN_IN: '/signin',
   SIGN_UP: '/signup',
-  GOOGLE_CALLBACK: '/auth/google/callback',
+  // Security
+  DASHBOARD: '/security',
+  CAMERA_CHECKIN: '/security/camera-checkin',
+  CHECKOUT_REQUESTS: '/security/checkout-requests',
+  VISITORS: '/security/visitors',
+  PROJECTS: '/projects',
+  RENDER: '/render',
 
   // Student routes
   STUDENT_DASHBOARD: '/student/dashboard',
@@ -14,13 +20,15 @@ export const ROUTES = {
   STUDENT_REQUESTS: '/student/requests',
   STUDENT_MAINTENANCE: '/student/maintenance',
   STUDENT_PROFILE: '/student/profile',
-
-  // Security routes
-  SECURITY_DASHBOARD: '/security',
-  CAMERA_CHECKIN: '/security/camera-checkin',
-  CHECKOUT_REQUESTS: '/security/checkout-requests',
-  VISITORS: '/security/visitors',
-
+  
+  // Admin routes
+  ADMIN_LOGIN: '/admin/login',
+  ADMIN: '/admin',
+  ADMIN_DORMS: '/admin/dorms',
+  ADMIN_FACILITIES: '/admin/facilities', // sẽ dùng cho quản lý CSVC sau
+  ADMIN_USERS: '/admin/users',
+  ADMIN_REPORTS: '/admin/reports',
+  ADMIN_DATA: '/admin/data',
   // Manager routes
   MANAGER: '/manager',
   MANAGER_DORMS: '/manager/dorms',

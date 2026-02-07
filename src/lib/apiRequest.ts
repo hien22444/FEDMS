@@ -86,6 +86,14 @@ class ApiRequest {
   async delete<T>(url: string, config: RequestInit = {}) {
     return this.request<T>(url, { ...config, method: 'DELETE' });
   }
+
+  async patch<T>(url: string, body: any, config: RequestInit = {}) {
+    return this.request<T>(url, {
+      ...config,
+      method: 'PATCH',
+      body,
+    });
+  }
 }
 
 export const api = new ApiRequest();
