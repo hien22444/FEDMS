@@ -8,15 +8,15 @@ interface StatCardProps {
   icon: ReactNode;
   change?: number;
   variant?:
-    | 'default'
-    | 'success'
-    | 'warning'
-    | 'orange'
-    | 'danger'
-    | 'blue'
-    | 'purple'
-    | 'cyan'
-    | 'pink';
+  | 'default'
+  | 'success'
+  | 'warning'
+  | 'orange'
+  | 'danger'
+  | 'blue'
+  | 'purple'
+  | 'cyan'
+  | 'pink';
 }
 
 const variantStyles = {
@@ -97,9 +97,8 @@ export default function StatCard({
           {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
           {change !== undefined && (
             <div
-              className={`flex items-center gap-1 mt-2 text-xs font-medium ${
-                change >= 0 ? 'text-emerald-600' : 'text-rose-500'
-              }`}
+              className={`flex items-center gap-1 mt-2 text-xs font-medium ${change >= 0 ? 'text-emerald-600' : 'text-rose-500'
+                }`}
             >
               {change >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
               <span>

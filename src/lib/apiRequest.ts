@@ -45,7 +45,14 @@ class ApiRequest {
       };
 
       if (res.status === 401) {
-        window.location.href = ROUTES.SIGN_IN;
+        // Remove invalid token
+        localStorage.removeItem('token');
+
+        // Only redirect if not already on signin page (avoid redirect loop)
+        if (!window.location.pathname.includes('/signin') &&
+            !window.location.pathname.includes('/auth/google/callback')) {
+          window.location.href = ROUTES.SIGN_IN;
+        }
         return Promise.reject(error);
       }
 
