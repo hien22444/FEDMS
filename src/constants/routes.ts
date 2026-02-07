@@ -2,7 +2,10 @@ export const ROUTES = {
   LANDING: '/',
   SIGN_IN: '/signin',
   SIGN_UP: '/signup',
+  GOOGLE_CALLBACK: '/auth/google/callback',
+
   // Security
+  SECURITY_DASHBOARD: '/security',
   DASHBOARD: '/security',
   CAMERA_CHECKIN: '/security/camera-checkin',
   CHECKOUT_REQUESTS: '/security/checkout-requests',
@@ -20,6 +23,11 @@ export const ROUTES = {
   STUDENT_REQUESTS: '/student/requests',
   STUDENT_MAINTENANCE: '/student/maintenance',
   STUDENT_PROFILE: '/student/profile',
+  STUDENT_CFD_POINTS: '/student/cfd-points',
+  STUDENT_GUIDELINES: '/student/guidelines',
+  STUDENT_FAQ: '/student/faq',
+  STUDENT_DORM_RULES: '/student/dorm-rules',
+  STUDENT_NOTIFICATIONS: '/student/notifications',
   
   // Admin routes
   ADMIN_LOGIN: '/admin/login',
