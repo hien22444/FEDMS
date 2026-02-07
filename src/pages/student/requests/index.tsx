@@ -27,8 +27,10 @@ const Requests: React.FC = () => {
             icon={<PlusOutlined />}
             size="large"
           >
+
             New Report
           </Button>
+          <div>hahaha</div>
         </div>
 
         {/* My Reports */}
