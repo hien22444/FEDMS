@@ -76,22 +76,22 @@ const StudentLayout = () => {
       label: 'Sửa chữa',
     },
     {
-      key: '/student/cfd-points',
+      key: ROUTES.STUDENT_CFD_POINTS,
       icon: <AlertOutlined />,
       label: 'Điểm CFD',
     },
     {
-      key: '/student/guidelines',
+      key: ROUTES.STUDENT_GUIDELINES,
       icon: <BookOutlined />,
       label: 'Hướng dẫn',
     },
     {
-      key: '/student/dorm-rules',
+      key: ROUTES.STUDENT_DORM_RULES,
       icon: <TeamOutlined />,
       label: 'Nội quy KTX FU',
     },
     {
-      key: '/student/faq',
+      key: ROUTES.STUDENT_FAQ,
       icon: <QuestionCircleOutlined />,
       label: 'FAQ',
     },
