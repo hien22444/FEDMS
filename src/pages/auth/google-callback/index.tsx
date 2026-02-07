@@ -38,8 +38,14 @@ const GoogleCallbackPage = () => {
         login(token, user, profile);
         toast.success('Đăng nhập Google thành công!');
 
-        // Redirect to dashboard
-        navigate(ROUTES.STUDENT_DASHBOARD, { replace: true });
+        // Redirect based on user role
+        let redirectPath = ROUTES.STUDENT_DASHBOARD;
+        if (user.role === 'manager') {
+          redirectPath = ROUTES.MANAGER;
+        } else if (user.role === 'security') {
+          redirectPath = ROUTES.SECURITY_DASHBOARD;
+        }
+        navigate(redirectPath, { replace: true });
       } catch (err) {
         console.error('Google callback error:', err);
         setError('Có lỗi xảy ra khi xử lý đăng nhập Google.');

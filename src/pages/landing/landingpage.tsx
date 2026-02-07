@@ -1,15 +1,16 @@
-import { 
-  Home, 
-  CreditCard, 
-  MessageSquare, 
-  BarChart3, 
-  ShieldCheck, 
-  Clock, 
+import {
+  Home,
+  CreditCard,
+  MessageSquare,
+  BarChart3,
+  ShieldCheck,
+  Clock,
   ChevronRight,
   Facebook,
   Twitter,
   Linkedin
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const LandingPage = () => {
   return (
@@ -31,7 +32,7 @@ const LandingPage = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="text-[#FF5C00] font-semibold px-4 py-2 hover:bg-orange-50 rounded-lg">Đăng Nhập</button>
+          <Link to="/signin" className="text-[#FF5C00] font-semibold px-4 py-2 hover:bg-orange-50 rounded-lg">Đăng Nhập</Link>
           <button className="bg-[#FF5C00] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#e65300] transition-colors">
             Dùng Thử Miễn Phí
           </button>

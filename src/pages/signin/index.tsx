@@ -23,15 +23,31 @@ const SignInPage = () => {
   const [form] = Form.useForm<IUser.SignInDto>();
   const { token } = theme.useToken();
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: signIn,
   });
 
+  // Helper function to get redirect path based on role
+  const getRedirectPath = (role: string) => {
+    if (role === 'manager') return ROUTES.MANAGER;
+    if (role === 'security') return ROUTES.SECURITY_DASHBOARD;
+    return ROUTES.STUDENT_DASHBOARD;
+  };
+
+  // Show loading while checking auth state
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div>Đang tải...</div>
+      </div>
+    );
+  }
+
   // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to={ROUTES.STUDENT_DASHBOARD} replace />;
+    return <Navigate to={ROUTES.LANDING} replace />;
   }
 
   const onFinish = async (values: IUser.SignInDto) => {
@@ -41,7 +57,7 @@ const SignInPage = () => {
         login(data.token, data.user, data.profile);
         toast.success('Đăng nhập thành công');
         form.resetFields();
-        navigate(ROUTES.STUDENT_DASHBOARD);
+        navigate(getRedirectPath(data.user.role));
       },
       onError: error => {
         const err = error as IError;

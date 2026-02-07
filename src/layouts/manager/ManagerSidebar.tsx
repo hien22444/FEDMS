@@ -2,56 +2,56 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MANAGER_MENU } from '@/constants/manager.constant';
 import {
-  LayoutDashboard,
-  BarChart3,
-  Building2,
-  LayoutGrid,
-  DoorOpen,
-  Bed,
-  History,
-  LogOut,
-  User,
-  AlertTriangle,
-  Plus,
-  Wrench,
-  ListChecks,
-  Zap,
-  FileText,
-  Newspaper,
-  MessageCircle,
-  Mail,
-  Bell,
-  Settings,
-  Upload,
-  Download,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+  RiDashboardLine,
+  RiBarChartLine,
+  RiBuilding2Line,
+  RiGridLine,
+  RiDoorLine,
+  RiHotelBedLine,
+  RiHistoryLine,
+  RiLogoutBoxLine,
+  RiUserLine,
+  RiAlertLine,
+  RiAddLine,
+  RiToolsLine,
+  RiListCheck2,
+  RiFlashlightLine,
+  RiFileTextLine,
+  RiNewspaperLine,
+  RiChat1Line,
+  RiMailLine,
+  RiNotification3Line,
+  RiSettings3Line,
+  RiUploadLine,
+  RiDownloadLine,
+  RiArrowDownSLine,
+  RiArrowUpSLine,
+} from 'react-icons/ri';
 
 const iconMap: Record<string, React.ReactNode> = {
-  dashboard: <LayoutDashboard size={18} />,
-  barChart: <BarChart3 size={18} />,
-  building: <Building2 size={18} />,
-  block: <LayoutGrid size={18} />,
-  door: <DoorOpen size={18} />,
-  bed: <Bed size={18} />,
-  history: <History size={18} />,
-  checkout: <LogOut size={18} />,
-  user: <User size={18} />,
-  warning: <AlertTriangle size={18} />,
-  plus: <Plus size={18} />,
-  tool: <Wrench size={18} />,
-  list: <ListChecks size={18} />,
-  electricity: <Zap size={18} />,
-  invoice: <FileText size={18} />,
-  news: <Newspaper size={18} />,
-  chat: <MessageCircle size={18} />,
-  email: <Mail size={18} />,
-  bell: <Bell size={18} />,
-  settings: <Settings size={18} />,
-  import: <Upload size={18} />,
-  export: <Download size={18} />,
-  gear: <Settings size={18} />,
+  dashboard: <RiDashboardLine size={18} />,
+  barChart: <RiBarChartLine size={18} />,
+  building: <RiBuilding2Line size={18} />,
+  block: <RiGridLine size={18} />,
+  door: <RiDoorLine size={18} />,
+  bed: <RiHotelBedLine size={18} />,
+  history: <RiHistoryLine size={18} />,
+  checkout: <RiLogoutBoxLine size={18} />,
+  user: <RiUserLine size={18} />,
+  warning: <RiAlertLine size={18} />,
+  plus: <RiAddLine size={18} />,
+  tool: <RiToolsLine size={18} />,
+  list: <RiListCheck2 size={18} />,
+  electricity: <RiFlashlightLine size={18} />,
+  invoice: <RiFileTextLine size={18} />,
+  news: <RiNewspaperLine size={18} />,
+  chat: <RiChat1Line size={18} />,
+  email: <RiMailLine size={18} />,
+  bell: <RiNotification3Line size={18} />,
+  settings: <RiSettings3Line size={18} />,
+  import: <RiUploadLine size={18} />,
+  export: <RiDownloadLine size={18} />,
+  gear: <RiSettings3Line size={18} />,
 };
 
 export default function ManagerSidebar() {
@@ -69,6 +69,7 @@ export default function ManagerSidebar() {
 
   return (
     <aside className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col fixed left-0 top-0 overflow-hidden">
+      {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
@@ -81,6 +82,7 @@ export default function ManagerSidebar() {
         </div>
       </div>
 
+      {/* Menu */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 no-scrollbar">
         {MANAGER_MENU.map((group) => (
           <div key={group.group} className="mb-4">
@@ -103,9 +105,9 @@ export default function ManagerSidebar() {
                           <span>{item.label}</span>
                         </div>
                         {expandedItems.includes(item.key) ? (
-                          <ChevronUp size={16} />
+                          <RiArrowUpSLine size={16} />
                         ) : (
-                          <ChevronDown size={16} />
+                          <RiArrowDownSLine size={16} />
                         )}
                       </button>
                       {expandedItems.includes(item.key) && (
@@ -116,8 +118,8 @@ export default function ManagerSidebar() {
                                 onClick={() => navigate(child.path)}
                                 className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-colors ${
                                   isActive(child.path)
-? 'bg-orange-100 text-orange-600'
-                                  : 'text-gray-500 hover:bg-orange-100 hover:text-orange-600'
+                                    ? 'bg-orange-100 text-orange-600'
+                                    : 'text-gray-500 hover:bg-orange-100 hover:text-orange-600'
                                 }`}
                               >
                                 {child.label}

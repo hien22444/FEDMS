@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: null,
       profile: null,
     });
-    navigate(ROUTES.SIGN_IN);
+    navigate(ROUTES.LANDING);
   }, [navigate]);
 
   // Refresh profile function

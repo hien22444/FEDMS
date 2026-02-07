@@ -1,3 +1,9 @@
+import {
+  RiHotelBedLine,
+  RiCheckboxCircleLine,
+  RiTimeLine,
+  RiToolsLine,
+} from 'react-icons/ri';
 import { Bed, CheckCircle, Clock, Wrench } from 'lucide-react';
 import { StatCard } from '../dashboard/components';
 import {
@@ -14,6 +20,7 @@ import type {
   IRoomOccupancy,
 } from '@/interfaces/manager.interface';
 
+// Mock data - replace with API calls
 const bedStatsSummary: IBedStatsSummary = {
   totalBeds: 2315,
   occupiedBeds: 1847,
