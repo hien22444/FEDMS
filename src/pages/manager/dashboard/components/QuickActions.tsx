@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { RiDoorLine, RiHotelBedLine, RiFileList3Line, RiListCheck2 } from 'react-icons/ri';
 import { DoorOpen, Bed, FileText, ListChecks } from 'lucide-react';
 
 interface QuickAction {

@@ -1,9 +1,4 @@
-import {
-  RiHotelBedLine,
-  RiCheckboxCircleLine,
-  RiTimeLine,
-  RiToolsLine,
-} from 'react-icons/ri';
+
 import { Bed, CheckCircle, Clock, Wrench } from 'lucide-react';
 import { StatCard } from '../dashboard/components';
 import {

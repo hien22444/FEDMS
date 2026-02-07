@@ -13,7 +13,6 @@ import {
   Tag,
   Space,
 } from 'antd';
-import { RiSearchLine, RiArrowLeftLine, RiUserLine } from 'react-icons/ri';
 import { Search, ArrowLeft, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';

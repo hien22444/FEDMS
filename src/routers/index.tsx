@@ -14,7 +14,6 @@ import StudentLayout from '@/layouts/StudentLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import SecurityLayout from '@/layouts/SecurityLayout';
 import { ManagerLayout } from '@/layouts/manager';
-import PrivateRoute from '@/components/PrivateRoute';
 
 // Security pages
 import DashboardPage from '@/pages/security/dashboard';
