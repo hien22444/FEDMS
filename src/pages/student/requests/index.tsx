@@ -29,6 +29,11 @@ const Requests: React.FC = () => {
           >
             New Report
           </Button>
+          <div>hehehe</div>
+          <div>hehehe</div>
+          <div>hehehe</div>
+          <div>hehehe</div>
+          <div>hehehe</div>
         </div>
 
         {/* My Reports */}
