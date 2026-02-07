@@ -27,6 +27,7 @@ const Requests: React.FC = () => {
             icon={<PlusOutlined />}
             size="large"
           >
+
             New Report
           </Button>
           <div>hehehe</div>
@@ -34,6 +35,7 @@ const Requests: React.FC = () => {
           <div>hehehe</div>
           <div>hehehe</div>
           <div>hehehe</div>
+          <div>hahaha</div>
         </div>
 
         {/* My Reports */}
