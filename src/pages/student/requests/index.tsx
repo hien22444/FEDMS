@@ -30,12 +30,7 @@ const Requests: React.FC = () => {
 
             New Report
           </Button>
-          <div>hehehe</div>
-          <div>hehehe</div>
-          <div>hehehe</div>
-          <div>hehehe</div>
-          <div>hehehe</div>
-          <div>hahaha</div>
+
         </div>
 
         {/* My Reports */}
