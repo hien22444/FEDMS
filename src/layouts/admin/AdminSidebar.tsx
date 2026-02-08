@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
+  Blocks,
   FolderCog,
   UserCog,
   BarChart3,
@@ -19,6 +20,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: ROUTES.ADMIN, icon: <LayoutDashboard size={18} /> },
   { label: 'Dorm Management', path: ROUTES.ADMIN_DORMS, icon: <Building2 size={18} /> },
+  { label: 'Block Management', path: ROUTES.ADMIN_BLOCKS, icon: <Blocks size={18} /> },
   { label: 'Facility Management', path: ROUTES.ADMIN_FACILITIES, icon: <FolderCog size={18} /> },
   { label: 'User Management', path: ROUTES.ADMIN_USERS, icon: <UserCog size={18} /> },
   { label: 'Reports & Monitoring', path: ROUTES.ADMIN_REPORTS, icon: <BarChart3 size={18} /> },

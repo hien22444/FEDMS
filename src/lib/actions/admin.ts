@@ -81,3 +81,63 @@ export const deleteDorm = async (id: string) => {
   return api.delete<{ message: string }>(`v1/dorms/${id}`);
 };
 
+// ===== Block types & APIs =====
+
+export interface Block {
+  id: string;
+  dorm: {
+    id: string;
+    dorm_name: string;
+    dorm_code: string;
+  } | string;
+  block_name: string;
+  block_code: string;
+  floor_count?: number;
+  total_rooms?: number;
+  gender_type: 'male' | 'female' | 'mixed';
+  is_active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlockListResponse {
+  items: Block[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const fetchBlocks = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  const query = searchParams.toString();
+  const url = `v1/blocks${query ? `?${query}` : ''}`;
+
+  return api.get<BlockListResponse>(url);
+};
+
+export const getBlockById = async (id: string) => {
+  return api.get<Block>(`v1/blocks/${id}`);
+};
+
+export const createBlock = async (body: Partial<Block>) => {
+  return api.post<Block>('v1/blocks', body);
+};
+
+export const updateBlock = async (id: string, body: Partial<Block>) => {
+  return api.patch<Block>(`v1/blocks/${id}`, body);
+};
+
+export const deleteBlock = async (id: string) => {
+  return api.delete<{ message: string }>(`v1/blocks/${id}`);
+};
