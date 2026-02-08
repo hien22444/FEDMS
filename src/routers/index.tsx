@@ -47,7 +47,8 @@ import { AppProvider } from '@/contexts';
 import { AdminLayout } from '@/layouts/admin';
 import AdminDashboardPage from '@/pages/admin/dashboard';
 import AdminLoginPage from '@/pages/admin/login';
-import AdminDormsPage from '@/pages/admin/facilities';
+import AdminDormsPage from '@/pages/admin/dorm';
+import AdminBlocksPage from '@/pages/admin/blocks';
 
 const ComingSoon = ({ label }: { label: string }) => (
   <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
@@ -190,6 +191,10 @@ const router = createBrowserRouter([
       {
         path: 'dorms',
         element: <AdminDormsPage />,
+      },
+      {
+        path: 'blocks',
+        element: <AdminBlocksPage />,
       },
       {
         path: 'users',

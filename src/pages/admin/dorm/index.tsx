@@ -3,7 +3,7 @@ import { Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, message } 
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Activity } from 'lucide-react';
-import { createDorm, deleteDorm, fetchDorms, updateDorm, type Dorm } from '@/lib/actions';
+import { createDorm, deleteDorm, fetchDorms, updateDorm, type Dorm } from '@/lib/actions/admin';
 
 const dormColumns = (
   onEdit: (record: Dorm) => void,
@@ -169,7 +169,7 @@ export default function AdminDormsPage() {
         onOk={handleSubmitDorm}
         okText="Save"
         cancelText="Cancel"
-        destroyOnHidden
+        destroyOnClose
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -250,4 +250,3 @@ export default function AdminDormsPage() {
     </div>
   );
 }
-

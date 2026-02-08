@@ -33,6 +33,7 @@ export const ROUTES = {
   ADMIN_LOGIN: '/admin/login',
   ADMIN: '/admin',
   ADMIN_DORMS: '/admin/dorms',
+  ADMIN_BLOCKS: '/admin/blocks',
   ADMIN_FACILITIES: '/admin/facilities', // sẽ dùng cho quản lý CSVC sau
   ADMIN_USERS: '/admin/users',
   ADMIN_REPORTS: '/admin/reports',
