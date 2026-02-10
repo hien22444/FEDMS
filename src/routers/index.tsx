@@ -49,6 +49,7 @@ import AdminDashboardPage from '@/pages/admin/dashboard';
 import AdminLoginPage from '@/pages/admin/login';
 import AdminDormsPage from '@/pages/admin/dorm';
 import AdminBlocksPage from '@/pages/admin/blocks';
+import AdminRoomsPage from '@/pages/admin/rooms';
 
 const ComingSoon = ({ label }: { label: string }) => (
   <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
@@ -195,6 +196,10 @@ const router = createBrowserRouter([
       {
         path: 'blocks',
         element: <AdminBlocksPage />,
+      },
+      {
+        path: 'rooms',
+        element: <AdminRoomsPage />,
       },
       {
         path: 'users',
