@@ -141,3 +141,80 @@ export const updateBlock = async (id: string, body: Partial<Block>) => {
 export const deleteBlock = async (id: string) => {
   return api.delete<{ message: string }>(`v1/blocks/${id}`);
 };
+
+// ===== Room types & APIs =====
+
+export type RoomType = '2_person' | '4_person' | '6_person' | '8_person';
+export type RoomStatus = 'available' | 'full' | 'maintenance' | 'inactive';
+
+export interface Room {
+  id: string;
+  block:
+    | {
+        id: string;
+        block_name: string;
+        block_code: string;
+        dorm?: {
+          id: string;
+          dorm_name: string;
+          dorm_code: string;
+        } | string;
+      }
+    | string;
+  room_number: string;
+  floor: number;
+  room_type: RoomType;
+  total_beds: number;
+  available_beds: number;
+  price_per_semester: number;
+  status: RoomStatus;
+  has_ac: boolean;
+  has_water_heater: boolean;
+  has_private_bathroom: boolean;
+  area_sqm?: number;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoomListResponse {
+  items: Room[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const fetchRooms = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  const query = searchParams.toString();
+  const url = `v1/rooms${query ? `?${query}` : ''}`;
+
+  return api.get<RoomListResponse>(url);
+};
+
+export const getRoomById = async (id: string) => {
+  return api.get<Room>(`v1/rooms/${id}`);
+};
+
+export const createRoom = async (body: Partial<Room>) => {
+  return api.post<Room>('v1/rooms', body);
+};
+
+export const updateRoom = async (id: string, body: Partial<Room>) => {
+  return api.patch<Room>(`v1/rooms/${id}`, body);
+};
+
+export const deleteRoom = async (id: string) => {
+  return api.delete<{ message: string }>(`v1/rooms/${id}`);
+};
