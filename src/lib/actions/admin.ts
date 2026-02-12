@@ -141,3 +141,37 @@ export const updateBlock = async (id: string, body: Partial<Block>) => {
 export const deleteBlock = async (id: string) => {
   return api.delete<{ message: string }>(`v1/blocks/${id}`);
 };
+
+// ===== Import Excel APIs =====
+
+export interface ImportedRecord {
+  row: number;
+  sheet: string;
+  email: string;
+  role: string;
+  code: string;
+}
+
+export interface ImportError {
+  row: number;
+  sheet: string;
+  email: string;
+  error: string;
+}
+
+export interface ImportExcelResponse {
+  summary: {
+    total: number;
+    success: number;
+    failed: number;
+  };
+  imported: ImportedRecord[];
+  errors: ImportError[];
+  warnings: string[];
+}
+
+export const importUsersFromExcel = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post<ImportExcelResponse>('users/import-excel', formData);
+};
