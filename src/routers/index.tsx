@@ -46,9 +46,9 @@ import DormRulesPage from '@/pages/student/dorm-rules';
 import { AppProvider } from '@/contexts';
 import { AdminLayout } from '@/layouts/admin';
 import AdminDashboardPage from '@/pages/admin/dashboard';
-import AdminLoginPage from '@/pages/admin/login';
 import AdminDormsPage from '@/pages/admin/dorm';
 import AdminBlocksPage from '@/pages/admin/blocks';
+import AdminUsersPage from '@/pages/admin/users';
 
 const ComingSoon = ({ label }: { label: string }) => (
   <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
@@ -145,12 +145,6 @@ const router = createBrowserRouter([
     ],
   },
 
-  // Admin Login (public)
-  {
-    path: ROUTES.ADMIN_LOGIN,
-    element: <AdminLoginPage />,
-  },
-
   // Security Routes (under AppProvider)
   {
     element: <AppProvider />,
@@ -198,7 +192,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'users',
-        element: <ComingSoon label="User Management" />,
+        element: <AdminUsersPage />,
       },
       {
         path: 'reports',

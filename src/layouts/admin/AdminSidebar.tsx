@@ -82,7 +82,7 @@ export default function AdminSidebar() {
               localStorage.removeItem('token');
               localStorage.removeItem('admin-role');
             }
-            navigate(ROUTES.ADMIN_LOGIN);
+            navigate(ROUTES.SIGN_IN);
           }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/95 hover:bg-white/10 transition-colors"
         >
