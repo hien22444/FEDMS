@@ -23,7 +23,7 @@ const SignInPage = () => {
   const [form] = Form.useForm<IUser.SignInDto>();
   const { token } = theme.useToken();
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, user } = useAuth();
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: signIn,
@@ -31,6 +31,7 @@ const SignInPage = () => {
 
   // Helper function to get redirect path based on role
   const getRedirectPath = (role: string) => {
+    if (role === 'admin') return ROUTES.ADMIN;
     if (role === 'manager') return ROUTES.MANAGER;
     if (role === 'security') return ROUTES.SECURITY_DASHBOARD;
     return ROUTES.STUDENT_DASHBOARD;
@@ -45,9 +46,9 @@ const SignInPage = () => {
     );
   }
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    return <Navigate to={ROUTES.LANDING} replace />;
+  // Redirect if already authenticated - go to correct dashboard based on role
+  if (isAuthenticated && user) {
+    return <Navigate to={getRedirectPath(user.role)} replace />;
   }
 
   const onFinish = async (values: IUser.SignInDto) => {
@@ -55,6 +56,10 @@ const SignInPage = () => {
       onSuccess: data => {
         // Use AuthContext login function
         login(data.token, data.user, data.profile);
+        // Set admin-role for AdminLayout guard
+        if (data.user.role === 'admin') {
+          localStorage.setItem('admin-role', data.user.role);
+        }
         toast.success('Đăng nhập thành công');
         form.resetFields();
         navigate(getRedirectPath(data.user.role));

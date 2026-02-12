@@ -8,7 +8,7 @@ export default function AdminLayout() {
     const role = localStorage.getItem('admin-role');
 
     if (!token || role !== 'admin') {
-      return <Navigate to={ROUTES.ADMIN_LOGIN} replace />;
+      return <Navigate to={ROUTES.SIGN_IN} replace />;
     }
   }
 
