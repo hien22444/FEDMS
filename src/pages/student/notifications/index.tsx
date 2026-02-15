@@ -54,7 +54,7 @@ const Notifications: React.FC = () => {
       id: 4,
       type: 'Visitor',
       title: 'Visitor Request Approved',
-      message: 'Visit request from Trần Thị B on 20/12/2024 has been approved',
+      message: 'Visit request from Tran Thi B on 20/12/2024 has been approved',
       time: '4 days ago',
       icon: '👥',
       read: true,

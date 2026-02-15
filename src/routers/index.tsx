@@ -8,12 +8,14 @@ import SignUpPage from '@/pages/signup';
 import GoogleCallbackPage from '@/pages/auth/google-callback';
 import LandingPage from '@/pages/landing/landingpage';
 import NotFoundPage from '@/pages/not-found';
+import AdminLoginPage from '@/pages/admin/login';
 
 // Layouts
 import StudentLayout from '@/layouts/StudentLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import SecurityLayout from '@/layouts/SecurityLayout';
 import { ManagerLayout } from '@/layouts/manager';
+import PrivateRoute from '@/components/PrivateRoute';
 
 // Security pages
 import DashboardPage from '@/pages/security/dashboard';
@@ -43,7 +45,6 @@ import NotificationsPage from '@/pages/student/notifications';
 import DormRulesPage from '@/pages/student/dorm-rules';
 
 // Admin
-import { AppProvider } from '@/contexts';
 import { AdminLayout } from '@/layouts/admin';
 import AdminDashboardPage from '@/pages/admin/dashboard';
 import AdminDormsPage from '@/pages/admin/dorm';
@@ -55,17 +56,17 @@ const ComingSoon = ({ label }: { label: string }) => (
 );
 
 const router = createBrowserRouter([
-  // Landing page
+  // Landing page (public)
   {
     path: ROUTES.LANDING,
     element: <LandingPage />,
   },
 
-  // Auth routes with AuthLayout (provides AuthContext)
+  // All auth-aware routes (provides AuthContext via AuthLayout)
   {
     element: <AuthLayout />,
     children: [
-      // Public auth routes
+      // Public auth routes (no PrivateRoute guard)
       {
         path: ROUTES.SIGN_IN,
         element: <SignInPage />,
@@ -78,10 +79,14 @@ const router = createBrowserRouter([
         path: ROUTES.GOOGLE_CALLBACK,
         element: <GoogleCallbackPage />,
       },
-
-      // Protected Student routes
       {
-        // element: <PrivateRoute allowedRoles={['student']} />,
+        path: ROUTES.ADMIN_LOGIN,
+        element: <AdminLoginPage />,
+      },
+
+      // Protected Student routes — only 'student' role
+      {
+        element: <PrivateRoute allowedRoles={['student']} />,
         children: [
           {
             element: <StudentLayout />,
@@ -142,73 +147,76 @@ const router = createBrowserRouter([
           },
         ],
       },
-    ],
-  },
 
-  // Security Routes (under AppProvider)
-  {
-    element: <AppProvider />,
-    children: [
+      // Protected Security routes — only 'security' role
       {
-        path: 'security',
-        element: <SecurityLayout />,
+        element: <PrivateRoute allowedRoles={['security']} />,
         children: [
           {
-            index: true,
-            element: <DashboardPage />,
-          },
-          {
-            path: 'camera-checkin',
-            element: <CameraCheckinPage />,
-          },
-          {
-            path: 'checkout-requests',
-            element: <CheckoutRequestsPage />,
-          },
-          {
-            path: 'visitors',
-            element: <VisitorsPage />,
+            path: 'security',
+            element: <SecurityLayout />,
+            children: [
+              {
+                index: true,
+                element: <DashboardPage />,
+              },
+              {
+                path: 'camera-checkin',
+                element: <CameraCheckinPage />,
+              },
+              {
+                path: 'checkout-requests',
+                element: <CheckoutRequestsPage />,
+              },
+              {
+                path: 'visitors',
+                element: <VisitorsPage />,
+              },
+            ],
           },
         ],
       },
-    ],
-  },
-  // Admin Routes
-  {
-    path: ROUTES.ADMIN,
-    element: <AdminLayout />,
-    children: [
+
+      // Protected Admin routes — only 'admin' role
       {
-        index: true,
-        element: <AdminDashboardPage />,
+        element: <PrivateRoute allowedRoles={['admin']} />,
+        children: [
+          {
+            path: ROUTES.ADMIN,
+            element: <AdminLayout />,
+            children: [
+              {
+                index: true,
+                element: <AdminDashboardPage />,
+              },
+              {
+                path: 'dorms',
+                element: <AdminDormsPage />,
+              },
+              {
+                path: 'blocks',
+                element: <AdminBlocksPage />,
+              },
+              {
+                path: 'users',
+                element: <AdminUsersPage />,
+              },
+              {
+                path: 'reports',
+                element: <ComingSoon label="Reports & Monitoring" />,
+              },
+              {
+                path: 'data',
+                element: <ComingSoon label="Data Management" />,
+              },
+            ],
+          },
+        ],
       },
+
+      // Protected Manager routes — only 'manager' role
       {
-        path: 'dorms',
-        element: <AdminDormsPage />,
-      },
-      {
-        path: 'blocks',
-        element: <AdminBlocksPage />,
-      },
-      {
-        path: 'users',
-        element: <AdminUsersPage />,
-      },
-      {
-        path: 'reports',
-        element: <ComingSoon label="Reports & Monitoring" />,
-      },
-      {
-        path: 'data',
-        element: <ComingSoon label="Data Management" />,
-      },
-    ],
-  },
-  {
-    element: <AuthLayout />,
-    children: [
-      {
-        // element: <PrivateRoute allowedRoles={['manager']} />,
+        element: <PrivateRoute allowedRoles={['manager']} />,
         children: [
           {
             path: ROUTES.MANAGER,

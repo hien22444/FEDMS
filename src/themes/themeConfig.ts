@@ -2,7 +2,7 @@ import type { ThemeConfig } from 'antd';
 
 const theme: ThemeConfig = {
   token: {
-    colorPrimary: '#FF6C00',    // FPT Orange (màu cam chính thức)
+    colorPrimary: '#FF6C00',    // FPT Orange (official brand color)
     colorSuccess: '#00CC66',
     colorWarning: '#FBBF24',
     colorError: '#DC2626',
