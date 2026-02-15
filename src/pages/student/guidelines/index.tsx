@@ -50,7 +50,7 @@ const Guidelines: React.FC = () => {
                   <TeamOutlined style={{ fontSize: '24px', color: token.colorPrimary }} />
                 </div>
                 <div>
-                  <Title level={4} style={{ margin: '0 0 4px 0' }}>Trần Thị B</Title>
+                  <Title level={4} style={{ margin: '0 0 4px 0' }}>Tran Thi B</Title>
                   <Text type="secondary">Phone: 098 765 4321</Text>
                 </div>
               </div>
@@ -104,7 +104,7 @@ const Guidelines: React.FC = () => {
                   <TeamOutlined style={{ fontSize: '24px', color: token.colorSuccess }} />
                 </div>
                 <div>
-                  <Title level={4} style={{ margin: '0 0 4px 0' }}>Phạm Văn C & Family</Title>
+                  <Title level={4} style={{ margin: '0 0 4px 0' }}>Pham Van C & Family</Title>
                   <Text type="secondary">Relation: Family</Text>
                 </div>
               </div>

@@ -16,17 +16,18 @@ const GoogleCallbackPage = () => {
     const handleCallback = () => {
       try {
         const token = searchParams.get('token');
+        const refreshToken = searchParams.get('refreshToken');
         const userParam = searchParams.get('user');
         const profileParam = searchParams.get('profile');
         const errorParam = searchParams.get('error');
 
         if (errorParam) {
-          setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
+          setError('Google sign-in failed. Please try again.');
           return;
         }
 
         if (!token || !userParam) {
-          setError('Không nhận được thông tin xác thực từ Google.');
+          setError('No authentication data received from Google.');
           return;
         }
 
@@ -34,9 +35,14 @@ const GoogleCallbackPage = () => {
         const user = JSON.parse(decodeURIComponent(userParam));
         const profile = profileParam ? JSON.parse(decodeURIComponent(profileParam)) : null;
 
+        // Store refresh token
+        if (refreshToken) {
+          localStorage.setItem('refreshToken', refreshToken);
+        }
+
         // Use AuthContext login function
         login(token, user, profile);
-        toast.success('Đăng nhập Google thành công!');
+        toast.success('Google sign-in successful!');
 
         // Redirect based on user role
         let redirectPath = ROUTES.STUDENT_DASHBOARD;
@@ -48,7 +54,7 @@ const GoogleCallbackPage = () => {
         navigate(redirectPath, { replace: true });
       } catch (err) {
         console.error('Google callback error:', err);
-        setError('Có lỗi xảy ra khi xử lý đăng nhập Google.');
+        setError('An error occurred while processing Google sign-in.');
       }
     };
 
@@ -67,11 +73,11 @@ const GoogleCallbackPage = () => {
       >
         <Result
           status="error"
-          title="Đăng nhập thất bại"
+          title="Sign-in Failed"
           subTitle={error}
           extra={
             <a href={ROUTES.SIGN_IN} style={{ color: '#FF6C00' }}>
-              Quay lại trang đăng nhập
+              Back to sign-in page
             </a>
           }
         />
@@ -91,7 +97,7 @@ const GoogleCallbackPage = () => {
       }}
     >
       <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#FF6C00' }} spin />} />
-      <p style={{ color: '#666', fontSize: '16px' }}>Đang xử lý đăng nhập Google...</p>
+      <p style={{ color: '#666', fontSize: '16px' }}>Processing Google sign-in...</p>
     </div>
   );
 };

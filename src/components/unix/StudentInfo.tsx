@@ -10,11 +10,11 @@ export const StudentInfo: FC = () => {
   // Get display data from profile or user
   const displayName = profile?.full_name || user?.fullname || user?.email?.split('@')[0] || 'Student';
   const avatarUrl = profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`;
-  const gender = profile?.gender === 'male' ? 'Nam' : profile?.gender === 'female' ? 'Nữ' : 'Chưa cập nhật';
+  const gender = profile?.gender === 'male' ? 'Male' : profile?.gender === 'female' ? 'Female' : 'Not updated';
   const dateOfBirth = profile?.date_of_birth
-    ? new Date(profile.date_of_birth).toLocaleDateString('vi-VN')
-    : 'Chưa cập nhật';
-  const phone = profile?.phone || 'Chưa cập nhật';
+    ? new Date(profile.date_of_birth).toLocaleDateString('en-US')
+    : 'Not updated';
+  const phone = profile?.phone || 'Not updated';
 
   return (
     <Card
@@ -22,7 +22,7 @@ export const StudentInfo: FC = () => {
         <Space>
           <UserOutlined style={{ fontSize: '20px' }} />
           <span style={{ fontSize: '18px', fontWeight: 'bold' }}>
-            Thông tin cá nhân
+            Personal Information
           </span>
         </Space>
       }
@@ -74,7 +74,7 @@ export const StudentInfo: FC = () => {
             <PhoneOutlined style={{ fontSize: '20px' }} />
             <div>
               <div style={{ fontSize: '12px', color: token.colorTextSecondary }}>
-                Điện thoại
+                Phone
               </div>
               <div style={{ fontWeight: 600, color: token.colorText }}>
                 {phone}
