@@ -15,33 +15,33 @@ const DashboardPage = () => {
   // Summary Cards Data
   const summaryCards = [
     {
-      title: 'Yêu Cầu Chưa Xử Lý',
+      title: 'Pending Requests',
       value: '12',
-      detail: '+3 từ hôm qua',
+      detail: '+3 from yesterday',
       icon: FileText,
       bgColor: 'bg-orange-50',
       iconBg: 'bg-[#FF5C00]',
     },
     {
-      title: 'Khách Trong Ký Túc',
+      title: 'Visitors in Dorm',
       value: '28',
-      detail: '↑ 5 hôm nay',
+      detail: '↑ 5 today',
       icon: UsersIcon,
       bgColor: 'bg-purple-50',
       iconBg: 'bg-purple-500',
     },
     {
-      title: 'Yêu Cầu Checkout',
+      title: 'Checkout Requests',
       value: '5',
-      detail: 'Đang chờ',
+      detail: 'Pending',
       icon: FileText,
       bgColor: 'bg-orange-50',
       iconBg: 'bg-orange-400',
     },
     {
-      title: 'Camera Hoạt Động',
+      title: 'Active Cameras',
       value: '24/24',
-      detail: '✓ Bình thường',
+      detail: '✓ Normal',
       icon: Video,
       bgColor: 'bg-green-50',
       iconBg: 'bg-green-500',
@@ -51,23 +51,23 @@ const DashboardPage = () => {
   // Processing Requests Data
   const processingRequests = [
     {
-      type: 'Khách Tham Quan',
-      room: 'Phòng 305',
-      name: 'Nguyễn Văn A',
+      type: 'Visitor',
+      room: 'Room 305',
+      name: 'Nguyen Van A',
       time: '2025-01-24 10:30',
       status: 'pending',
     },
     {
-      type: 'Sửa Chữa',
-      room: 'Phòng 201',
-      name: 'Công Nhân Sửa Chữa',
+      type: 'Maintenance',
+      room: 'Room 201',
+      name: 'Repair Worker',
       time: '2025-01-24 09:15',
       status: 'pending',
     },
     {
-      type: 'Giao Hàng',
-      room: 'Phòng 102',
-      name: 'Người Giao Hàng',
+      type: 'Delivery',
+      room: 'Room 102',
+      name: 'Delivery Person',
       time: '2025-01-24 08:45',
       status: 'approved',
     },
@@ -78,32 +78,32 @@ const DashboardPage = () => {
     {
       type: 'alert',
       icon: AlertCircle,
-      message: 'Phát hiện ra khách không có phép',
-      time: '5 phút trước',
+      message: 'Unauthorized visitor detected',
+      time: '5 minutes ago',
       bgColor: 'bg-red-50',
       iconColor: 'text-red-500',
     },
     {
       type: 'info',
       icon: Info,
-      message: 'Camera phòng 301 cần bảo trì',
-      time: '2 giờ trước',
+      message: 'Camera in room 301 needs maintenance',
+      time: '2 hours ago',
       bgColor: 'bg-blue-50',
       iconColor: 'text-blue-500',
     },
     {
       type: 'success',
       icon: CheckCircle,
-      message: 'Tất cả camera đã kết nối lại',
-      time: '1 giờ trước',
+      message: 'All cameras reconnected',
+      time: '1 hour ago',
       bgColor: 'bg-green-50',
       iconColor: 'text-green-500',
     },
     {
       type: 'alert',
       icon: AlertCircle,
-      message: 'Tìm thấy chốt cửa không khóa',
-      time: '30 phút trước',
+      message: 'Unlocked door latch found',
+      time: '30 minutes ago',
       bgColor: 'bg-red-50',
       iconColor: 'text-red-500',
     },
@@ -146,10 +146,10 @@ const DashboardPage = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
-              Yêu Cầu Đang Xử Lý
+              Processing Requests
             </h2>
             <button className="bg-[#FF5C00] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#e65300] transition-colors text-sm">
-              Tạo Yêu Cầu Mới
+              New Request
             </button>
           </div>
 
@@ -187,18 +187,18 @@ const DashboardPage = () => {
                   {request.status === 'pending' ? (
                     <>
                       <button className="px-3 py-1.5 text-xs rounded-lg border border-yellow-300 text-yellow-700 bg-yellow-50 hover:bg-yellow-100">
-                        Chờ Duyệt
+                        Pending
                       </button>
                       <button className="px-3 py-1.5 text-xs rounded-lg border border-green-300 text-green-700 bg-green-50 hover:bg-green-100">
-                        Duyệt
+                        Approve
                       </button>
                       <button className="px-3 py-1.5 text-xs rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100">
-                        Từ Chối
+                        Reject
                       </button>
                     </>
                   ) : (
                     <button className="px-3 py-1.5 text-xs rounded-lg border border-green-300 text-green-700 bg-green-50">
-                      Đã Duyệt
+                      Approved
                     </button>
                   )}
                   <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -211,7 +211,7 @@ const DashboardPage = () => {
         {/* Security Notifications Panel */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">
-            Thông Báo Bảo Mật
+            Security Notifications
           </h2>
 
           <div className="space-y-4 max-h-[600px] overflow-y-auto">
@@ -241,7 +241,7 @@ const DashboardPage = () => {
           </div>
 
           <button className="mt-6 text-[#FF5C00] text-sm font-medium hover:underline">
-            Xem Tất Cả Thông Báo
+            View All Notifications
           </button>
         </div>
       </div>
