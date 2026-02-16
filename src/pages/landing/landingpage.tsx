@@ -25,16 +25,16 @@ const LandingPage = () => {
         </div>
         
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
-          <a href="#" className="hover:text-[#FF5C00]">Tính Năng</a>
-          <a href="#" className="hover:text-[#FF5C00]">Giá Cả</a>
-          <a href="#" className="hover:text-[#FF5C00]">Về Chúng Tôi</a>
-          <a href="#" className="hover:text-[#FF5C00]">Liên Hệ</a>
+          <a href="#" className="hover:text-[#FF5C00]">Features</a>
+          <a href="#" className="hover:text-[#FF5C00]">Pricing</a>
+          <a href="#" className="hover:text-[#FF5C00]">About Us</a>
+          <a href="#" className="hover:text-[#FF5C00]">Contact</a>
         </div>
 
         <div className="flex items-center gap-4">
-          <Link to="/signin" className="text-[#FF5C00] font-semibold px-4 py-2 hover:bg-orange-50 rounded-lg">Đăng Nhập</Link>
+          <Link to="/signin" className="text-[#FF5C00] font-semibold px-4 py-2 hover:bg-orange-50 rounded-lg">Sign In</Link>
           <button className="bg-[#FF5C00] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#e65300] transition-colors">
-            Dùng Thử Miễn Phí
+            Try For Free
           </button>
         </div>
       </nav>
@@ -43,27 +43,27 @@ const LandingPage = () => {
       <section className="container mx-auto px-8 py-16 flex flex-col md:flex-row items-center justify-between">
         <div className="md:w-1/2 space-y-6">
           <div className="inline-block bg-orange-100 text-[#FF5C00] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-            ✨ Giải pháp quản lý ký túc xá hiện đại
+            ✨ Modern dormitory management solution
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
-            Quản Lý Ký Túc Xá <br />
-            <span className="text-gray-800">Thông Minh & Hiệu Quả</span>
+            Dormitory Management <br />
+            <span className="text-gray-800">Smart & Efficient</span>
           </h1>
           <p className="text-gray-500 text-lg max-w-lg">
-            DormFlow giúp sinh viên và quản lý ký túc xá kết nối dễ dàng. Quản lý phòng, thanh toán, và các yêu cầu chỉ trong một ứng dụng.
+            DormFlow helps students and dormitory managers connect easily. Manage rooms, payments, and requests all in one app.
           </p>
           <div className="flex items-center gap-4 pt-4">
             <button className="bg-[#FF5C00] text-white px-8 py-3.5 rounded-lg font-bold flex items-center gap-2 hover:bg-[#e65300]">
-              Bắt Đầu Ngay <ChevronRight size={20} />
+              Get Started <ChevronRight size={20} />
             </button>
             <button className="border-2 border-orange-200 text-[#FF5C00] px-8 py-3 rounded-lg font-bold hover:bg-orange-50 transition-colors">
-              Xem Demo
+              View Demo
             </button>
           </div>
           
           <div className="grid grid-cols-3 gap-8 pt-10 border-t border-gray-100">
-            <div><p className="text-2xl font-bold text-[#FF5C00]">500+</p><p className="text-sm text-gray-500">Ký túc xá</p></div>
-            <div><p className="text-2xl font-bold text-[#FF5C00]">50K+</p><p className="text-sm text-gray-500">Sinh viên</p></div>
+            <div><p className="text-2xl font-bold text-[#FF5C00]">500+</p><p className="text-sm text-gray-500">Dormitories</p></div>
+            <div><p className="text-2xl font-bold text-[#FF5C00]">50K+</p><p className="text-sm text-gray-500">Students</p></div>
             <div><p className="text-2xl font-bold text-[#FF5C00]">4.9/5</p><p className="text-sm text-gray-500">Rating</p></div>
           </div>
         </div>
@@ -73,9 +73,9 @@ const LandingPage = () => {
             <div className="bg-white/20 p-6 rounded-3xl mb-8">
               <Home size={60} strokeWidth={1.5} />
             </div>
-            <h3 className="text-3xl font-bold mb-3 text-center">Ứng dụng quản lý</h3>
+            <h3 className="text-3xl font-bold mb-3 text-center">Management App</h3>
             <p className="text-orange-100 text-center text-lg opacity-90">
-              Dễ sử dụng & hiện đại
+              Easy to use & modern
             </p>
           </div>
         </div>
@@ -85,17 +85,17 @@ const LandingPage = () => {
       <section className="bg-white py-20 px-8">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Tính Năng Mạnh Mẽ</h2>
-            <p className="text-gray-500">Mọi công cụ bạn cần để quản lý ký túc xá hiệu quả</p>
+            <h2 className="text-4xl font-bold mb-4">Powerful Features</h2>
+            <p className="text-gray-500">All the tools you need to manage your dormitory efficiently</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: <Home className="text-white" />, title: "Quản Lý Phòng", desc: "Quản lý thông tin phòng, bố trí, và tình trạng một cách dễ dàng" },
-              { icon: <CreditCard className="text-white" />, title: "Thanh Toán Điện Tử", desc: "Hỗ trợ multiple payment methods với bảo mật tối đa" },
-              { icon: <MessageSquare className="text-white" />, title: "Liên Lạc Trực Tiếp", desc: "Chat với quản lý và nhân viên ký túc xá ngay lập tức" },
-              { icon: <BarChart3 className="text-white" />, title: "Báo Cáo Chi Tiết", desc: "Dashboard thống kê hoàn chỉnh cho quản lý" },
-              { icon: <ShieldCheck className="text-white" />, title: "Bảo Mật Cao", desc: "Dữ liệu được mã hóa và bảo vệ an toàn" },
-              { icon: <Clock className="text-white" />, title: "Hỗ Trợ 24/7", desc: "Đội ngũ hỗ trợ luôn sẵn sàng giúp bạn" },
+              { icon: <Home className="text-white" />, title: "Room Management", desc: "Easily manage room information, layouts, and availability" },
+              { icon: <CreditCard className="text-white" />, title: "Digital Payments", desc: "Multiple payment methods with maximum security" },
+              { icon: <MessageSquare className="text-white" />, title: "Direct Communication", desc: "Chat with managers and dormitory staff instantly" },
+              { icon: <BarChart3 className="text-white" />, title: "Detailed Reports", desc: "Complete statistics dashboard for management" },
+              { icon: <ShieldCheck className="text-white" />, title: "High Security", desc: "Data is encrypted and safely protected" },
+              { icon: <Clock className="text-white" />, title: "24/7 Support", desc: "Support team always ready to help you" },
             ].map((item, index) => (
               <div key={index} className="p-8 rounded-2xl bg-[#FFFBF7] hover:shadow-lg transition-shadow border border-orange-50 group">
                 <div className="bg-[#FF5C00] w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-orange-200 shadow-lg">
@@ -113,12 +113,12 @@ const LandingPage = () => {
       <section className="container mx-auto px-8 py-20">
         <div className="bg-[#FF5C00] rounded-[40px] p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl">
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
-            <h2 className="text-4xl md:text-5xl font-bold">Sẵn Sàng Nâng Cấp Ký Túc Xá?</h2>
+            <h2 className="text-4xl md:text-5xl font-bold">Ready to Upgrade Your Dormitory?</h2>
             <p className="text-orange-100 text-lg">
-              Hãy bắt đầu hành trình chuyển đổi số hôm nay. Dùng thử miễn phí 30 ngày, không cần thẻ tín dụng.
+              Start your digital transformation journey today. Free 30-day trial, no credit card required.
             </p>
             <button className="bg-white text-[#FF5C00] px-10 py-4 rounded-xl font-bold text-lg hover:bg-orange-50 transition-colors inline-flex items-center gap-2">
-              Dùng Thử Miễn Phí <ChevronRight size={20} />
+              Try For Free <ChevronRight size={20} />
             </button>
           </div>
           {/* Decorative circles */}
@@ -138,40 +138,40 @@ const LandingPage = () => {
               <span className="text-xl font-bold">DormFlow</span>
             </div>
             <p className="text-sm leading-relaxed">
-              Giải pháp quản lý ký túc xá thông minh cho thế hệ sinh viên số.
+              Smart dormitory management solution for the digital student generation.
             </p>
           </div>
-          
+
           <div>
-            <h4 className="text-white font-bold mb-6">Sản Phẩm</h4>
+            <h4 className="text-white font-bold mb-6">Product</h4>
             <ul className="space-y-4 text-sm">
-              <li><a href="#" className="hover:text-white">Tính Năng</a></li>
-              <li><a href="#" className="hover:text-white">Giá Cả</a></li>
-              <li><a href="#" className="hover:text-white">Bảo Mật</a></li>
+              <li><a href="#" className="hover:text-white">Features</a></li>
+              <li><a href="#" className="hover:text-white">Pricing</a></li>
+              <li><a href="#" className="hover:text-white">Security</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-bold mb-6">Công Ty</h4>
+            <h4 className="text-white font-bold mb-6">Company</h4>
             <ul className="space-y-4 text-sm">
-              <li><a href="#" className="hover:text-white">Về Chúng Tôi</a></li>
+              <li><a href="#" className="hover:text-white">About Us</a></li>
               <li><a href="#" className="hover:text-white">Blog</a></li>
-              <li><a href="#" className="hover:text-white">Tuyển Dụng</a></li>
+              <li><a href="#" className="hover:text-white">Careers</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-bold mb-6">Pháp Lý</h4>
+            <h4 className="text-white font-bold mb-6">Legal</h4>
             <ul className="space-y-4 text-sm">
-              <li><a href="#" className="hover:text-white">Điều Khoản</a></li>
-              <li><a href="#" className="hover:text-white">Riêng Tư</a></li>
-              <li><a href="#" className="hover:text-white">Hỗ Trợ</a></li>
+              <li><a href="#" className="hover:text-white">Terms</a></li>
+              <li><a href="#" className="hover:text-white">Privacy</a></li>
+              <li><a href="#" className="hover:text-white">Support</a></li>
             </ul>
           </div>
         </div>
         
         <div className="container mx-auto mt-16 pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm">© 2026 DormFlow. Tất cả quyền lợi được bảo lưu.</p>
+          <p className="text-sm">© 2026 DormFlow. All rights reserved.</p>
           <div className="flex gap-4">
             <div className="bg-gray-800 p-2 rounded-full hover:bg-gray-700 cursor-pointer"><Facebook size={18} /></div>
             <div className="bg-gray-800 p-2 rounded-full hover:bg-gray-700 cursor-pointer"><Twitter size={18} /></div>

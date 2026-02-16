@@ -6,27 +6,27 @@ const VisitorsPage = () => {
   const [visitors] = useState([
     {
       id: 1,
-      name: 'Nguyễn Thị Hoa',
-      student: 'Nguyễn Văn A',
-      room: 'Phòng 305',
+      name: 'Nguyen Thi Hoa',
+      student: 'Nguyen Van A',
+      room: 'Room 305',
       checkIn: '10:00',
       expectedOut: '12:00',
       status: 'active',
     },
     {
       id: 2,
-      name: 'Trần Văn Hùng',
-      student: 'Trần Thị B',
-      room: 'Phòng 402',
+      name: 'Tran Van Hung',
+      student: 'Tran Thi B',
+      room: 'Room 402',
       checkIn: '09:30',
       expectedOut: '11:30',
       status: 'active',
     },
     {
       id: 3,
-      name: 'Lê Thu Hà',
-      student: 'Lê Văn C',
-      room: 'Phòng 205',
+      name: 'Le Thu Ha',
+      student: 'Le Van C',
+      room: 'Room 205',
       checkIn: '08:00',
       expectedOut: '10:00',
       status: 'departed',
@@ -50,10 +50,10 @@ const VisitorsPage = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <RiGroupLine className="w-6 h-6 text-[#FF5C00]" />
-          <h1 className="text-2xl font-bold text-gray-900">Khách Tham Quan</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Visitors</h1>
         </div>
         <span className="bg-[#FF5C00] text-white px-3 py-1 rounded-full text-sm font-medium">
-          {activeCount} Đang ở
+          {activeCount} Present
         </span>
       </div>
 
@@ -88,7 +88,7 @@ const VisitorsPage = () => {
                   <div className="flex items-center gap-2">
                     <RiTimeLine className="w-4 h-4 text-gray-400" />
                     <div>
-                      <p className="text-xs text-gray-500">Vào:</p>
+                      <p className="text-xs text-gray-500">In:</p>
                       <p className="text-sm font-medium text-gray-900">
                         {visitor.checkIn}
                       </p>
@@ -97,7 +97,7 @@ const VisitorsPage = () => {
                   <div className="flex items-center gap-2">
                     <RiTimeLine className="w-4 h-4 text-gray-400" />
                     <div>
-                      <p className="text-xs text-gray-500">Dự kiến:</p>
+                      <p className="text-xs text-gray-500">Expected:</p>
                       <p className="text-sm font-medium text-gray-900">
                         {visitor.expectedOut}
                       </p>
@@ -111,14 +111,14 @@ const VisitorsPage = () => {
                     <>
                       <RiCheckboxCircleLine className="w-5 h-5 text-green-500" />
                       <span className="text-sm font-medium text-green-600">
-                        Đang ở
+                        Present
                       </span>
                     </>
                   ) : (
                     <>
                       <RiCloseCircleLine className="w-5 h-5 text-gray-400" />
                       <span className="text-sm font-medium text-gray-500">
-                        Đã Rời
+                        Departed
                       </span>
                     </>
                   )}
@@ -128,7 +128,7 @@ const VisitorsPage = () => {
               {/* Action Button */}
               {visitor.status === 'active' && (
                 <button className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors whitespace-nowrap">
-                  Đánh Dấu Rời Đi
+                  Mark as Departed
                 </button>
               )}
             </div>
@@ -139,7 +139,7 @@ const VisitorsPage = () => {
       {/* Add New Visitor Button */}
       <button className="w-full border-2 border-[#FF5C00] border-dashed rounded-xl p-6 flex items-center justify-center gap-2 text-[#FF5C00] font-medium hover:bg-orange-50 transition-colors">
         <RiAddLine className="w-5 h-5" />
-        Thêm Khách Mới
+        Add New Visitor
       </button>
     </div>
   );

@@ -6,18 +6,18 @@ const CheckoutRequestsPage = () => {
   const [activeFilter, setActiveFilter] = useState('all');
 
   const filters = [
-    { id: 'all', label: 'Tất Cả' },
-    { id: 'pending', label: 'Chờ Duyệt' },
-    { id: 'approved', label: 'Đã Duyệt' },
-    { id: 'completed', label: 'Hoàn Thành' },
+    { id: 'all', label: 'All' },
+    { id: 'pending', label: 'Pending' },
+    { id: 'approved', label: 'Approved' },
+    { id: 'completed', label: 'Completed' },
   ];
 
   const requests = [
     {
       id: 1,
-      name: 'Nguyễn Văn A',
-      room: 'Phòng 305',
-      type: 'Chuyển ký túc xá',
+      name: 'Nguyen Van A',
+      room: 'Room 305',
+      type: 'Dorm Transfer',
       accessCount: 2,
       requestTime: '14:00',
       status: 'pending',
@@ -25,9 +25,9 @@ const CheckoutRequestsPage = () => {
     },
     {
       id: 2,
-      name: 'Trần Thị B',
-      room: 'Phòng 402',
-      type: 'Rời Trường',
+      name: 'Tran Thi B',
+      room: 'Room 402',
+      type: 'Leaving School',
       accessCount: 5,
       requestTime: '13:30',
       status: 'approved',
@@ -35,9 +35,9 @@ const CheckoutRequestsPage = () => {
     },
     {
       id: 3,
-      name: 'Lê Văn C',
-      room: 'Phòng 205',
-      type: 'Nâng Cấp Phòng',
+      name: 'Le Van C',
+      room: 'Room 205',
+      type: 'Room Upgrade',
       accessCount: 1,
       requestTime: '12:15',
       status: 'pending',
@@ -45,9 +45,9 @@ const CheckoutRequestsPage = () => {
     },
     {
       id: 4,
-      name: 'Phạm Thị D',
-      room: 'Phòng 101',
-      type: 'Tạm Nghỉ',
+      name: 'Pham Thi D',
+      room: 'Room 101',
+      type: 'Temporary Leave',
       accessCount: 3,
       requestTime: '11:00',
       status: 'completed',
@@ -60,7 +60,7 @@ const CheckoutRequestsPage = () => {
       case 'pending':
         return {
           icon: Clock,
-          label: 'Chờ Duyệt',
+          label: 'Pending',
           color: 'text-yellow-600',
           bgColor: 'bg-yellow-50',
           borderColor: 'border-yellow-200',
@@ -68,7 +68,7 @@ const CheckoutRequestsPage = () => {
       case 'approved':
         return {
           icon: Info,
-          label: 'Đã Duyệt',
+          label: 'Approved',
           color: 'text-blue-600',
           bgColor: 'bg-blue-50',
           borderColor: 'border-blue-200',
@@ -76,7 +76,7 @@ const CheckoutRequestsPage = () => {
       case 'completed':
         return {
           icon: CheckCircle,
-          label: 'Hoàn Thành',
+          label: 'Completed',
           color: 'text-green-600',
           bgColor: 'bg-green-50',
           borderColor: 'border-green-200',
@@ -84,7 +84,7 @@ const CheckoutRequestsPage = () => {
       default:
         return {
           icon: Clock,
-          label: 'Chờ Duyệt',
+          label: 'Pending',
           color: 'text-gray-600',
           bgColor: 'bg-gray-50',
           borderColor: 'border-gray-200',
@@ -106,10 +106,10 @@ const CheckoutRequestsPage = () => {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Yêu Cầu Checkout
+          Checkout Requests
         </h1>
         <p className="text-gray-600">
-          Quản lý các yêu cầu checkout của sinh viên
+          Manage student checkout requests
         </p>
       </div>
 
@@ -164,13 +164,13 @@ const CheckoutRequestsPage = () => {
 
                   <div className="grid grid-cols-2 gap-6 mt-4">
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Lần Truy Cập</p>
+                      <p className="text-sm text-gray-600 mb-1">Access Count</p>
                       <p className="text-xl font-bold text-gray-900">
-                        {request.accessCount} Lần
+                        {request.accessCount} Times
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Yêu Cầu Vào</p>
+                      <p className="text-sm text-gray-600 mb-1">Requested At</p>
                       <p className="text-xl font-bold text-gray-900">
                         {request.requestTime}
                       </p>
@@ -199,21 +199,21 @@ const CheckoutRequestsPage = () => {
                     {request.status === 'pending' && (
                       <>
                         <button className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
-                          Duyệt Yêu Cầu
+                          Approve
                         </button>
                         <button className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
-                          Từ Chối
+                          Reject
                         </button>
                       </>
                     )}
                     {request.status === 'approved' && (
                       <button className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors">
-                        Hoàn Thành Checkout
+                        Complete Checkout
                       </button>
                     )}
                     {request.status === 'completed' && (
                       <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors">
-                        Chi Tiết
+                        Details
                       </button>
                     )}
                   </div>
