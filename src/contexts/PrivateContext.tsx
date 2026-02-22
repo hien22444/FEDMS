@@ -6,7 +6,7 @@ interface IProps {
 }
 
 interface IContextState {
-  value?: string; // đưa các state và hàm setState vào đây để truyền xuống các component con
+  value?: string; // Add states and setState functions here to pass down to child components
 }
 
 const PrivateContext = React.createContext<IContextState | null>(

@@ -10,6 +10,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { useAuth } from '@/contexts';
 
 type NavItem = {
   label: string;
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
 export default function AdminSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
 
   const isActive = (path: string) => {
     if (path === '/admin') return location.pathname === '/admin';
@@ -77,13 +79,7 @@ export default function AdminSidebar() {
       <div className="p-4 border-t border-orange-700">
         <button
           type="button"
-          onClick={() => {
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('token');
-              localStorage.removeItem('admin-role');
-            }
-            navigate(ROUTES.SIGN_IN);
-          }}
+          onClick={() => logout()}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/95 hover:bg-white/10 transition-colors"
         >
           <LogOut size={18} />

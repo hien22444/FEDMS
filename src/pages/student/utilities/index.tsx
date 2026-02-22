@@ -36,8 +36,8 @@ const Utilities: React.FC = () => {
     <div style={{ padding: '32px', background: token.colorBgLayout }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ marginBottom: '32px' }}>
-          <Title level={2} style={{ marginBottom: '8px' }}>Điện Nước</Title>
-          <Text type="secondary">Xem thông tin tiêu thụ điện nước hàng tháng</Text>
+          <Title level={2} style={{ marginBottom: '8px' }}>Utilities</Title>
+          <Text type="secondary">View monthly electricity and water usage</Text>
         </div>
 
         {/* Current Month Summary */}
@@ -51,10 +51,10 @@ const Utilities: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                    Tiêu thụ Điện Tháng Này
+                    Electricity Usage This Month
                   </Text>
                   <Title level={2} style={{ margin: '0 0 8px 0' }}>125 kWh</Title>
-                  <Text type="secondary" style={{ fontSize: '14px' }}>Tháng 12/2024</Text>
+                  <Text type="secondary" style={{ fontSize: '14px' }}>December 2024</Text>
                 </div>
                 <div
                   style={{
@@ -80,11 +80,11 @@ const Utilities: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ArrowDownOutlined style={{ color: token.colorSuccess }} />
                   <Text style={{ color: token.colorSuccess, fontWeight: 500 }}>
-                    -7% so với tháng trước
+                    -7% vs last month
                   </Text>
                 </div>
                 <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                  Tiết kiệm được 9 kWh
+                  Saved 9 kWh
                 </Text>
               </div>
             </Card>
@@ -99,10 +99,10 @@ const Utilities: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                    Tiêu thụ Nước Tháng Này
+                    Water Usage This Month
                   </Text>
                   <Title level={2} style={{ margin: '0 0 8px 0' }}>8 m³</Title>
-                  <Text type="secondary" style={{ fontSize: '14px' }}>Tháng 12/2024</Text>
+                  <Text type="secondary" style={{ fontSize: '14px' }}>December 2024</Text>
                 </div>
                 <div
                   style={{
@@ -128,11 +128,11 @@ const Utilities: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ArrowDownOutlined style={{ color: token.colorSuccess }} />
                   <Text style={{ color: token.colorSuccess, fontWeight: 500 }}>
-                    -2% so với tháng trước
+                    -2% vs last month
                   </Text>
                 </div>
                 <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                  Tiết kiệm được 0.2 m³
+                  Saved 0.2 m³
                 </Text>
               </div>
             </Card>
@@ -140,7 +140,7 @@ const Utilities: React.FC = () => {
         </Row>
 
         {/* Electricity Usage History */}
-        <Title level={3} style={{ marginBottom: '16px' }}>Lịch Sử Tiêu Thụ Điện</Title>
+        <Title level={3} style={{ marginBottom: '16px' }}>Electricity Usage History</Title>
         <Card style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {electricityData.map((data, idx) => (
@@ -209,7 +209,7 @@ const Utilities: React.FC = () => {
         </Card>
 
         {/* Water Usage History */}
-        <Title level={3} style={{ marginBottom: '16px' }}>Lịch Sử Tiêu Thụ Nước</Title>
+        <Title level={3} style={{ marginBottom: '16px' }}>Water Usage History</Title>
         <Card style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {waterData.map((data, idx) => (
@@ -284,19 +284,19 @@ const Utilities: React.FC = () => {
             borderLeft: `4px solid ${token.colorSuccess}`,
           }}
         >
-          <Title level={4} style={{ marginBottom: '16px' }}>Mẹo Tiết Kiệm Điện Nước</Title>
+          <Title level={4} style={{ marginBottom: '16px' }}>Tips for Saving Electricity & Water</Title>
           <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <li>
-              <Text>Tắt đèn khi không cần sử dụng</Text>
+              <Text>Turn off lights when not in use</Text>
             </li>
             <li>
-              <Text>Sử dụng bóng đèn tiết kiệm năng lượng</Text>
+              <Text>Use energy-saving light bulbs</Text>
             </li>
             <li>
-              <Text>Đóng vòi nước khi đánh răng hoặc rửa bát</Text>
+              <Text>Turn off the faucet when brushing teeth or washing dishes</Text>
             </li>
             <li>
-              <Text>Kiểm tra vòi nước để phòng tránh rò rỉ</Text>
+              <Text>Check faucets regularly to prevent leaks</Text>
             </li>
           </ul>
         </Card>

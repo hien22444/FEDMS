@@ -34,7 +34,7 @@ export const ROUTES = {
   ADMIN: '/admin',
   ADMIN_DORMS: '/admin/dorms',
   ADMIN_BLOCKS: '/admin/blocks',
-  ADMIN_FACILITIES: '/admin/facilities', // sẽ dùng cho quản lý CSVC sau
+  ADMIN_FACILITIES: '/admin/facilities', // will be used for facility management later
   ADMIN_USERS: '/admin/users',
   ADMIN_REPORTS: '/admin/reports',
   ADMIN_DATA: '/admin/data',
