@@ -225,3 +225,150 @@ export const importUsersFromExcel = async (file: File) => {
   formData.append('file', file);
   return api.post<ImportExcelResponse>('users/import-excel', formData);
 };
+
+// ===== Equipment Category types & APIs =====
+
+export interface EquipmentCategory {
+  id: string;
+  category_name: string;
+  description?: string;
+  created_at: string;
+}
+
+export interface EquipmentCategoryListResponse {
+  items: EquipmentCategory[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const fetchEquipmentCategories = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+  }
+  const query = searchParams.toString();
+  return api.get<EquipmentCategoryListResponse>(`equipment/categories${query ? `?${query}` : ''}`);
+};
+
+export const createEquipmentCategory = async (body: Partial<EquipmentCategory>) => {
+  return api.post<EquipmentCategory>('equipment/categories', body);
+};
+
+export const updateEquipmentCategory = async (id: string, body: Partial<EquipmentCategory>) => {
+  return api.patch<EquipmentCategory>(`equipment/categories/${id}`, body);
+};
+
+export const deleteEquipmentCategory = async (id: string) => {
+  return api.delete<{ message: string }>(`equipment/categories/${id}`);
+};
+
+// ===== Equipment Template types & APIs =====
+
+export interface EquipmentTemplate {
+  id: string;
+  category: { id: string; category_name: string } | string;
+  equipment_name: string;
+  brand?: string;
+  model?: string;
+  specifications?: string;
+  estimated_lifespan_years?: number;
+  unit_price?: number;
+  is_active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EquipmentTemplateListResponse {
+  items: EquipmentTemplate[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const fetchEquipmentTemplates = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+  }
+  const query = searchParams.toString();
+  return api.get<EquipmentTemplateListResponse>(`equipment/templates${query ? `?${query}` : ''}`);
+};
+
+export const createEquipmentTemplate = async (body: Partial<EquipmentTemplate>) => {
+  return api.post<EquipmentTemplate>('equipment/templates', body);
+};
+
+export const updateEquipmentTemplate = async (id: string, body: Partial<EquipmentTemplate>) => {
+  return api.patch<EquipmentTemplate>(`equipment/templates/${id}`, body);
+};
+
+export const deleteEquipmentTemplate = async (id: string) => {
+  return api.delete<{ message: string }>(`equipment/templates/${id}`);
+};
+
+// ===== Room Type Equipment Config types & APIs =====
+
+export interface RoomTypeEquipmentConfig {
+  id: string;
+  room_type: '2_person' | '4_person' | '6_person' | '8_person';
+  template: {
+    id: string;
+    equipment_name: string;
+    brand?: string;
+    model?: string;
+    category?: { id: string; category_name: string };
+  } | string;
+  standard_quantity: number;
+  is_mandatory: boolean;
+  created_at: string;
+}
+
+export interface RoomTypeConfigListResponse {
+  items: RoomTypeEquipmentConfig[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const fetchRoomTypeConfigs = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+  }
+  const query = searchParams.toString();
+  return api.get<RoomTypeConfigListResponse>(`equipment/room-type-configs${query ? `?${query}` : ''}`);
+};
+
+export const createRoomTypeConfig = async (body: Partial<RoomTypeEquipmentConfig>) => {
+  return api.post<RoomTypeEquipmentConfig>('equipment/room-type-configs', body);
+};
+
+export const updateRoomTypeConfig = async (id: string, body: Partial<RoomTypeEquipmentConfig>) => {
+  return api.patch<RoomTypeEquipmentConfig>(`equipment/room-type-configs/${id}`, body);
+};
+
+export const deleteRoomTypeConfig = async (id: string) => {
+  return api.delete<{ message: string }>(`equipment/room-type-configs/${id}`);
+};

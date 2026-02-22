@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts';
 import { MANAGER_MENU } from '@/constants/manager.constant';
 import {
   RiDashboardLine,
@@ -57,6 +58,7 @@ const iconMap: Record<string, React.ReactNode> = {
 export default function ManagerSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const [expandedItems, setExpandedItems] = useState<string[]>(['beds', 'electricity']);
 
   const toggleExpand = (key: string) => {
@@ -65,89 +67,120 @@ export default function ManagerSidebar() {
     );
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) =>
+    path === '/manager' ? location.pathname === '/manager' : location.pathname.startsWith(path);
 
   return (
-    <aside className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col fixed left-0 top-0 overflow-hidden">
-      {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">F</span>
-          </div>
-          <div>
-            <h1 className="font-semibold text-gray-900 text-sm">FPT Dormitory</h1>
-            <p className="text-xs text-gray-500">Management System</p>
-          </div>
+    <aside className="w-[280px] bg-orange-600 text-white flex flex-col fixed left-0 top-0 h-screen z-20">
+      {/* Brand */}
+      <div className="h-16 px-5 flex items-center gap-3 border-b border-orange-700 shrink-0">
+        <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center font-bold text-base">
+          F
+        </div>
+        <div className="leading-tight">
+          <div className="font-semibold text-base">FPT Dormitory</div>
+          <div className="text-xs text-white/70">Manager Panel</div>
         </div>
       </div>
 
-      {/* Menu */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 no-scrollbar">
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-3 no-scrollbar">
         {MANAGER_MENU.map((group) => (
-          <div key={group.group} className="mb-4">
-            <p className="text-xs font-medium text-orange-500 mb-2 px-2">{group.group}</p>
-            <ul className="space-y-1">
-              {group.items.map((item) => (
-                <li key={item.key}>
-                  {item.children ? (
-                    <div>
-                      <button
-                        onClick={() => toggleExpand(item.key)}
-                        className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-sm transition-colors ${
-                          isActive(item.path)
-                            ? 'bg-orange-100 text-orange-600'
-                            : 'text-gray-500 hover:bg-orange-100 hover:text-orange-600'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {iconMap[item.icon]}
-                          <span>{item.label}</span>
-                        </div>
-                        {expandedItems.includes(item.key) ? (
-                          <RiArrowUpSLine size={16} />
-                        ) : (
-                          <RiArrowDownSLine size={16} />
+          <div key={group.group} className="mb-3">
+            {/* Group label */}
+            <p className="text-xs font-semibold tracking-widest text-white/60 uppercase mb-1.5 px-3">
+              {group.group}
+            </p>
+            <ul className="space-y-0.5">
+              {group.items.map((item) => {
+                const active = isActive(item.path);
+                const expanded = expandedItems.includes(item.key);
+
+                return (
+                  <li key={item.key}>
+                    {item.children ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(item.key)}
+                          className={[
+                            'w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors',
+                            active
+                              ? 'bg-white text-orange-600'
+                              : 'text-white/90 hover:bg-white/10',
+                          ].join(' ')}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className={active ? 'text-orange-600' : 'text-white'}>
+                              {iconMap[item.icon]}
+                            </span>
+                            <span>{item.label}</span>
+                          </div>
+                          <span className={active ? 'text-orange-400' : 'text-white/60'}>
+                            {expanded ? <RiArrowUpSLine size={16} /> : <RiArrowDownSLine size={16} />}
+                          </span>
+                        </button>
+
+                        {expanded && (
+                          <ul className="mt-0.5 ml-4 pl-3 border-l border-white/20 space-y-0.5">
+                            {item.children.map((child) => {
+                              const childActive = location.pathname === child.path;
+                              return (
+                                <li key={child.key}>
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate(child.path)}
+                                    className={[
+                                      'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors',
+                                      childActive
+                                        ? 'bg-white text-orange-600 font-medium'
+                                        : 'text-white/80 hover:bg-white/10 hover:text-white',
+                                    ].join(' ')}
+                                  >
+                                    {child.label}
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
                         )}
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => navigate(item.path)}
+                        className={[
+                          'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors',
+                          active
+                            ? 'bg-white text-orange-600 shadow-sm'
+                            : 'text-white/90 hover:bg-white/10',
+                        ].join(' ')}
+                      >
+                        <span className={active ? 'text-orange-600' : 'text-white'}>
+                          {iconMap[item.icon]}
+                        </span>
+                        <span>{item.label}</span>
                       </button>
-                      {expandedItems.includes(item.key) && (
-                        <ul className="ml-6 mt-1 space-y-1">
-                          {item.children.map((child) => (
-                            <li key={child.key}>
-                              <button
-                                onClick={() => navigate(child.path)}
-                                className={`w-full text-left px-2 py-1.5 rounded-lg text-sm transition-colors ${
-                                  isActive(child.path)
-                                    ? 'bg-orange-100 text-orange-600'
-                                    : 'text-gray-500 hover:bg-orange-100 hover:text-orange-600'
-                                }`}
-                              >
-                                {child.label}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => navigate(item.path)}
-                      className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                        isActive(item.path)
-                          ? 'bg-orange-100 text-orange-600'
-                          : 'text-gray-600 hover:bg-orange-100 hover:text-orange-600'
-                      }`}
-                    >
-                      {iconMap[item.icon]}
-                      <span>{item.label}</span>
-                    </button>
-                  )}
-                </li>
-              ))}
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
       </nav>
+
+      {/* Logout */}
+      <div className="p-4 border-t border-orange-700 shrink-0">
+        <button
+          type="button"
+          onClick={() => logout()}
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:bg-white/10 transition-colors"
+        >
+          <RiLogoutBoxLine size={18} />
+          Logout
+        </button>
+      </div>
     </aside>
   );
 }

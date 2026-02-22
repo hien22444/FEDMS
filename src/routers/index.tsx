@@ -50,6 +50,7 @@ import AdminDashboardPage from '@/pages/admin/dashboard';
 import AdminDormsPage from '@/pages/admin/dorm';
 import AdminBlocksPage from '@/pages/admin/blocks';
 import AdminUsersPage from '@/pages/admin/users';
+import AdminFacilitiesPage from '@/pages/admin/facilities';
 
 const ComingSoon = ({ label }: { label: string }) => (
   <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
@@ -202,6 +203,10 @@ const router = createBrowserRouter([
                 element: <AdminUsersPage />,
               },
               {
+                path: 'facilities',
+                element: <AdminFacilitiesPage />,
+              },
+              {
                 path: 'reports',
                 element: <ComingSoon label="Reports & Monitoring" />,
               },
@@ -214,8 +219,15 @@ const router = createBrowserRouter([
         ],
       },
 
-      // Protected Manager routes — only 'manager' role
+    ],
+  },
+
+  // Manager routes
+  {
+    element: <AuthLayout />,
+    children: [
       {
+        // element: <PrivateRoute allowedRoles={['manager']} />,
         element: <PrivateRoute allowedRoles={['manager']} />,
         children: [
           {
