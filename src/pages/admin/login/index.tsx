@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
           </Text>
         </div>
 
-        <Form layout="vertical" initialValues={{ username: 'admin', password: 'admin' }} onFinish={onFinish}>
+        <Form layout="vertical" onFinish={onFinish}>
           <Form.Item
             label="Account"
             name="username"
@@ -62,7 +62,7 @@ export default function AdminLoginPage() {
           >
             <Input
               prefix={<UserOutlined />}
-              placeholder="admin"
+              placeholder="Enter admin username"
               autoComplete="username"
             />
           </Form.Item>
@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="admin"
+              placeholder="Enter password"
               autoComplete="current-password"
             />
           </Form.Item>

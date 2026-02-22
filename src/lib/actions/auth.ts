@@ -27,7 +27,6 @@ interface RegisterResponse {
 
 interface RefreshTokenResponse {
   token: string;
-  refreshToken: string;
 }
 
 export const signIn = async (doc: IUser.SignInDto) => {
@@ -74,9 +73,7 @@ export const refreshAccessToken = async (): Promise<RefreshTokenResponse | null>
     if (res.token) {
       localStorage.setItem('token', res.token);
     }
-    if (res.refreshToken) {
-      localStorage.setItem('refreshToken', res.refreshToken);
-    }
+    // Refresh token is NOT rotated — keep the original
     return res;
   } catch {
     // Refresh token also expired — force logout

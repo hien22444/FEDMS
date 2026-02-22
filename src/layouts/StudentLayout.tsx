@@ -8,9 +8,7 @@ import {
   ThunderboltOutlined,
   CreditCardOutlined,
   FileSearchOutlined,
-  ToolOutlined,
   AlertOutlined,
-  BookOutlined,
   TeamOutlined,
   QuestionCircleOutlined,
   LogoutOutlined,
@@ -71,19 +69,9 @@ const StudentLayout = () => {
       label: 'Requests',
     },
     {
-      key: ROUTES.STUDENT_MAINTENANCE,
-      icon: <ToolOutlined />,
-      label: 'Maintenance',
-    },
-    {
       key: ROUTES.STUDENT_CFD_POINTS,
       icon: <AlertOutlined />,
       label: 'CFD Points',
-    },
-    {
-      key: ROUTES.STUDENT_GUIDELINES,
-      icon: <BookOutlined />,
-      label: 'Visitors',
     },
     {
       key: ROUTES.STUDENT_DORM_RULES,
