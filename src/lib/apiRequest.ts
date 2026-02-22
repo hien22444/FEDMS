@@ -31,7 +31,7 @@ class ApiRequest {
 
       const data = response.data;
       if (data.token) localStorage.setItem('token', data.token);
-      if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+      // Refresh token is NOT rotated — keep the original
       return true;
     } catch {
       return false;

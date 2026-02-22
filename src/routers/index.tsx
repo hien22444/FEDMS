@@ -37,9 +37,9 @@ import BookingPage from '@/pages/student/booking';
 import UtilitiesPage from '@/pages/student/utilities';
 import PaymentPage from '@/pages/student/payment';
 import RequestsPage from '@/pages/student/requests';
-import MaintenancePage from '@/pages/student/maintenance';
 import CFDPage from '@/pages/student/cfd-points';
 import GuidelinesPage from '@/pages/student/guidelines';
+import MaintenancePage from '@/pages/student/maintenance';
 import FAQPage from '@/pages/student/faq';
 import NotificationsPage from '@/pages/student/notifications';
 import DormRulesPage from '@/pages/student/dorm-rules';
@@ -120,16 +120,16 @@ const router = createBrowserRouter([
                 element: <RequestsPage />,
               },
               {
-                path: ROUTES.STUDENT_MAINTENANCE,
-                element: <MaintenancePage />,
-              },
-              {
                 path: ROUTES.STUDENT_CFD_POINTS,
                 element: <CFDPage />,
               },
               {
                 path: ROUTES.STUDENT_GUIDELINES,
                 element: <GuidelinesPage />,
+              },
+              {
+                path: ROUTES.STUDENT_MAINTENANCE,
+                element: <MaintenancePage />,
               },
               {
                 path: ROUTES.STUDENT_FAQ,
