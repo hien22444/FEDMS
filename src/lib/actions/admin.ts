@@ -3,6 +3,7 @@ import { api } from '../apiRequest';
 // Reuse BE structure (BEDMS auth.service login response)
 export interface AdminLoginResponse {
   token: string;
+  refreshToken: string;
   user: {
     id: string;
     email: string;
@@ -24,7 +25,9 @@ export const adminLogin = async (payload: AdminLoginDto) => {
 
   if (res.token) {
     localStorage.setItem('token', res.token);
-    localStorage.setItem('admin-role', res.user.role || '');
+  }
+  if (res.refreshToken) {
+    localStorage.setItem('refreshToken', res.refreshToken);
   }
 
   return res;
@@ -140,6 +143,53 @@ export const updateBlock = async (id: string, body: Partial<Block>) => {
 
 export const deleteBlock = async (id: string) => {
   return api.delete<{ message: string }>(`v1/blocks/${id}`);
+};
+
+// ===== User List APIs =====
+
+export interface UserRecord {
+  id: string;
+  email: string;
+  fullname: string | null;
+  role: string;
+  is_active: boolean;
+  last_login: string | null;
+  createdAt: string;
+  code: string | null;
+  phone: string | null;
+  gender: string | null;
+  major: string | null;
+  cohort: string | null;
+}
+
+export interface UserListResponse {
+  items: UserRecord[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const fetchUsers = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  const query = searchParams.toString();
+  const url = `users${query ? `?${query}` : ''}`;
+
+  return api.get<UserListResponse>(url);
+};
+
+export const deleteUser = async (id: string) => {
+  return api.delete<{ message: string }>(`users/${id}`);
 };
 
 // ===== Import Excel APIs =====

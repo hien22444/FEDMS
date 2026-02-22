@@ -46,9 +46,9 @@ const Schedule: React.FC = () => {
               </div>
             </Col>
             <Col xs={24} sm={16} md={18}>
-              <Title level={3} style={{ marginBottom: '8px' }}>Nguyễn Văn A</Title>
+              <Title level={3} style={{ marginBottom: '8px' }}>Nguyen Van A</Title>
               <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>
-                MSSV: SE170001
+                Student ID: SE170001
               </Text>
               <Button
                 type="primary"
@@ -71,7 +71,7 @@ const Schedule: React.FC = () => {
                   <Text type="secondary" style={{ fontSize: '14px', display: 'block', marginBottom: '4px' }}>
                     Full Name
                   </Text>
-                  <Text strong>Nguyễn Văn A</Text>
+                  <Text strong>Nguyen Van A</Text>
                 </div>
                 <div>
                   <Text type="secondary" style={{ fontSize: '14px', display: 'block', marginBottom: '4px' }}>
@@ -117,7 +117,7 @@ const Schedule: React.FC = () => {
                   <Text type="secondary" style={{ fontSize: '14px', display: 'block', marginBottom: '4px' }}>
                     Address
                   </Text>
-                  <Text strong>123 Đường Láng, Hanoi</Text>
+                  <Text strong>123 Lang Street, Hanoi</Text>
                 </div>
               </div>
             </Card>

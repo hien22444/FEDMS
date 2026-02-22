@@ -13,24 +13,24 @@ const CFDPoints: React.FC = () => {
   const { token } = theme.useToken();
 
   const violations = [
-    { title: 'Vi Phạm Âm Thanh', description: 'Tiếng ồn sau giờ im lặng', date: '15/11/2024', points: '-0.5' },
-    { title: 'Không Giữ Vệ Sinh', description: 'Phòng không sạch sẽ', date: '10/10/2024', points: '-1.0' },
-    { title: 'Đem Vật Cấm', description: 'Giấu bình nóng lạnh', date: '05/09/2024', points: '-0.75' }
+    { title: 'Noise Violation', description: 'Noise after quiet hours', date: '15/11/2024', points: '-0.5' },
+    { title: 'Poor Hygiene', description: 'Room not clean', date: '10/10/2024', points: '-1.0' },
+    { title: 'Prohibited Items', description: 'Hidden water heater', date: '05/09/2024', points: '-0.75' }
   ];
 
   const rewards = [
-    { title: 'Tham Gia Hoạt Động Tập Thể', description: 'Khoá đào tạo kỹ năng sống', date: '20/12/2024', points: '+0.5' },
-    { title: 'Giữ Vệ Sinh Xuất Sắc', description: 'Phòng đạt tiêu chuẩn sạch sẽ 3 tháng liên tiếp', date: '15/12/2024', points: '+1.0' },
-    { title: 'Tình Nguyện Viên', description: 'Tham gia sinh hoạt tình nguyện', date: '10/11/2024', points: '+0.75' },
-    { title: 'Học Sinh Giỏi', description: 'Đạt danh hiệu học sinh giỏi', date: '05/10/2024', points: '+1.5' }
+    { title: 'Group Activity Participation', description: 'Life skills training course', date: '20/12/2024', points: '+0.5' },
+    { title: 'Excellent Hygiene', description: 'Room met cleanliness standard for 3 consecutive months', date: '15/12/2024', points: '+1.0' },
+    { title: 'Volunteer Work', description: 'Participated in volunteer activities', date: '10/11/2024', points: '+0.75' },
+    { title: 'Academic Excellence', description: 'Achieved honor student title', date: '05/10/2024', points: '+1.5' }
   ];
 
   return (
     <div style={{ padding: '32px', background: token.colorBgLayout }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <div style={{ marginBottom: '32px' }}>
-          <Title level={2} style={{ marginBottom: '8px' }}>Điểm CFD</Title>
-          <Text type="secondary">Quản lý và theo dõi điểm rèn luyện của bạn</Text>
+          <Title level={2} style={{ marginBottom: '8px' }}>CFD Points</Title>
+          <Text type="secondary">Manage and track your behavioral score</Text>
         </div>
 
         {/* Score Display */}
@@ -43,7 +43,7 @@ const CFDPoints: React.FC = () => {
           }}
         >
           <Text type="secondary" style={{ textTransform: 'uppercase', letterSpacing: '2px', fontSize: '14px', fontWeight: 600 }}>
-            Điểm CFD Hiện Tại
+            Current CFD Score
           </Text>
           <div style={{ margin: '24px 0', display: 'flex', alignItems: 'baseline', justifyContent: 'center' }}>
             <span style={{ fontSize: '96px', fontWeight: 'bold', color: token.colorPrimary, lineHeight: 1 }}>
@@ -60,9 +60,9 @@ const CFDPoints: React.FC = () => {
             style={{ maxWidth: '400px', margin: '0 auto 24px' }}
           />
           <Text style={{ fontSize: '18px', color: token.colorSuccess, fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-            Điểm Tốt
+            Good Score
           </Text>
-          <Text type="secondary">Bạn đang duy trì đủ điểm rèn luyện</Text>
+          <Text type="secondary">You are maintaining a sufficient behavioral score</Text>
         </Card>
 
         {/* Score Breakdown */}
@@ -72,16 +72,16 @@ const CFDPoints: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                    Hạng Đạo Đức
+                    Conduct Rank
                   </Text>
                   <Title level={3} style={{ color: token.colorSuccess, margin: 0 }}>
-                    ⭐ Khá
+                    ⭐ Good
                   </Title>
                 </div>
                 <TrophyOutlined style={{ fontSize: '32px', color: token.colorSuccess, opacity: 0.5 }} />
               </div>
               <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '16px' }}>
-                Hạng học kỳ hiện tại
+                Current semester rank
               </Text>
             </Card>
           </Col>
@@ -91,7 +91,7 @@ const CFDPoints: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                    Lần Vi Phạm
+                    Violations
                   </Text>
                   <Title level={3} style={{ color: token.colorPrimary, margin: 0 }}>
                     1/3
@@ -100,7 +100,7 @@ const CFDPoints: React.FC = () => {
                 <ExclamationCircleOutlined style={{ fontSize: '32px', color: token.colorPrimary, opacity: 0.5 }} />
               </div>
               <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '16px' }}>
-                Bạn vẫn trong tình trạng tốt
+                You are in good standing
               </Text>
             </Card>
           </Col>
@@ -110,23 +110,23 @@ const CFDPoints: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                    Cập Nhật Lần Cuối
+                    Last Updated
                   </Text>
                   <Title level={3} style={{ margin: 0 }}>
-                    Hôm nay
+                    Today
                   </Title>
                 </div>
                 <RiseOutlined style={{ fontSize: '32px', color: token.colorText, opacity: 0.5 }} />
               </div>
               <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '16px' }}>
-                Cập nhật thường xuyên
+                Updated regularly
               </Text>
             </Card>
           </Col>
         </Row>
 
         {/* Deducted Points */}
-        <Title level={3} style={{ marginBottom: '16px' }}>Điểm Bị Trừ</Title>
+        <Title level={3} style={{ marginBottom: '16px' }}>Deducted Points</Title>
         <Card style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {violations.map((violation, idx) => (
@@ -154,7 +154,7 @@ const CFDPoints: React.FC = () => {
                     {violation.date}
                   </Text>
                   <Text strong style={{ color: token.colorError, fontSize: '14px' }}>
-                    {violation.points} điểm
+                    {violation.points} pts
                   </Text>
                 </div>
               </div>
@@ -170,15 +170,15 @@ const CFDPoints: React.FC = () => {
               alignItems: 'center',
             }}
           >
-            <Text strong>Tổng điểm bị trừ</Text>
+            <Text strong>Total deducted</Text>
             <Title level={4} style={{ color: token.colorError, margin: 0 }}>
-              -2.25 điểm
+              -2.25 pts
             </Title>
           </div>
         </Card>
 
         {/* Earned Points */}
-        <Title level={3} style={{ marginBottom: '16px' }}>Điểm Cộng Thêm</Title>
+        <Title level={3} style={{ marginBottom: '16px' }}>Earned Points</Title>
         <Card style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {rewards.map((reward, idx) => (
@@ -206,7 +206,7 @@ const CFDPoints: React.FC = () => {
                     {reward.date}
                   </Text>
                   <Text strong style={{ color: token.colorSuccess, fontSize: '14px' }}>
-                    {reward.points} điểm
+                    {reward.points} pts
                   </Text>
                 </div>
               </div>
@@ -222,15 +222,15 @@ const CFDPoints: React.FC = () => {
               alignItems: 'center',
             }}
           >
-            <Text strong>Tổng điểm cộng</Text>
+            <Text strong>Total earned</Text>
             <Title level={4} style={{ color: token.colorSuccess, margin: 0 }}>
-              +3.75 điểm
+              +3.75 pts
             </Title>
           </div>
         </Card>
 
         {/* Score Factors */}
-        <Title level={3} style={{ marginBottom: '16px' }}>Các Yếu Tố Ảnh Hưởng Điểm CFD</Title>
+        <Title level={3} style={{ marginBottom: '16px' }}>CFD Score Factors</Title>
         <Card style={{ marginBottom: '32px' }}>
           <Row gutter={[24, 24]}>
             <Col xs={24} md={8}>
@@ -243,7 +243,7 @@ const CFDPoints: React.FC = () => {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <CheckCircleOutlined style={{ fontSize: '20px', color: token.colorSuccess }} />
-                  <Text strong>Vệ Sinh Phòng</Text>
+                  <Text strong>Room Cleanliness</Text>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <Progress
@@ -255,7 +255,7 @@ const CFDPoints: React.FC = () => {
                   <Text strong style={{ fontSize: '14px' }}>9/10</Text>
                 </div>
                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                  Luôn giữ phòng sạch sẽ
+                  Always keeps room clean
                 </Text>
               </div>
             </Col>
@@ -270,7 +270,7 @@ const CFDPoints: React.FC = () => {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <CheckCircleOutlined style={{ fontSize: '20px', color: token.colorSuccess }} />
-                  <Text strong>Tuân Thủ Nội Quy</Text>
+                  <Text strong>Rule Compliance</Text>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <Progress
@@ -282,7 +282,7 @@ const CFDPoints: React.FC = () => {
                   <Text strong style={{ fontSize: '14px' }}>8.5/10</Text>
                 </div>
                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                  Chủ yếu tuân thủ quy định
+                  Mostly compliant with regulations
                 </Text>
               </div>
             </Col>
@@ -297,7 +297,7 @@ const CFDPoints: React.FC = () => {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <CheckCircleOutlined style={{ fontSize: '20px', color: token.colorSuccess }} />
-                  <Text strong>Tham Gia Hoạt Động</Text>
+                  <Text strong>Activity Participation</Text>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <Progress
@@ -309,7 +309,7 @@ const CFDPoints: React.FC = () => {
                   <Text strong style={{ fontSize: '14px' }}>8/10</Text>
                 </div>
                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                  Tham gia một số hoạt động
+                  Participated in some activities
                 </Text>
               </div>
             </Col>
@@ -323,19 +323,19 @@ const CFDPoints: React.FC = () => {
             borderLeft: `4px solid ${token.colorSuccess}`,
           }}
         >
-          <Title level={4} style={{ marginBottom: '16px' }}>Cách Nâng Cao Điểm CFD</Title>
+          <Title level={4} style={{ marginBottom: '16px' }}>How to Improve Your CFD Score</Title>
           <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <li>
-              <Text>Luôn tuân thủ nội quy ký túc xá</Text>
+              <Text>Always comply with dormitory rules</Text>
             </li>
             <li>
-              <Text>Giữ vệ sinh phòng và khu vực chung</Text>
+              <Text>Keep your room and common areas clean</Text>
             </li>
             <li>
-              <Text>Tham gia các hoạt động tập thể</Text>
+              <Text>Participate in group activities</Text>
             </li>
             <li>
-              <Text>Tích cực giúp đỡ sinh viên khác</Text>
+              <Text>Actively help other students</Text>
             </li>
           </ul>
         </Card>

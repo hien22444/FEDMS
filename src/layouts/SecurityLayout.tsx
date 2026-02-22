@@ -16,10 +16,10 @@ const SecurityLayout = () => {
   const navigate = useNavigate();
 
   const navItems = [
-    { path: ROUTES.DASHBOARD, label: 'Tổng Quan', icon: LayoutDashboard },
+    { path: ROUTES.DASHBOARD, label: 'Overview', icon: LayoutDashboard },
     { path: ROUTES.CAMERA_CHECKIN, label: 'Camera Checkin', icon: Camera },
-    { path: ROUTES.CHECKOUT_REQUESTS, label: 'Yêu Cầu Checkout', icon: FileText },
-    { path: ROUTES.VISITORS, label: 'Khách Tham Quan', icon: Users },
+    { path: ROUTES.CHECKOUT_REQUESTS, label: 'Checkout Requests', icon: FileText },
+    { path: ROUTES.VISITORS, label: 'Visitors', icon: Users },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -37,7 +37,7 @@ const SecurityLayout = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">DormFlow Security</h1>
-                <p className="text-sm text-gray-500">Hệ Thống Quản Lý Bảo Mật</p>
+                <p className="text-sm text-gray-500">Security Management System</p>
               </div>
             </div>
 
@@ -52,7 +52,7 @@ const SecurityLayout = () => {
                 className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
               >
                 <LogOut className="w-5 h-5" />
-                <span>Đăng Xuất</span>
+                <span>Logout</span>
               </button>
             </div>
           </div>
