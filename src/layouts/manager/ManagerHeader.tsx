@@ -27,7 +27,7 @@ export default function ManagerHeader() {
     { key: 'logout', label: 'Logout', danger: true },
   ];
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 left-64 right-0 z-10">
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 left-[280px] right-0 z-10">
       <div className="flex items-center gap-4">
         <Input
           placeholder="Search rooms, students, invoices..."

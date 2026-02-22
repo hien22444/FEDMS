@@ -7,7 +7,7 @@ export default function ManagerLayout() {
     <div className="min-h-screen bg-gray-50">
       <ManagerSidebar />
       <ManagerHeader />
-      <main className="ml-64 pt-16 p-6">
+      <main className="ml-[280px] pt-16 p-6">
         <Outlet />
       </main>
     </div>
