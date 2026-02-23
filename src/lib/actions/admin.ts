@@ -36,6 +36,7 @@ export interface Dorm {
   id: string;
   dorm_name: string;
   dorm_code: string;
+  total_floors?: number;
   total_blocks: number;
   description?: string;
   is_active: boolean;
@@ -64,34 +65,38 @@ export const fetchDorms = async (params?: Record<string, string | number | boole
   }
 
   const query = searchParams.toString();
-  const url = `v1/dorms${query ? `?${query}` : ''}`;
+  const url = `dorms${query ? `?${query}` : ''}`;
 
   return api.get<DormListResponse>(url);
 };
 
 export const createDorm = async (body: Partial<Dorm>) => {
-  return api.post<Dorm>('v1/dorms', body);
+  return api.post<Dorm>('dorms', body);
 };
 
 export const updateDorm = async (id: string, body: Partial<Dorm>) => {
-  return api.patch<Dorm>(`v1/dorms/${id}`, body);
+  return api.patch<Dorm>(`dorms/${id}`, body);
 };
 
 export const deleteDorm = async (id: string) => {
-  return api.delete<{ message: string }>(`v1/dorms/${id}`);
+  return api.delete<{ message: string }>(`dorms/${id}`);
 };
 
 // ===== Block types & APIs =====
 
 export interface Block {
   id: string;
-  dorm: {
-    id: string;
-    dorm_name: string;
-    dorm_code: string;
-  } | string;
+  dorm:
+    | {
+        id: string;
+        dorm_name: string;
+        dorm_code: string;
+        total_floors?: number;
+      }
+    | string;
   block_name: string;
   block_code: string;
+  floor?: number;
   floor_count?: number;
   total_rooms?: number;
   gender_type: 'male' | 'female' | 'mixed';
@@ -121,25 +126,25 @@ export const fetchBlocks = async (params?: Record<string, string | number | bool
   }
 
   const query = searchParams.toString();
-  const url = `v1/blocks${query ? `?${query}` : ''}`;
+  const url = `blocks${query ? `?${query}` : ''}`;
 
   return api.get<BlockListResponse>(url);
 };
 
 export const getBlockById = async (id: string) => {
-  return api.get<Block>(`v1/blocks/${id}`);
+  return api.get<Block>(`blocks/${id}`);
 };
 
 export const createBlock = async (body: Partial<Block>) => {
-  return api.post<Block>('v1/blocks', body);
+  return api.post<Block>('blocks', body);
 };
 
 export const updateBlock = async (id: string, body: Partial<Block>) => {
-  return api.patch<Block>(`v1/blocks/${id}`, body);
+  return api.patch<Block>(`blocks/${id}`, body);
 };
 
 export const deleteBlock = async (id: string) => {
-  return api.delete<{ message: string }>(`v1/blocks/${id}`);
+  return api.delete<{ message: string }>(`blocks/${id}`);
 };
 
 // ===== Room types & APIs =====
@@ -168,10 +173,8 @@ export interface Room {
   available_beds: number;
   price_per_semester: number;
   status: RoomStatus;
-  has_ac: boolean;
-  has_water_heater: boolean;
   has_private_bathroom: boolean;
-  area_sqm?: number;
+  student_type: 'vietnamese' | 'international';
   description?: string;
   createdAt: string;
   updatedAt: string;
@@ -198,23 +201,56 @@ export const fetchRooms = async (params?: Record<string, string | number | boole
   }
 
   const query = searchParams.toString();
-  const url = `v1/rooms${query ? `?${query}` : ''}`;
+  const url = `rooms${query ? `?${query}` : ''}`;
 
   return api.get<RoomListResponse>(url);
 };
 
 export const getRoomById = async (id: string) => {
-  return api.get<Room>(`v1/rooms/${id}`);
+  return api.get<Room>(`rooms/${id}`);
 };
 
 export const createRoom = async (body: Partial<Room>) => {
-  return api.post<Room>('v1/rooms', body);
+  return api.post<Room>('rooms', body);
 };
 
 export const updateRoom = async (id: string, body: Partial<Room>) => {
-  return api.patch<Room>(`v1/rooms/${id}`, body);
+  return api.patch<Room>(`rooms/${id}`, body);
 };
 
 export const deleteRoom = async (id: string) => {
-  return api.delete<{ message: string }>(`v1/rooms/${id}`);
+  return api.delete<{ message: string }>(`rooms/${id}`);
+};
+// ===== Import Excel APIs =====
+
+export interface ImportedRecord {
+  row: number;
+  sheet: string;
+  email: string;
+  role: string;
+  code: string;
+}
+
+export interface ImportError {
+  row: number;
+  sheet: string;
+  email: string;
+  error: string;
+}
+
+export interface ImportExcelResponse {
+  summary: {
+    total: number;
+    success: number;
+    failed: number;
+  };
+  imported: ImportedRecord[];
+  errors: ImportError[];
+  warnings: string[];
+}
+
+export const importUsersFromExcel = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post<ImportExcelResponse>('users/import-excel', formData);
 };

@@ -21,10 +21,18 @@ const dormColumns = (
     render: (code: string) => <span className="font-mono text-xs">{code}</span>,
   },
   {
+    title: 'Floors',
+    dataIndex: 'total_floors',
+    key: 'total_floors',
+    width: 80,
+    render: (n: number) => n ?? '-',
+  },
+  {
     title: 'Blocks',
     dataIndex: 'total_blocks',
     key: 'total_blocks',
     width: 80,
+    render: (n: number) => n ?? 0,
   },
   {
     title: 'Status',
@@ -92,18 +100,16 @@ export default function AdminDormsPage() {
   useEffect(() => {
     if (modalOpen) {
       if (editingDorm) {
-        // Edit mode: set values from record
         form.setFieldsValue({
           dorm_name: editingDorm.dorm_name,
           dorm_code: editingDorm.dorm_code,
-          total_blocks: editingDorm.total_blocks,
+          total_floors: editingDorm.total_floors ?? 1,
           description: editingDorm.description,
           is_active: editingDorm.is_active,
         });
       } else {
-        // Create mode: reset and set defaults
         form.resetFields();
-        form.setFieldsValue({ is_active: true, total_blocks: 0 });
+        form.setFieldsValue({ is_active: true, total_floors: 1 });
       }
     }
   }, [modalOpen, editingDorm, form]);
@@ -186,8 +192,12 @@ export default function AdminDormsPage() {
           >
             <Input />
           </Form.Item>
-          <Form.Item label="Number of Blocks" name="total_blocks" rules={[{ type: 'number', min: 0 }]}>
-            <InputNumber style={{ width: '100%' }} />
+          <Form.Item
+            label="Number of floors"
+            name="total_floors"
+            rules={[{ required: true, message: 'Please enter number of floors' }, { type: 'number', min: 1, message: 'Minimum 1 floor' }]}
+          >
+            <InputNumber style={{ width: '100%' }} min={1} />
           </Form.Item>
           <Form.Item label="Description" name="description">
             <Input.TextArea rows={3} />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, Select, message } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -40,11 +40,11 @@ const blockColumns = (
     },
   },
   {
-    title: 'Floors',
-    dataIndex: 'floor_count',
-    key: 'floor_count',
+    title: 'Floor',
+    dataIndex: 'floor',
+    key: 'floor',
     width: 80,
-    render: (count?: number) => count ?? '-',
+    render: (floor?: number) => floor ?? '-',
   },
   {
     title: 'Total Rooms',
@@ -104,6 +104,28 @@ export default function AdminBlocksPage() {
   const [deletingBlock, setDeletingBlock] = useState<Block | null>(null);
   const [form] = Form.useForm();
 
+  const selectedDormId = Form.useWatch('dorm', form) as string | undefined;
+  const selectedDorm = useMemo(
+    () => dorms.find((d) => d.id === selectedDormId),
+    [dorms, selectedDormId],
+  );
+  const floorOptions = useMemo(() => {
+    const n = Math.max(1, selectedDorm?.total_floors ?? 1);
+    return Array.from({ length: n }, (_, i) => ({
+      label: `Floor ${i + 1}`,
+      value: i + 1,
+    }));
+  }, [selectedDorm?.total_floors]);
+
+  useEffect(() => {
+    if (!selectedDormId || floorOptions.length === 0) return;
+    const currentFloor = form.getFieldValue('floor');
+    const validFloors = floorOptions.map((o) => o.value);
+    if (currentFloor != null && !validFloors.includes(currentFloor)) {
+      form.setFieldValue('floor', undefined);
+    }
+  }, [selectedDormId, floorOptions, form]);
+
   const loadDorms = async () => {
     try {
       setLoadingDorms(true);
@@ -155,13 +177,12 @@ export default function AdminBlocksPage() {
           dorm: dormId,
           block_name: editingBlock.block_name,
           block_code: editingBlock.block_code,
-          floor_count: editingBlock.floor_count,
+          floor: editingBlock.floor ?? 1,
           total_rooms: editingBlock.total_rooms,
           gender_type: editingBlock.gender_type,
           is_active: editingBlock.is_active,
         });
       } else {
-        // Create mode: reset and set defaults
         form.resetFields();
         form.setFieldsValue({ is_active: true, gender_type: 'mixed' });
       }
@@ -269,8 +290,16 @@ export default function AdminBlocksPage() {
           >
             <Input />
           </Form.Item>
-          <Form.Item label="Floor Count" name="floor_count" rules={[{ type: 'number', min: 0 }]}>
-            <InputNumber style={{ width: '100%' }} min={0} />
+          <Form.Item
+            label="Floor"
+            name="floor"
+            rules={[{ required: true, message: 'Please select floor' }]}
+          >
+            <Select
+              placeholder="Select floor (select Dorm first)"
+              options={floorOptions}
+              disabled={!selectedDormId || floorOptions.length === 0}
+            />
           </Form.Item>
           <Form.Item label="Total Rooms" name="total_rooms" rules={[{ type: 'number', min: 0 }]}>
             <InputNumber style={{ width: '100%' }} min={0} />
