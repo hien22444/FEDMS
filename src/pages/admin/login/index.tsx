@@ -20,17 +20,17 @@ export default function AdminLoginPage() {
       });
 
       if (res.user.role !== 'admin') {
-        message.error('Tài khoản không phải admin');
+        message.error('Account is not an admin');
         return;
       }
 
-      message.success('Đăng nhập admin thành công');
+      message.success('Admin login successful');
       navigate(ROUTES.ADMIN, { replace: true });
     } catch (err: any) {
       const msg =
         err?.message ||
         (Array.isArray(err?.message) ? err.message[0] : '') ||
-        'Đăng nhập thất bại';
+        'Login failed';
       message.error(msg);
     } finally {
       setLoading(false);
@@ -51,9 +51,9 @@ export default function AdminLoginPage() {
 
         <Form layout="vertical" initialValues={{ username: 'admin', password: 'admin' }} onFinish={onFinish}>
           <Form.Item
-            label="Tài khoản"
+            label="Username"
             name="username"
-            rules={[{ required: true, message: 'Vui lòng nhập tài khoản' }]}
+            rules={[{ required: true, message: 'Please enter username' }]}
           >
             <Input
               prefix={<UserOutlined />}
@@ -63,9 +63,9 @@ export default function AdminLoginPage() {
           </Form.Item>
 
           <Form.Item
-            label="Mật khẩu"
+            label="Password"
             name="password"
-            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
+            rules={[{ required: true, message: 'Please enter password' }]}
           >
             <Input.Password
               prefix={<LockOutlined />}
@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
               block
               className="mt-2"
             >
-              Đăng nhập
+              Sign in
             </Button>
           </Form.Item>
         </Form>

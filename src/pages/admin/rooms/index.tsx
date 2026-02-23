@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  App,
   Button,
   Table,
   Tag,
@@ -34,6 +35,11 @@ const roomTypeOptions: { label: string; value: RoomType }[] = [
   { label: '6 Person', value: '6_person' },
   { label: '8 Person', value: '8_person' },
 ];
+
+const roomTypeToBeds = (roomType: RoomType): number => {
+  const n = parseInt(roomType.split('_')[0], 10);
+  return Number.isFinite(n) ? n : 4;
+};
 
 const roomStatusOptions: { label: string; value: RoomStatus }[] = [
   { label: 'Available', value: 'available' },
@@ -108,6 +114,16 @@ const roomColumns = (
     },
   },
   {
+    title: 'Student type',
+    dataIndex: 'student_type',
+    key: 'student_type',
+    width: 140,
+    render: (type: string) => {
+      const label = type === 'international' ? 'International students' : 'Vietnamese students';
+      return <Tag color={type === 'international' ? 'cyan' : 'green'}>{label}</Tag>;
+    },
+  },
+  {
     title: 'Actions',
     key: 'actions',
     width: 160,
@@ -125,6 +141,7 @@ const roomColumns = (
 ];
 
 export default function AdminRoomsPage() {
+  const { modal } = App.useApp();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [dorms, setDorms] = useState<Dorm[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -197,6 +214,24 @@ export default function AdminRoomsPage() {
   };
 
   const selectedDormId = Form.useWatch('dorm', form) as string | undefined;
+  const selectedBlockId = Form.useWatch('block', form) as string | undefined;
+  const selectedRoomType = Form.useWatch('room_type', form) as RoomType | undefined;
+  const totalBeds = Form.useWatch('total_beds', form) as number | undefined;
+
+  useEffect(() => {
+    if (!modalOpen || !selectedRoomType) return;
+    const beds = roomTypeToBeds(selectedRoomType);
+    form.setFieldsValue({ total_beds: beds });
+    const currentAvailable = form.getFieldValue('available_beds');
+    if (currentAvailable == null || Number(currentAvailable) > beds) {
+      form.setFieldValue('available_beds', beds);
+    }
+  }, [modalOpen, selectedRoomType, form]);
+
+  const selectedBlock = useMemo(
+    () => blocks.find((b) => b.id === selectedBlockId),
+    [blocks, selectedBlockId],
+  );
 
   const blockOptions = useMemo(() => {
     const filtered =
@@ -209,6 +244,14 @@ export default function AdminRoomsPage() {
       value: b.id,
     }));
   }, [blocks, selectedDormId]);
+
+  useEffect(() => {
+    if (!modalOpen || !selectedBlockId) return;
+    const block = blocks.find((b) => b.id === selectedBlockId);
+    if (block?.floor != null) {
+      form.setFieldValue('floor', block.floor);
+    }
+  }, [modalOpen, selectedBlockId, blocks, form]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -230,10 +273,8 @@ export default function AdminRoomsPage() {
         available_beds: editingRoom.available_beds,
         price_per_semester: editingRoom.price_per_semester,
         status: editingRoom.status,
-        has_ac: editingRoom.has_ac,
-        has_water_heater: editingRoom.has_water_heater,
         has_private_bathroom: editingRoom.has_private_bathroom,
-        area_sqm: editingRoom.area_sqm,
+        student_type: editingRoom.student_type ?? 'vietnamese',
         description: editingRoom.description,
       });
     } else {
@@ -241,9 +282,10 @@ export default function AdminRoomsPage() {
       form.setFieldsValue({
         status: 'available',
         room_type: '4_person',
-        has_ac: false,
-        has_water_heater: false,
+        total_beds: 4,
+        available_beds: 4,
         has_private_bathroom: false,
+        student_type: 'vietnamese',
       });
     }
   }, [modalOpen, editingRoom, form]);
@@ -270,11 +312,18 @@ export default function AdminRoomsPage() {
       loadRooms();
     } catch (error: any) {
       if (error?.errorFields) return;
-      console.error(error);
-      const errMsg = Array.isArray(error?.message)
-        ? error.message.join(', ')
-        : error?.message || 'Failed to save room';
-      message.error(errMsg);
+      const raw = Array.isArray(error?.message) ? error.message.join(', ') : (error?.message || '');
+      const errMsg = raw.includes('only allows') || raw.includes('Cannot create more rooms')
+        ? 'Block has reached its room limit. Cannot create more rooms in this block.'
+        : raw.includes('Target block only allows') || raw.includes('Cannot move this room')
+          ? 'Target block has reached its room limit. Cannot move this room there.'
+          : raw || 'Failed to save room.';
+      modal.error({
+        title: 'Room save error',
+        content: errMsg,
+        okText: 'Close',
+        zIndex: 2000,
+      });
     }
   };
 
@@ -360,9 +409,14 @@ export default function AdminRoomsPage() {
             <Form.Item
               label="Floor"
               name="floor"
-              rules={[{ required: true, message: 'Please enter floor' }]}
+              rules={[{ required: true, message: 'Select a block to show floor' }]}
             >
-              <InputNumber style={{ width: '100%' }} min={0} />
+              <InputNumber
+                style={{ width: '100%' }}
+                min={1}
+                disabled
+                placeholder={selectedBlock ? `Floor ${selectedBlock.floor}` : 'Select block first'}
+              />
             </Form.Item>
           </div>
 
@@ -388,17 +442,28 @@ export default function AdminRoomsPage() {
             <Form.Item
               label="Total Beds"
               name="total_beds"
-              rules={[{ required: true, message: 'Please enter total beds' }]}
+              rules={[{ required: true, message: 'Set by room type' }]}
             >
-              <InputNumber style={{ width: '100%' }} min={0} />
+              <InputNumber style={{ width: '100%' }} min={0} disabled />
             </Form.Item>
 
             <Form.Item
               label="Available Beds"
               name="available_beds"
-              rules={[{ required: true, message: 'Please enter available beds' }]}
+              rules={[
+                { required: true, message: 'Please enter available beds' },
+                {
+                  validator: (_, value) => {
+                    const total = form.getFieldValue('total_beds') ?? 0;
+                    if (value != null && Number(value) > Number(total)) {
+                      return Promise.reject(new Error('Available beds cannot exceed total beds'));
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
             >
-              <InputNumber style={{ width: '100%' }} min={0} />
+              <InputNumber style={{ width: '100%' }} min={0} max={totalBeds ?? 8} />
             </Form.Item>
 
             <Form.Item
@@ -410,30 +475,30 @@ export default function AdminRoomsPage() {
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Form.Item label="Area (sqm)" name="area_sqm">
-              <InputNumber style={{ width: '100%' }} min={0} />
-            </Form.Item>
-            <Form.Item label="Description" name="description">
-              <Input.TextArea rows={2} />
-            </Form.Item>
-          </div>
+          <Form.Item
+            label="Student type"
+            name="student_type"
+            rules={[{ required: true, message: 'Please select student type' }]}
+          >
+            <Select
+              options={[
+                { label: 'Vietnamese students', value: 'vietnamese' },
+                { label: 'International students', value: 'international' },
+              ]}
+            />
+          </Form.Item>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Form.Item label="Has AC" name="has_ac" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-            <Form.Item label="Water Heater" name="has_water_heater" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-            <Form.Item
-              label="Private Bathroom"
-              name="has_private_bathroom"
-              valuePropName="checked"
-            >
-              <Switch />
-            </Form.Item>
-          </div>
+          <Form.Item label="Description" name="description">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+
+          <Form.Item
+            label="Private Bathroom"
+            name="has_private_bathroom"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
         </Form>
       </Modal>
 
