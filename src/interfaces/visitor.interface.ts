@@ -48,6 +48,10 @@ export namespace IVisitor {
 
   export interface CreateVisitorRequestDto {
     visit_date: string;
+    /** "HH:MM" — defaults to 07:00 on BE if not provided */
+    visit_time_from?: string;
+    /** "HH:MM" — defaults to 17:00 on BE if not provided */
+    visit_time_to?: string;
     purpose: string;
     visitors: {
       full_name: string;

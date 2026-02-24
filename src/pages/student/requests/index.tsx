@@ -145,7 +145,8 @@ const Requests: React.FC = () => {
       subtitle: `Code: ${r.request_code}`,
       status: r.status,
       date: dayjs(r.visit_date).format('DD/MM/YYYY'),
-      detail: `07:00 - 17:00`,
+      detail: `${r.visit_time_from} - ${r.visit_time_to}`,
+      rejection_reason: r.rejection_reason,
       raw: r,
     })),
   ];
@@ -314,6 +315,11 @@ const Requests: React.FC = () => {
                         {getTypeLabel(req.type)}
                       </Tag>
                     </div>
+                    {req.status === 'rejected' && req.rejection_reason && (
+                      <Text type="danger" style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                        Lý do từ chối: {req.rejection_reason}
+                      </Text>
+                    )}
                   </div>
                   {req.status === 'pending' && (
                     <Button
@@ -401,7 +407,7 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   return (
     <Form form={form} layout="vertical" initialValues={{ visitors: [{}] }}>
       <Alert
-        message="Visiting hours: 07:00 – 17:00 daily. Visitors may arrive and leave at any time within this window."
+        message="Khung giờ tiếp khách: 07:00 – 17:00 hằng ngày. Người thân có thể đến và về bất kỳ lúc nào trong khung giờ này."
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -414,7 +420,10 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
             label="Visit Date"
             rules={[{ required: true, message: 'Required' }]}
           >
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker
+              style={{ width: '100%' }}
+              disabledDate={(d) => d.isBefore(dayjs().startOf('day'))}
+            />
           </Form.Item>
         </Col>
       </Row>
@@ -491,6 +500,20 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
                           { label: 'Other', value: 'other' },
                         ]}
                       />
+                    </Form.Item>
+                    <Form.Item noStyle shouldUpdate>
+                      {({ getFieldValue }) =>
+                        getFieldValue(['visitors', name, 'relationship']) === 'other' ? (
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'relationship_other']}
+                            label="Specify relationship"
+                            rules={[{ required: true, message: 'Please specify' }]}
+                          >
+                            <Input placeholder="e.g. Cousin, Aunt..." />
+                          </Form.Item>
+                        ) : null
+                      }
                     </Form.Item>
                   </Col>
                 </Row>
