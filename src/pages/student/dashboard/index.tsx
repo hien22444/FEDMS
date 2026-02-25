@@ -42,7 +42,7 @@ const StudentDashboard = () => {
           </Title>
           <Space size="middle">
             <Input
-              placeholder="Tìm kiếm..."
+              placeholder="Search..."
               prefix={<SearchOutlined />}
               style={{ width: 250 }}
             />
@@ -65,7 +65,7 @@ const StudentDashboard = () => {
               <EnvironmentOutlined
                 style={{ color: token.colorPrimary, fontSize: '18px' }}
               />
-              <Text strong>Đà Nẵng</Text>
+              <Text strong>Da Nang</Text>
             </div>
           </Space>
         </div>
@@ -83,11 +83,11 @@ const StudentDashboard = () => {
         {/* Greeting */}
         <div style={{ marginBottom: '32px' }}>
           <Title level={2} style={{ marginBottom: '8px' }}>
-            Xin chào,{' '}
+            Hello,{' '}
             <span style={{ color: token.colorPrimary }}>{displayName}</span>
           </Title>
           <Text type="secondary">
-            Chào mừng bạn trở lại hệ thống quản lý ký túc xá
+            Welcome back to the dormitory management system
           </Text>
         </div>
 
@@ -96,7 +96,7 @@ const StudentDashboard = () => {
           <Col xs={24} sm={12} lg={6}>
             <StatCard
               icon={<ThunderboltOutlined style={{ fontSize: '24px' }} />}
-              label="Điện tháng này"
+              label="Electricity This Month"
               value="125 kWh"
               change="+12%"
               changeType="positive"
@@ -105,7 +105,7 @@ const StudentDashboard = () => {
           <Col xs={24} sm={12} lg={6}>
             <StatCard
               icon={<DropboxOutlined style={{ fontSize: '24px' }} />}
-              label="Nước tháng này"
+              label="Water This Month"
               value="8 m³"
               change="-5%"
               changeType="negative"
@@ -114,18 +114,18 @@ const StudentDashboard = () => {
           <Col xs={24} sm={12} lg={6}>
             <StatCard
               icon={<CreditCardOutlined style={{ fontSize: '24px' }} />}
-              label="Thanh toán"
+              label="Payment"
               value="0 VND"
-              change="Đã thanh toán"
+              change="Paid"
               changeType="success"
             />
           </Col>
           <Col xs={24} sm={12} lg={6}>
             <StatCard
               icon={<CalendarOutlined style={{ fontSize: '24px' }} />}
-              label="Hợp đồng"
+              label="Contract"
               value="Spring 2026"
-              change="Còn hiệu lực"
+              change="Active"
               changeType="info"
             />
           </Col>

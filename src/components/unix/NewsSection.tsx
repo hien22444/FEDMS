@@ -17,20 +17,20 @@ interface NewsItem {
 const newsItems: NewsItem[] = [
   {
     id: 1,
-    badge: 'Mới',
-    title: 'Thông báo lịch hủy phòng - đăng ký KTX học kỳ Spring 2026',
+    badge: 'New',
+    title: 'Room cancellation & registration schedule for Spring 2026 semester',
     date: '2025-12-09',
     comments: 8,
   },
   {
     id: 2,
-    title: 'Số 138 - QĐ-FPTUDN Ban hành Nội quy Ký túc xá cơ sở Đà Nẵng',
+    title: 'Decision No. 138 - Dormitory Rules for Da Nang Campus',
     date: '2025-10-23',
     comments: 8,
   },
   {
     id: 3,
-    title: 'Thông báo lịch hủy phòng - đăng ký KTX học kỳ Summer 2025',
+    title: 'Room cancellation & registration schedule for Summer 2025 semester',
     date: '2025-04-05',
     comments: 8,
   },
@@ -45,7 +45,7 @@ export const NewsSection: FC = () => {
         <Space>
           <NotificationOutlined style={{ fontSize: '20px' }} />
           <span style={{ fontSize: '18px', fontWeight: 'bold' }}>
-            Tin tức & Thông báo
+            News & Announcements
           </span>
         </Space>
       }
@@ -103,7 +103,7 @@ export const NewsSection: FC = () => {
               >
                 <Space size="small">
                   <MessageOutlined />
-                  <span>{item.comments} bình luận</span>
+                  <span>{item.comments} comments</span>
                 </Space>
                 <Space size="small">
                   <CalendarOutlined />
