@@ -136,17 +136,25 @@ const Requests: React.FC = () => {
     }
   };
 
+  const relationshipLabel: Record<string, string> = {
+    parent: 'Parent',
+    sibling: 'Sibling',
+    friend: 'Friend',
+    other: 'Other',
+  };
+
   // Map visitor requests to a common display format
   const allRequests = [
     ...visitorRequests.map((r) => ({
       id: r.id,
       type: 'visitor' as const,
-      title: r.visitors.map((v) => v.full_name).join(', ') || 'Visitor Request',
-      subtitle: `Code: ${r.request_code}`,
+      title: r.purpose || 'Visitor Request',
+      subtitle: r.request_code,
       status: r.status,
       date: dayjs(r.visit_date).format('DD/MM/YYYY'),
-      detail: `${r.visit_time_from} - ${r.visit_time_to}`,
+      detail: `${r.visit_time_from ?? '07:00'} - ${r.visit_time_to ?? '17:00'}`,
       rejection_reason: r.rejection_reason,
+      visitors: r.visitors,
       raw: r,
     })),
   ];
@@ -265,68 +273,105 @@ const Requests: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {filteredRequests.map((req) => (
               <Card key={`${req.type}-${req.id}`} size="small">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                  {/* Icon */}
                   <div
                     style={{
-                      width: '48px',
-                      height: '48px',
+                      width: '44px',
+                      height: '44px',
                       background: token.colorBgTextHover,
                       borderRadius: token.borderRadius,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
+                      marginTop: '2px',
                     }}
                   >
                     {getTypeIcon(req.type)}
                   </div>
-                  <div style={{ flex: 1 }}>
+
+                  {/* Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Row 1: purpose + status */}
                     <div
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
+                        gap: '8px',
                         marginBottom: '4px',
                       }}
                     >
-                      <Text strong>{req.title}</Text>
+                      <Text strong style={{ fontSize: '14px', lineHeight: '22px' }}>
+                        {req.title}
+                      </Text>
                       {getStatusTag(req.status)}
                     </div>
-                    <Text type="secondary" style={{ fontSize: '13px' }}>
-                      {req.subtitle}
+
+                    {/* Row 2: request code */}
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Code: {req.subtitle}
                     </Text>
-                    <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
+
+                    {/* Row 3: date + time */}
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
                       <Text type="secondary" style={{ fontSize: '12px' }}>
-                        <ClockCircleOutlined /> {req.date}
+                        <ClockCircleOutlined style={{ marginRight: 4 }} />
+                        {req.date}
                       </Text>
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         {req.detail}
                       </Text>
-                      <Tag
-                        style={{ fontSize: '11px', lineHeight: '18px' }}
-                        color={
-                          req.type === 'visitor'
-                            ? 'blue'
-                            : req.type === 'maintenance'
-                              ? 'green'
-                              : 'orange'
-                        }
-                      >
-                        {getTypeLabel(req.type)}
-                      </Tag>
+                      {req.visitors && req.visitors.length > 0 && (
+                        <Tag color="blue" style={{ fontSize: '11px', lineHeight: '18px' }}>
+                          {req.visitors.length} visitor{req.visitors.length > 1 ? 's' : ''}
+                        </Tag>
+                      )}
                     </div>
+
+                    {/* Row 4: visitor names + relationships */}
+                    {req.visitors && req.visitors.length > 0 && (
+                      <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {req.visitors.map((v, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              fontSize: '12px',
+                              color: token.colorTextSecondary,
+                              background: token.colorBgTextHover,
+                              borderRadius: '4px',
+                              padding: '1px 8px',
+                            }}
+                          >
+                            {v.full_name}
+                            <span style={{ color: token.colorTextQuaternary, marginLeft: 4 }}>
+                              ({relationshipLabel[v.relationship] ?? v.relationship})
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Row 5: rejection reason */}
                     {req.status === 'rejected' && req.rejection_reason && (
-                      <Text type="danger" style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                        Lý do từ chối: {req.rejection_reason}
+                      <Text
+                        type="danger"
+                        style={{ fontSize: '12px', display: 'block', marginTop: '6px' }}
+                      >
+                        Rejection reason: {req.rejection_reason}
                       </Text>
                     )}
                   </div>
+
+                  {/* Cancel button */}
                   {req.status === 'pending' && (
                     <Button
                       danger
                       size="small"
                       icon={<CloseOutlined />}
                       onClick={() => handleCancel(req.id)}
+                      style={{ flexShrink: 0 }}
                     >
                       Cancel
                     </Button>

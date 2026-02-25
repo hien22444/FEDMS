@@ -39,6 +39,7 @@ export interface Dorm {
   id: string;
   dorm_name: string;
   dorm_code: string;
+  total_floors?: number;
   total_blocks: number;
   description?: string;
   is_active: boolean;
@@ -67,34 +68,38 @@ export const fetchDorms = async (params?: Record<string, string | number | boole
   }
 
   const query = searchParams.toString();
-  const url = `v1/dorms${query ? `?${query}` : ''}`;
+  const url = `dorms${query ? `?${query}` : ''}`;
 
   return api.get<DormListResponse>(url);
 };
 
 export const createDorm = async (body: Partial<Dorm>) => {
-  return api.post<Dorm>('v1/dorms', body);
+  return api.post<Dorm>('dorms', body);
 };
 
 export const updateDorm = async (id: string, body: Partial<Dorm>) => {
-  return api.patch<Dorm>(`v1/dorms/${id}`, body);
+  return api.patch<Dorm>(`dorms/${id}`, body);
 };
 
 export const deleteDorm = async (id: string) => {
-  return api.delete<{ message: string }>(`v1/dorms/${id}`);
+  return api.delete<{ message: string }>(`dorms/${id}`);
 };
 
 // ===== Block types & APIs =====
 
 export interface Block {
   id: string;
-  dorm: {
-    id: string;
-    dorm_name: string;
-    dorm_code: string;
-  } | string;
+  dorm:
+    | {
+        id: string;
+        dorm_name: string;
+        dorm_code: string;
+        total_floors?: number;
+      }
+    | string;
   block_name: string;
   block_code: string;
+  floor?: number;
   floor_count?: number;
   total_rooms?: number;
   gender_type: 'male' | 'female' | 'mixed';
@@ -124,27 +129,71 @@ export const fetchBlocks = async (params?: Record<string, string | number | bool
   }
 
   const query = searchParams.toString();
-  const url = `v1/blocks${query ? `?${query}` : ''}`;
+  const url = `blocks${query ? `?${query}` : ''}`;
 
   return api.get<BlockListResponse>(url);
 };
 
 export const getBlockById = async (id: string) => {
-  return api.get<Block>(`v1/blocks/${id}`);
+  return api.get<Block>(`blocks/${id}`);
 };
 
 export const createBlock = async (body: Partial<Block>) => {
-  return api.post<Block>('v1/blocks', body);
+  return api.post<Block>('blocks', body);
 };
 
 export const updateBlock = async (id: string, body: Partial<Block>) => {
-  return api.patch<Block>(`v1/blocks/${id}`, body);
+  return api.patch<Block>(`blocks/${id}`, body);
 };
 
 export const deleteBlock = async (id: string) => {
-  return api.delete<{ message: string }>(`v1/blocks/${id}`);
+  return api.delete<{ message: string }>(`blocks/${id}`);
 };
 
+// ===== Room types & APIs =====
+
+export type RoomType = string;
+export type RoomStatus = 'available' | 'full' | 'maintenance' | 'inactive';
+
+export interface Room {
+  id: string;
+  block:
+    | {
+        id: string;
+        block_name: string;
+        block_code: string;
+        dorm?: {
+          id: string;
+          dorm_name: string;
+          dorm_code: string;
+        } | string;
+      }
+    | string;
+  room_number: string;
+  floor: number;
+  room_type: RoomType;
+  total_beds: number;
+  available_beds: number;
+  price_per_semester: number;
+  status: RoomStatus;
+  has_private_bathroom: boolean;
+  student_type: 'vietnamese' | 'international';
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoomListResponse {
+  items: Room[];
+}
+
+// ===== Room type pricing APIs =====
+
+export type RoomTypePriceMap = Record<RoomType, number>;
+
+export interface RoomTypePricingResponse {
+  prices: RoomTypePriceMap;
+}
 // ===== User List APIs =====
 
 export interface UserRecord {
@@ -172,6 +221,46 @@ export interface UserListResponse {
   };
 }
 
+export const fetchRooms = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  const query = searchParams.toString();
+  const url = `rooms${query ? `?${query}` : ''}`;
+
+  return api.get<RoomListResponse>(url);
+};
+
+export const getRoomById = async (id: string) => {
+  return api.get<Room>(`rooms/${id}`);
+};
+
+export const createRoom = async (body: Partial<Room>) => {
+  return api.post<Room>('rooms', body);
+};
+
+export const updateRoom = async (id: string, body: Partial<Room>) => {
+  return api.patch<Room>(`rooms/${id}`, body);
+};
+
+export const deleteRoom = async (id: string) => {
+  return api.delete<{ message: string }>(`rooms/${id}`);
+};
+
+export const fetchRoomTypePricing = async () => {
+  return api.get<RoomTypePricingResponse>('room-type-pricing');
+};
+
+export const updateRoomTypePricing = async (prices: RoomTypePriceMap) => {
+  return api.put<RoomTypePricingResponse>('room-type-pricing', { prices });
+};
+
 export const fetchUsers = async (params?: Record<string, string | number | boolean>) => {
   const searchParams = new URLSearchParams();
   if (params) {
@@ -191,6 +280,7 @@ export const fetchUsers = async (params?: Record<string, string | number | boole
 export const deleteUser = async (id: string) => {
   return api.delete<{ message: string }>(`users/${id}`);
 };
+
 
 // ===== Import Excel APIs =====
 

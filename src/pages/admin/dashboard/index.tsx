@@ -130,7 +130,7 @@ export default function AdminDashboardPage() {
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="font-semibold text-gray-900 mb-2">System Overview</div>
           <p className="text-sm text-gray-500">
-            A quick overview of system status and dormitory-related services.
+            Quick overview of system status and dormitory-related services.
           </p>
         </div>
 

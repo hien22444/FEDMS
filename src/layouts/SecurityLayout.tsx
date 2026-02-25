@@ -10,10 +10,12 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { cn } from '@/utils';
+import { useAuth } from '@/contexts';
 
 const SecurityLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const navItems = [
     { path: ROUTES.DASHBOARD, label: 'Overview', icon: LayoutDashboard },
@@ -48,7 +50,7 @@ const SecurityLayout = () => {
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
               </div>
               <button
-                onClick={() => navigate(ROUTES.SIGN_IN)}
+                onClick={() => logout()}
                 className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
               >
                 <LogOut className="w-5 h-5" />
