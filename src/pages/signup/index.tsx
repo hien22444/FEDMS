@@ -47,14 +47,14 @@ const SignUpPage = () => {
       onSuccess: data => {
         // Use AuthContext login function
         login(data.token, data.user, null);
-        toast.success('Đăng ký thành công');
+        toast.success('Registration successful');
         form.resetFields();
         navigate(ROUTES.STUDENT_DASHBOARD);
       },
       onError: error => {
         const err = error as IError;
         const message = Array.isArray(err.message) ? err.message[0] : err.message;
-        toast.error(message || 'Đăng ký thất bại');
+        toast.error(message || 'Registration failed');
       },
     });
   };
@@ -109,10 +109,10 @@ const SignUpPage = () => {
                 marginBottom: '8px',
               }}
             >
-              Đăng ký tài khoản KTX FPT
+              Register FPT Dormitory Account
             </h1>
             <p style={{ color: token.colorTextSecondary }}>
-              Tạo tài khoản để quản lý phòng ở và dịch vụ ký túc xá
+              Create an account to manage your room and dormitory services
             </p>
           </div>
 
@@ -151,7 +151,7 @@ const SignUpPage = () => {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
             <span style={{ fontWeight: 500, color: token.colorText }}>
-              Đăng ký với Google (@fpt.edu.vn)
+              Sign up with Google (@fpt.edu.vn)
             </span>
           </button>
 
@@ -171,7 +171,7 @@ const SignUpPage = () => {
                 fontSize: '14px',
               }}
             >
-              hoặc đăng ký bằng email
+              or sign up with email
             </span>
             <div style={{ flex: 1, height: '1px', backgroundColor: token.colorBorder }} />
           </div>
@@ -187,14 +187,14 @@ const SignUpPage = () => {
               name="fullname"
               label={
                 <span style={{ color: token.colorTextSecondary, fontWeight: 500 }}>
-                  Họ và tên
+                  Full Name
                 </span>
               }
-              rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
+              rules={[{ required: true, message: 'Please enter your full name!' }]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: token.colorTextSecondary }} />}
-                placeholder="VD: Nguyễn Văn A"
+                placeholder="e.g. John Doe"
                 style={{ height: '48px', borderRadius: '8px' }}
               />
             </Form.Item>
@@ -207,13 +207,13 @@ const SignUpPage = () => {
                 </span>
               }
               rules={[
-                { required: true, message: 'Vui lòng nhập email!' },
-                { type: 'email', message: 'Email không hợp lệ!' },
+                { required: true, message: 'Please enter your email!' },
+                { type: 'email', message: 'Invalid email address!' },
               ]}
             >
               <Input
                 prefix={<MailOutlined style={{ color: token.colorTextSecondary }} />}
-                placeholder="VD: email@fpt.edu.vn"
+                placeholder="e.g. email@fpt.edu.vn"
                 style={{ height: '48px', borderRadius: '8px' }}
               />
             </Form.Item>
@@ -222,14 +222,14 @@ const SignUpPage = () => {
               name="password"
               label={
                 <span style={{ color: token.colorTextSecondary, fontWeight: 500 }}>
-                  Mật khẩu
+                  Password
                 </span>
               }
               rules={[
-                { required: true, message: 'Vui lòng nhập mật khẩu!' },
+                { required: true, message: 'Please enter your password!' },
                 {
                   pattern: PASSWORD_REGEX,
-                  message: 'Tối thiểu 8 ký tự, 1 chữ hoa và 1 số.',
+                  message: 'Min 8 characters, 1 uppercase and 1 number.',
                 },
               ]}
             >
@@ -253,18 +253,18 @@ const SignUpPage = () => {
               name="confirmPassword"
               label={
                 <span style={{ color: token.colorTextSecondary, fontWeight: 500 }}>
-                  Xác nhận mật khẩu
+                  Confirm Password
                 </span>
               }
               dependencies={['password']}
               rules={[
-                { required: true, message: 'Vui lòng xác nhận mật khẩu!' },
+                { required: true, message: 'Please confirm your password!' },
                 {
                   validator: (_, value) => {
                     if (!value || form.getFieldValue('password') === value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('Mật khẩu không khớp!'));
+                    return Promise.reject(new Error('Passwords do not match!'));
                   },
                 },
               ]}
@@ -299,7 +299,7 @@ const SignUpPage = () => {
                   boxShadow: `0 8px 16px ${token.colorPrimary}40`,
                 }}
               >
-                {isPending ? 'Đang đăng ký...' : 'Đăng ký'}
+                {isPending ? 'Signing up...' : 'Sign Up'}
               </Button>
             </Form.Item>
           </Form>
@@ -313,24 +313,24 @@ const SignUpPage = () => {
               marginBottom: '16px',
             }}
           >
-            Khi đăng ký, bạn đồng ý với{' '}
+            By signing up, you agree to our{' '}
             <Link to="#" style={{ color: token.colorPrimary }}>
-              Chính sách bảo mật
+              Privacy Policy
             </Link>{' '}
-            và{' '}
+            and{' '}
             <Link to="#" style={{ color: token.colorPrimary }}>
-              Điều khoản dịch vụ
+              Terms of Service
             </Link>
           </p>
 
           {/* Login Link */}
           <p style={{ textAlign: 'center', color: token.colorTextSecondary, fontSize: '14px' }}>
-            Đã có tài khoản?{' '}
+            Already have an account?{' '}
             <Link
               to={ROUTES.SIGN_IN}
               style={{ color: token.colorPrimary, fontWeight: 600 }}
             >
-              Đăng nhập
+              Sign In
             </Link>
           </p>
         </div>
@@ -404,7 +404,7 @@ const SignUpPage = () => {
                 marginBottom: '24px',
               }}
             >
-              Ký túc xá FPT - Ngôi nhà thứ hai của bạn
+              FPT Dormitory - Your Second Home
             </h2>
             <p
               style={{
@@ -414,8 +414,8 @@ const SignUpPage = () => {
                 marginBottom: '40px',
               }}
             >
-              Hệ thống quản lý ký túc xá thông minh, giúp sinh viên FPT dễ dàng đăng ký phòng,
-              thanh toán và theo dõi các dịch vụ tiện ích.
+              Smart dormitory management system, helping FPT students easily book rooms,
+              make payments and track utility services.
             </p>
 
             {/* Feature Cards */}
@@ -428,23 +428,23 @@ const SignUpPage = () => {
             >
               <FeatureCard
                 icon={<TeamOutlined style={{ fontSize: '28px', color: '#fff' }} />}
-                title="Đăng ký phòng"
-                subtitle="Nhanh chóng"
+                title="Room Booking"
+                subtitle="Quick & Easy"
               />
               <FeatureCard
                 icon={<SafetyOutlined style={{ fontSize: '28px', color: '#fff' }} />}
-                title="An ninh"
+                title="Security"
                 subtitle="24/7"
               />
               <FeatureCard
                 icon={<ClockCircleOutlined style={{ fontSize: '28px', color: '#fff' }} />}
-                title="Hỗ trợ"
-                subtitle="Mọi lúc"
+                title="Support"
+                subtitle="Anytime"
               />
               <FeatureCard
                 icon={<HomeOutlined style={{ fontSize: '28px', color: '#fff' }} />}
-                title="Tiện nghi"
-                subtitle="Hiện đại"
+                title="Amenities"
+                subtitle="Modern"
               />
             </div>
           </div>

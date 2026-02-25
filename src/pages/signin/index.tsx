@@ -23,7 +23,7 @@ const SignInPage = () => {
   const [form] = Form.useForm<IUser.SignInDto>();
   const { token } = theme.useToken();
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, user } = useAuth();
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: signIn,
@@ -31,6 +31,7 @@ const SignInPage = () => {
 
   // Helper function to get redirect path based on role
   const getRedirectPath = (role: string) => {
+    if (role === 'admin') return ROUTES.ADMIN;
     if (role === 'manager') return ROUTES.MANAGER;
     if (role === 'security') return ROUTES.SECURITY_DASHBOARD;
     return ROUTES.STUDENT_DASHBOARD;
@@ -40,14 +41,14 @@ const SignInPage = () => {
   if (isLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>Đang tải...</div>
+        <div>Loading...</div>
       </div>
     );
   }
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    return <Navigate to={ROUTES.LANDING} replace />;
+  // Redirect if already authenticated - go to correct dashboard based on role
+  if (isAuthenticated && user) {
+    return <Navigate to={getRedirectPath(user.role)} replace />;
   }
 
   const onFinish = async (values: IUser.SignInDto) => {
@@ -55,14 +56,14 @@ const SignInPage = () => {
       onSuccess: data => {
         // Use AuthContext login function
         login(data.token, data.user, data.profile);
-        toast.success('Đăng nhập thành công');
+        toast.success('Login successful');
         form.resetFields();
         navigate(getRedirectPath(data.user.role));
       },
       onError: error => {
         const err = error as IError;
         const message = Array.isArray(err.message) ? err.message[0] : err.message;
-        toast.error(message || 'Đăng nhập thất bại');
+        toast.error(message || 'Login failed');
       },
     });
   };
@@ -117,10 +118,10 @@ const SignInPage = () => {
                 marginBottom: '8px',
               }}
             >
-              Chào mừng đến KTX FPT
+              Welcome to FPT Dormitory
             </h1>
             <p style={{ color: token.colorTextSecondary }}>
-              Đăng nhập để quản lý phòng ở và dịch vụ ký túc xá
+              Sign in to manage your room and dormitory services
             </p>
           </div>
 
@@ -159,7 +160,7 @@ const SignInPage = () => {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
             <span style={{ fontWeight: 500, color: token.colorText }}>
-              Đăng nhập với Google (@fpt.edu.vn)
+              Sign in with Google (@fpt.edu.vn)
             </span>
           </button>
 
@@ -179,7 +180,7 @@ const SignInPage = () => {
                 fontSize: '14px',
               }}
             >
-              hoặc đăng nhập bằng email
+              or sign in with email
             </span>
             <div style={{ flex: 1, height: '1px', backgroundColor: token.colorBorder }} />
           </div>
@@ -195,17 +196,17 @@ const SignInPage = () => {
               name="email"
               label={
                 <span style={{ color: token.colorTextSecondary, fontWeight: 500 }}>
-                  Mã sinh viên / Email
+                  Student ID / Email
                 </span>
               }
               rules={[
-                { required: true, message: 'Vui lòng nhập email!' },
-                { type: 'email', message: 'Email không hợp lệ!' },
+                { required: true, message: 'Please enter your email!' },
+                { type: 'email', message: 'Invalid email address!' },
               ]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: token.colorTextSecondary }} />}
-                placeholder="VD: SE170xxx hoặc email@fpt.edu.vn"
+                placeholder="e.g. SE170xxx or email@fpt.edu.vn"
                 style={{ height: '48px', borderRadius: '8px' }}
               />
             </Form.Item>
@@ -214,10 +215,10 @@ const SignInPage = () => {
               name="password"
               label={
                 <span style={{ color: token.colorTextSecondary, fontWeight: 500 }}>
-                  Mật khẩu
+                  Password
                 </span>
               }
-              rules={[{ required: true, message: 'Vui lòng nhập mật khẩu!' }]}
+              rules={[{ required: true, message: 'Please enter your password!' }]}
             >
               <Input
                 prefix={<LockOutlined style={{ color: token.colorTextSecondary }} />}
@@ -246,7 +247,7 @@ const SignInPage = () => {
               <Form.Item name="rememberMe" valuePropName="checked" noStyle>
                 <Checkbox>
                   <span style={{ color: token.colorTextSecondary, fontSize: '14px' }}>
-                    Ghi nhớ đăng nhập
+                    Remember me
                   </span>
                 </Checkbox>
               </Form.Item>
@@ -258,7 +259,7 @@ const SignInPage = () => {
                   fontSize: '14px',
                 }}
               >
-                Quên mật khẩu?
+                Forgot password?
               </Link>
             </div>
 
@@ -276,19 +277,19 @@ const SignInPage = () => {
                   boxShadow: `0 8px 16px ${token.colorPrimary}40`,
                 }}
               >
-                {isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                {isPending ? 'Signing in...' : 'Sign In'}
               </Button>
             </Form.Item>
           </Form>
 
           {/* Support Link */}
           <p style={{ textAlign: 'center', color: token.colorTextSecondary, fontSize: '14px' }}>
-            Cần hỗ trợ?{' '}
+            Need help?{' '}
             <Link
               to="#"
               style={{ color: token.colorPrimary, fontWeight: 600 }}
             >
-              Liên hệ Ban quản lý KTX
+              Contact Dormitory Management
             </Link>
           </p>
         </div>
@@ -362,7 +363,7 @@ const SignInPage = () => {
                 marginBottom: '24px',
               }}
             >
-              Ký túc xá FPT - Ngôi nhà thứ hai của bạn
+              FPT Dormitory - Your Second Home
             </h2>
             <p
               style={{
@@ -372,8 +373,8 @@ const SignInPage = () => {
                 marginBottom: '40px',
               }}
             >
-              Hệ thống quản lý ký túc xá thông minh, giúp sinh viên FPT dễ dàng đăng ký phòng,
-              thanh toán và theo dõi các dịch vụ tiện ích.
+              Smart dormitory management system, helping FPT students easily book rooms,
+              make payments and track utility services.
             </p>
 
             {/* Feature Cards */}
@@ -386,23 +387,23 @@ const SignInPage = () => {
             >
               <FeatureCard
                 icon={<TeamOutlined style={{ fontSize: '28px', color: '#fff' }} />}
-                title="Đăng ký phòng"
-                subtitle="Nhanh chóng"
+                title="Room Booking"
+                subtitle="Quick & Easy"
               />
               <FeatureCard
                 icon={<SafetyOutlined style={{ fontSize: '28px', color: '#fff' }} />}
-                title="An ninh"
+                title="Security"
                 subtitle="24/7"
               />
               <FeatureCard
                 icon={<ClockCircleOutlined style={{ fontSize: '28px', color: '#fff' }} />}
-                title="Hỗ trợ"
-                subtitle="Mọi lúc"
+                title="Support"
+                subtitle="Anytime"
               />
               <FeatureCard
                 icon={<HomeOutlined style={{ fontSize: '28px', color: '#fff' }} />}
-                title="Tiện nghi"
-                subtitle="Hiện đại"
+                title="Amenities"
+                subtitle="Modern"
               />
             </div>
           </div>

@@ -4,12 +4,14 @@ import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { adminLogin } from '@/lib/actions';
 import { ROUTES } from '@/constants';
+import { useAuth } from '@/contexts';
 
 const { Title, Text } = Typography;
 
 export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const onFinish = async (values: { username: string; password: string }) => {
     try {
@@ -20,17 +22,20 @@ export default function AdminLoginPage() {
       });
 
       if (res.user.role !== 'admin') {
-        message.error('Tài khoản không phải admin');
+        message.error('This account is not an admin');
         return;
       }
 
-      message.success('Đăng nhập admin thành công');
+      // Update AuthContext so PrivateRoute recognizes the session
+      login(res.token, res.user as any, null);
+
+      message.success('Admin login successful');
       navigate(ROUTES.ADMIN, { replace: true });
     } catch (err: any) {
       const msg =
         err?.message ||
         (Array.isArray(err?.message) ? err.message[0] : '') ||
-        'Đăng nhập thất bại';
+        'Login failed';
       message.error(msg);
     } finally {
       setLoading(false);
@@ -49,27 +54,27 @@ export default function AdminLoginPage() {
           </Text>
         </div>
 
-        <Form layout="vertical" initialValues={{ username: 'admin', password: 'admin' }} onFinish={onFinish}>
+        <Form layout="vertical" onFinish={onFinish}>
           <Form.Item
-            label="Tài khoản"
+            label="Account"
             name="username"
-            rules={[{ required: true, message: 'Vui lòng nhập tài khoản' }]}
+            rules={[{ required: true, message: 'Please enter your account' }]}
           >
             <Input
               prefix={<UserOutlined />}
-              placeholder="admin"
+              placeholder="Enter admin username"
               autoComplete="username"
             />
           </Form.Item>
 
           <Form.Item
-            label="Mật khẩu"
+            label="Password"
             name="password"
-            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
+            rules={[{ required: true, message: 'Please enter your password' }]}
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="admin"
+              placeholder="Enter password"
               autoComplete="current-password"
             />
           </Form.Item>
@@ -82,7 +87,7 @@ export default function AdminLoginPage() {
               block
               className="mt-2"
             >
-              Đăng nhập
+              Login
             </Button>
           </Form.Item>
         </Form>
@@ -93,4 +98,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-

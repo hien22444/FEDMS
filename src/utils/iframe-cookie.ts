@@ -1,5 +1,5 @@
 /**
- * Set cookie để cho phép truy cập editor pages
+ * Set cookie to allow access to editor pages
  */
 export const setEditorAccessCookie = () => {
   if (typeof document === 'undefined') return;
@@ -8,8 +8,8 @@ export const setEditorAccessCookie = () => {
     'editor-access-token=true',
     'path=/',
     'SameSite=None',
-    'Secure', // Bắt buộc khi dùng SameSite=None (chỉ hoạt động với HTTPS)
-    'max-age=86400', // 24 giờ
+    'Secure', // Required when using SameSite=None (only works with HTTPS)
+    'max-age=86400', // 24 hours
   ];
 
   document.cookie = cookieOptions.join('; ');

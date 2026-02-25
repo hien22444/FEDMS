@@ -8,9 +8,27 @@ interface PrivateRouteProps {
 }
 
 /**
+ * Get the default dashboard route for a given user role
+ */
+const getRoleDashboard = (role: string): string => {
+  switch (role) {
+    case 'student':
+      return ROUTES.STUDENT_DASHBOARD;
+    case 'admin':
+      return ROUTES.ADMIN;
+    case 'manager':
+      return ROUTES.MANAGER;
+    case 'security':
+      return ROUTES.SECURITY_DASHBOARD;
+    default:
+      return ROUTES.SIGN_IN;
+  }
+};
+
+/**
  * PrivateRoute component - Protects routes that require authentication
  * Redirects to signin page if user is not authenticated
- * Can also check for specific roles if allowedRoles is provided
+ * Redirects to user's own dashboard if role doesn't match
  */
 const PrivateRoute = ({ allowedRoles }: PrivateRouteProps) => {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -28,14 +46,13 @@ const PrivateRoute = ({ allowedRoles }: PrivateRouteProps) => {
           backgroundColor: '#f5f5f5',
         }}
       >
-        <Spin size="large" tip="Đang kiểm tra xác thực..." />
+        <Spin size="large" tip="Checking authentication..." />
       </div>
     );
   }
 
   // Not authenticated - redirect to signin
   if (!isAuthenticated) {
-    // Save the attempted URL for redirecting after login
     return <Navigate to={ROUTES.SIGN_IN} state={{ from: location }} replace />;
   }
 
@@ -44,9 +61,8 @@ const PrivateRoute = ({ allowedRoles }: PrivateRouteProps) => {
     const hasRequiredRole = allowedRoles.includes(user.role);
 
     if (!hasRequiredRole) {
-      // User doesn't have required role - redirect to appropriate page
-      // You can customize this based on user role
-      return <Navigate to={ROUTES.SIGN_IN} replace />;
+      // Redirect to the user's own dashboard instead of sign-in
+      return <Navigate to={getRoleDashboard(user.role)} replace />;
     }
   }
 
