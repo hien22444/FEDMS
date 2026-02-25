@@ -4,12 +4,14 @@ import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { adminLogin } from '@/lib/actions';
 import { ROUTES } from '@/constants';
+import { useAuth } from '@/contexts';
 
 const { Title, Text } = Typography;
 
 export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const onFinish = async (values: { username: string; password: string }) => {
     try {
@@ -20,9 +22,12 @@ export default function AdminLoginPage() {
       });
 
       if (res.user.role !== 'admin') {
-        message.error('Account is not an admin');
+        message.error('This account is not an admin');
         return;
       }
+
+      // Update AuthContext so PrivateRoute recognizes the session
+      login(res.token, res.user as any, null);
 
       message.success('Admin login successful');
       navigate(ROUTES.ADMIN, { replace: true });
@@ -51,9 +56,9 @@ export default function AdminLoginPage() {
 
         <Form layout="vertical" initialValues={{ username: 'admin', password: 'admin' }} onFinish={onFinish}>
           <Form.Item
-            label="Username"
+            label="Account"
             name="username"
-            rules={[{ required: true, message: 'Please enter username' }]}
+            rules={[{ required: true, message: 'Please enter your account' }]}
           >
             <Input
               prefix={<UserOutlined />}
@@ -65,7 +70,7 @@ export default function AdminLoginPage() {
           <Form.Item
             label="Password"
             name="password"
-            rules={[{ required: true, message: 'Please enter password' }]}
+            rules={[{ required: true, message: 'Please enter your password' }]}
           >
             <Input.Password
               prefix={<LockOutlined />}
@@ -82,7 +87,7 @@ export default function AdminLoginPage() {
               block
               className="mt-2"
             >
-              Sign in
+              Login
             </Button>
           </Form.Item>
         </Form>
@@ -93,4 +98,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-

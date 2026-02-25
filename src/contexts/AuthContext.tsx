@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants';
 import type { IUser } from '@/interfaces';
-import { getProfile, logout as logoutAction } from '@/lib/actions';
+import { getProfile, logout as logoutAction, refreshAccessToken } from '@/lib/actions';
 
 // Auth state interface
 interface AuthState {
@@ -60,9 +60,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           profile: data.profile,
         });
       } catch (error) {
-        // Token invalid or expired
-        console.error('Auth init failed:', error);
+        // Token invalid or expired — try refreshing
+        console.error('Auth init failed, attempting token refresh:', error);
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+          try {
+            const data = await getProfile();
+            setState({
+              isAuthenticated: true,
+              isLoading: false,
+              user: data.user,
+              profile: data.profile,
+            });
+            return;
+          } catch {
+            // Refresh succeeded but profile fetch still failed
+          }
+        }
+
+        // All attempts failed — clear tokens
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         setState({
           isAuthenticated: false,
           isLoading: false,

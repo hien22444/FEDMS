@@ -4,6 +4,7 @@ import {
   Building2,
   Blocks,
   DoorClosed,
+  Layers3,
   FolderCog,
   UserCog,
   BarChart3,
@@ -11,6 +12,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
+import { useAuth } from '@/contexts';
 
 type NavItem = {
   label: string;
@@ -23,6 +25,7 @@ const navItems: NavItem[] = [
   { label: 'Dorm Management', path: ROUTES.ADMIN_DORMS, icon: <Building2 size={18} /> },
   { label: 'Block Management', path: ROUTES.ADMIN_BLOCKS, icon: <Blocks size={18} /> },
   { label: 'Room Management', path: ROUTES.ADMIN_ROOMS, icon: <DoorClosed size={18} /> },
+  { label: 'Room Type Management', path: ROUTES.ADMIN_ROOM_TYPES, icon: <Layers3 size={18} /> },
   { label: 'Facility Management', path: ROUTES.ADMIN_FACILITIES, icon: <FolderCog size={18} /> },
   { label: 'User Management', path: ROUTES.ADMIN_USERS, icon: <UserCog size={18} /> },
   { label: 'Reports & Monitoring', path: ROUTES.ADMIN_REPORTS, icon: <BarChart3 size={18} /> },
@@ -32,6 +35,7 @@ const navItems: NavItem[] = [
 export default function AdminSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
 
   const isActive = (path: string) => {
     if (path === '/admin') return location.pathname === '/admin';
@@ -79,13 +83,7 @@ export default function AdminSidebar() {
       <div className="p-4 border-t border-orange-700">
         <button
           type="button"
-          onClick={() => {
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('token');
-              localStorage.removeItem('admin-role');
-            }
-            navigate(ROUTES.SIGN_IN);
-          }}
+          onClick={() => logout()}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/95 hover:bg-white/10 transition-colors"
         >
           <LogOut size={18} />

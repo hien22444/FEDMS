@@ -22,6 +22,7 @@ import {
   updateRoom,
   fetchDorms,
   fetchBlocks,
+  fetchRoomTypePricing,
   type Dorm,
   type Block,
   type Room,
@@ -29,7 +30,7 @@ import {
   type RoomType,
 } from '@/lib/actions/admin';
 
-const roomTypeOptions: { label: string; value: RoomType }[] = [
+const fallbackRoomTypeOptions: { label: string; value: RoomType }[] = [
   { label: '2 Person', value: '2_person' },
   { label: '4 Person', value: '4_person' },
   { label: '6 Person', value: '6_person' },
@@ -145,6 +146,7 @@ export default function AdminRoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [dorms, setDorms] = useState<Dorm[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [roomTypePrices, setRoomTypePrices] = useState<Record<RoomType, number> | null>(null);
 
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [loadingDorms, setLoadingDorms] = useState(false);
@@ -197,10 +199,21 @@ export default function AdminRoomsPage() {
     }
   };
 
+  const loadRoomTypePrices = async () => {
+    try {
+      const res = await fetchRoomTypePricing();
+      setRoomTypePrices(res.prices || null);
+    } catch (error: any) {
+      console.error(error);
+      // If pricing not configured yet, just keep fallback options
+    }
+  };
+
   useEffect(() => {
     loadDorms();
     loadBlocks();
     loadRooms();
+    loadRoomTypePrices();
   }, []);
 
   const openCreateModal = () => {
@@ -218,6 +231,21 @@ export default function AdminRoomsPage() {
   const selectedRoomType = Form.useWatch('room_type', form) as RoomType | undefined;
   const totalBeds = Form.useWatch('total_beds', form) as number | undefined;
 
+  const roomTypeOptions = useMemo(() => {
+    if (roomTypePrices && Object.keys(roomTypePrices).length > 0) {
+      return Object.keys(roomTypePrices)
+        .map((rt) => {
+          const beds = roomTypeToBeds(rt);
+          return {
+            label: `${beds} Person`,
+            value: rt as RoomType,
+          };
+        })
+        .sort((a, b) => roomTypeToBeds(a.value) - roomTypeToBeds(b.value));
+    }
+    return fallbackRoomTypeOptions;
+  }, [roomTypePrices]);
+
   useEffect(() => {
     if (!modalOpen || !selectedRoomType) return;
     const beds = roomTypeToBeds(selectedRoomType);
@@ -226,7 +254,13 @@ export default function AdminRoomsPage() {
     if (currentAvailable == null || Number(currentAvailable) > beds) {
       form.setFieldValue('available_beds', beds);
     }
-  }, [modalOpen, selectedRoomType, form]);
+
+    const price = roomTypePrices?.[selectedRoomType];
+    if (typeof price === 'number') {
+      // Always sync price with selected room type
+      form.setFieldValue('price_per_semester', price);
+    }
+  }, [modalOpen, selectedRoomType, form, roomTypePrices]);
 
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.id === selectedBlockId),
@@ -281,9 +315,6 @@ export default function AdminRoomsPage() {
       form.resetFields();
       form.setFieldsValue({
         status: 'available',
-        room_type: '4_person',
-        total_beds: 4,
-        available_beds: 4,
         has_private_bathroom: false,
         student_type: 'vietnamese',
       });
@@ -469,9 +500,9 @@ export default function AdminRoomsPage() {
             <Form.Item
               label="Price / Semester"
               name="price_per_semester"
-              rules={[{ required: true, message: 'Please enter price' }]}
+              rules={[{ required: true, message: 'Price is set by room type' }]}
             >
-              <InputNumber style={{ width: '100%' }} min={0} />
+              <InputNumber style={{ width: '100%' }} min={0} disabled />
             </Form.Item>
           </div>
 

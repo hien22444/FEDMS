@@ -7,54 +7,54 @@ const CameraCheckinPage = () => {
 
   // Summary Cards
   const summaryCards = [
-    { label: 'Hoạt Động', value: '3', color: 'green' },
-    { label: 'Ngoại Tuyến', value: '1', color: 'red' },
-    { label: 'Tổng Số', value: '4', color: 'orange' },
-    { label: 'Chi Tiết Lưu', value: '8', color: 'blue' },
+    { label: 'Active', value: '3', color: 'green' },
+    { label: 'Offline', value: '1', color: 'red' },
+    { label: 'Total', value: '4', color: 'orange' },
+    { label: 'Recordings', value: '8', color: 'blue' },
   ];
 
   // Camera Feeds
   const cameras = [
     {
       id: 1,
-      name: 'Cổng Chính',
-      location: 'Lối vào tòa A',
+      name: 'Main Gate',
+      location: 'Building A entrance',
       status: 'active',
       resolution: '1080p',
-      lastActive: '2 phút trước',
+      lastActive: '2 minutes ago',
     },
     {
       id: 2,
-      name: 'Hành Lang Tầng 3',
-      location: 'Tòa A',
+      name: 'Floor 3 Hallway',
+      location: 'Building A',
       status: 'active',
       resolution: '1080p',
-      lastActive: '1 phút trước',
+      lastActive: '1 minute ago',
     },
     {
       id: 3,
-      name: 'Khu Phòng Sinh Viên',
-      location: 'Tòa B',
+      name: 'Student Room Area',
+      location: 'Building B',
       status: 'offline',
       resolution: '720p',
-      lastActive: '30 phút trước',
+      lastActive: '30 minutes ago',
     },
     {
       id: 4,
-      name: 'Cổng Phía Sau',
-      location: 'Lối thoát hiểm',
+      name: 'Back Gate',
+      location: 'Emergency exit',
       status: 'active',
       resolution: '1080p',
-      lastActive: 'Vừa xong',
+      lastActive: 'Just now',
     },
   ];
 
   // Recent Activity
   const recentActivity = [
-    { name: 'Nguyễn Văn A', action: 'Check in', time: '09:30' },
-    { name: 'Trần Thị B', action: 'Check out', time: '09:15' },
-    { name: 'Lê Văn C', action: 'Check in', time: '09:00' },
-    { name: 'Phạm Thị D', action: 'Check out', time: '08:45' },
+    { name: 'Nguyen Van A', action: 'Check in', time: '09:30' },
+    { name: 'Tran Thi B', action: 'Check out', time: '09:15' },
+    { name: 'Le Van C', action: 'Check in', time: '09:00' },
+    { name: 'Pham Thi D', action: 'Check out', time: '08:45' },
   ];
 
   return (
@@ -63,7 +63,7 @@ const CameraCheckinPage = () => {
       <div className="flex items-center gap-3">
         <Video className="w-6 h-6 text-[#FF5C00]" />
         <h1 className="text-2xl font-bold text-gray-900">
-          Quản Lý Camera Check-In
+          Camera Check-In Management
         </h1>
       </div>
 
@@ -124,7 +124,7 @@ const CameraCheckinPage = () => {
               )}
             >
               <XCircle className="w-5 h-5" />
-              Thủ Công
+              Manual
             </button>
           </div>
 
@@ -134,10 +134,10 @@ const CameraCheckinPage = () => {
               <div className="flex flex-col items-center justify-center text-center">
                 <Video className="w-16 h-16 text-[#FF5C00] mb-4" />
                 <p className="text-gray-700 font-medium mb-2">
-                  Quét QR Code của sinh viên
+                  Scan student's QR Code
                 </p>
                 <p className="text-sm text-gray-500">
-                  Đặt camera trước mã QR
+                  Place camera in front of QR code
                 </p>
               </div>
             </div>
@@ -148,7 +148,7 @@ const CameraCheckinPage = () => {
             <div className="space-y-4 mb-6">
               <input
                 type="text"
-                placeholder="Nhập mã sinh viên"
+                placeholder="Enter student ID"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
               />
             </div>
@@ -167,7 +167,7 @@ const CameraCheckinPage = () => {
           {/* Recent Activity */}
           <div className="mt-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Hoạt Động Gần Đây
+              Recent Activity
             </h3>
             <div className="space-y-3">
               {recentActivity.map((activity, index) => (
@@ -223,12 +223,12 @@ const CameraCheckinPage = () => {
                   {camera.status === 'active' ? (
                     <div className="text-center">
                       <Video className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">Luồng Trực Tiếp</p>
+                      <p className="text-sm text-gray-500">Live Stream</p>
                     </div>
                   ) : (
                     <div className="text-center">
                       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
-                      <p className="text-sm text-red-500">Camera Ngoại Tuyến</p>
+                      <p className="text-sm text-red-500">Camera Offline</p>
                     </div>
                   )}
                 </div>
@@ -236,22 +236,22 @@ const CameraCheckinPage = () => {
                 {/* Camera Details */}
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Trạng Thái:</span>
+                    <span className="text-gray-600">Status:</span>
                     <span
                       className={cn(
                         'font-medium',
                         camera.status === 'active' ? 'text-green-600' : 'text-red-600'
                       )}
                     >
-                      {camera.status === 'active' ? 'Hoạt Động' : 'Ngoại Tuyến'}
+                      {camera.status === 'active' ? 'Active' : 'Offline'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Độ Phân Giải:</span>
+                    <span className="text-gray-600">Resolution:</span>
                     <span className="font-medium text-gray-900">{camera.resolution}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Hoạt Động Gần Đây:</span>
+                    <span className="text-gray-600">Last Active:</span>
                     <span className="font-medium text-gray-900">{camera.lastActive}</span>
                   </div>
                 </div>
@@ -260,11 +260,11 @@ const CameraCheckinPage = () => {
                 <div className="flex gap-2">
                   <button className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2">
                     <Eye className="w-4 h-4" />
-                    Xem Chi Tiết
+                    View Details
                   </button>
                   <button className="flex-1 bg-[#FF5C00] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#e65300] transition-colors flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" />
-                    Cài Đặt
+                    Settings
                   </button>
                 </div>
               </div>

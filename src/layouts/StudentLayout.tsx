@@ -38,57 +38,57 @@ const StudentLayout = () => {
     {
       key: ROUTES.STUDENT_DASHBOARD,
       icon: <HomeOutlined />,
-      label: 'Trang chủ',
+      label: 'Home',
     },
     {
       key: ROUTES.STUDENT_NEWS,
       icon: <FileTextOutlined />,
-      label: 'Tin tức',
+      label: 'News',
     },
     {
       key: ROUTES.STUDENT_SCHEDULE,
       icon: <CalendarOutlined />,
-      label: 'Lịch ở phòng',
+      label: 'Room Schedule',
     },
     {
       key: ROUTES.STUDENT_BOOKING,
       icon: <KeyOutlined />,
-      label: 'Đặt phòng',
+      label: 'Booking',
     },
     {
       key: ROUTES.STUDENT_UTILITIES,
       icon: <ThunderboltOutlined />,
-      label: 'Điện nước',
+      label: 'Utilities',
     },
     {
       key: ROUTES.STUDENT_PAYMENT,
       icon: <CreditCardOutlined />,
-      label: 'Thanh toán',
+      label: 'Payment',
     },
     {
       key: ROUTES.STUDENT_REQUESTS,
       icon: <FileSearchOutlined />,
-      label: 'Yêu cầu',
+      label: 'Requests',
     },
     {
       key: ROUTES.STUDENT_MAINTENANCE,
       icon: <ToolOutlined />,
-      label: 'Sửa chữa',
+      label: 'Maintenance',
     },
     {
       key: ROUTES.STUDENT_CFD_POINTS,
       icon: <AlertOutlined />,
-      label: 'Điểm CFD',
+      label: 'CFD Points',
     },
     {
       key: ROUTES.STUDENT_GUIDELINES,
       icon: <BookOutlined />,
-      label: 'Hướng dẫn',
+      label: 'Visitors',
     },
     {
       key: ROUTES.STUDENT_DORM_RULES,
       icon: <TeamOutlined />,
-      label: 'Nội quy KTX FU',
+      label: 'Dorm Rules',
     },
     {
       key: ROUTES.STUDENT_FAQ,
@@ -251,7 +251,7 @@ const StudentLayout = () => {
               textAlign: collapsed ? 'center' : 'left',
             }}
           >
-            {!collapsed && 'Đăng xuất'}
+            {!collapsed && 'Logout'}
           </Button>
         </div>
       </Sider>
