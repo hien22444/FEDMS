@@ -257,6 +257,28 @@ const VisitorsPage = () => {
                     </div>
                   </div>
 
+                  {/* Visitor details for pending requests — show before approve/reject */}
+                  {req.status === 'pending' && req.visitors.length > 0 && (
+                    <div className="mt-3 border-t pt-3">
+                      <p className="text-xs text-gray-500 mb-2">Visitors:</p>
+                      <div className="space-y-1">
+                        {req.visitors.map((v) => (
+                          <div
+                            key={v.id}
+                            className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm py-1 border-b border-gray-100 last:border-0"
+                          >
+                            <span className="font-medium">{v.full_name}</span>
+                            <span className="text-gray-500 capitalize">{v.relationship}</span>
+                            <span className="text-gray-600">ID: {v.citizen_id}</span>
+                            {v.phone && (
+                              <span className="text-gray-500">📞 {v.phone}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Visitor details for approved requests — show checkin buttons */}
                   {req.status === 'approved' && req.visitors.length > 0 && (
                     <div className="mt-3 border-t pt-3">
@@ -268,6 +290,9 @@ const VisitorsPage = () => {
                         >
                           <span>
                             {v.full_name} ({v.relationship}) — {v.citizen_id}
+                            {v.phone && (
+                              <span className="text-gray-400 ml-2">📞 {v.phone}</span>
+                            )}
                           </span>
                           {v.checkin ? (
                             <span className="text-green-600 text-xs flex items-center gap-1">
@@ -346,6 +371,12 @@ const VisitorsPage = () => {
                   <h3 className="text-lg font-bold text-gray-900 mb-1">
                     {av.visitor?.full_name}
                   </h3>
+                  <p className="text-sm text-gray-500 mb-1">
+                    {av.visitor?.relationship && (
+                      <span className="mr-3">{av.visitor.relationship}</span>
+                    )}
+                    {av.visitor?.phone && <span>📞 {av.visitor.phone}</span>}
+                  </p>
                   <p className="text-sm text-gray-600 mb-4">
                     Student: {av.student?.full_name || av.request?.user?.fullname}{' '}
                     — {av.request?.request_code}

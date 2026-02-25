@@ -34,6 +34,8 @@ export const ROUTES = {
   ADMIN: '/admin',
   ADMIN_DORMS: '/admin/dorms',
   ADMIN_BLOCKS: '/admin/blocks',
+  ADMIN_ROOMS: '/admin/rooms',
+  ADMIN_ROOM_TYPES: '/admin/room-types',
   ADMIN_FACILITIES: '/admin/facilities', // will be used for facility management later
   ADMIN_USERS: '/admin/users',
   ADMIN_REPORTS: '/admin/reports',
