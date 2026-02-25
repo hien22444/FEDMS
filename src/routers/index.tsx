@@ -49,6 +49,8 @@ import { AdminLayout } from '@/layouts/admin';
 import AdminDashboardPage from '@/pages/admin/dashboard';
 import AdminDormsPage from '@/pages/admin/dorm';
 import AdminBlocksPage from '@/pages/admin/blocks';
+import AdminRoomsPage from '@/pages/admin/rooms';
+import AdminRoomTypesPage from '@/pages/admin/room-types';
 import AdminUsersPage from '@/pages/admin/users';
 import AdminFacilitiesPage from '@/pages/admin/facilities';
 
@@ -197,6 +199,14 @@ const router = createBrowserRouter([
               {
                 path: 'blocks',
                 element: <AdminBlocksPage />,
+              },
+              {
+                path: 'rooms',
+                element: <AdminRoomsPage />,
+              },
+              {
+                path: 'room-types',
+                element: <AdminRoomTypesPage />,
               },
               {
                 path: 'users',
