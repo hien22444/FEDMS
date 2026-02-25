@@ -66,12 +66,20 @@ class ApiRequest {
       headers,
     });
 
-    const response = await res.json();
+    let response: { success?: boolean; message?: string | string[]; data?: T };
+    try {
+      response = await res.json();
+    } catch {
+      response = { success: false, message: res.statusText || 'An error occurred' };
+    }
+
+    const msg = response.message;
+    const messageStr = Array.isArray(msg) ? msg.join(', ') : (msg || 'An error occurred');
 
     if (!res.ok || response.success === false) {
       const error = {
         statusCode: res.status,
-        message: response.message || ['An error occurred'],
+        message: messageStr,
       };
 
       if (res.status === 401 && !isRetry) {
@@ -106,7 +114,7 @@ class ApiRequest {
     }
 
     // Handle both formats: { data: T } and { success: true, data: T }
-    return response.data as T;
+    return (response as { data?: T }).data as T;
   }
 
   async get<T>(url: string, config: RequestInit = {}) {
