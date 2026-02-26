@@ -2,9 +2,14 @@ import type { ThemeConfig } from 'antd';
 
 const theme: ThemeConfig = {
   token: {
-    colorPrimary: '#146EF5',
+    colorPrimary: '#FF6C00',    // FPT Orange (official brand color)
+    colorSuccess: '#00CC66',
+    colorWarning: '#FBBF24',
+    colorError: '#DC2626',
+    colorInfo: '#3B82F6',
+    borderRadius: 6,
     fontSize: 14,
-    fontFamily: 'InterTight-Regular',
+    fontFamily: 'Inter, sans-serif',
   },
   components: {
     Button: {

@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 
 interface IProps {
   content: string;
@@ -26,7 +27,7 @@ const Markdown = forwardRef<
           ...(components ? components : {}),
         }}
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
       >
         {content}
       </ReactMarkdown>
