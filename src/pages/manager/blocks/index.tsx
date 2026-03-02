@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, Select, message, Space } from 'antd';
+import { Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, Select, message } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Building2 } from 'lucide-react';
@@ -18,6 +18,17 @@ const blockColumns = (
   onDeleteClick: (record: Block) => void,
 ): ColumnsType<Block> => [
   {
+    title: 'Block Name',
+    dataIndex: 'block_name',
+    key: 'block_name',
+  },
+  {
+    title: 'Block Code',
+    dataIndex: 'block_code',
+    key: 'block_code',
+    render: (code: string) => <span className="font-mono text-xs">{code}</span>,
+  },
+  {
     title: 'Dorm',
     dataIndex: 'dorm',
     key: 'dorm',
@@ -27,11 +38,6 @@ const blockColumns = (
       }
       return '-';
     },
-  },
-  {
-    title: 'Block Name',
-    dataIndex: 'block_name',
-    key: 'block_name',
   },
   {
     title: 'Floor',
@@ -56,7 +62,6 @@ const blockColumns = (
       const colorMap: Record<string, string> = {
         male: 'blue',
         female: 'pink',
-        mixed: 'purple',
       };
       return <Tag color={colorMap[type] || 'default'}>{type.toUpperCase()}</Tag>;
     },
@@ -87,7 +92,7 @@ const blockColumns = (
   },
 ];
 
-export default function AdminBlocksPage() {
+export default function ManagerBlocksPage() {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [dorms, setDorms] = useState<Dorm[]>([]);
   const [loadingBlocks, setLoadingBlocks] = useState(false);
@@ -97,12 +102,6 @@ export default function AdminBlocksPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingBlock, setDeletingBlock] = useState<Block | null>(null);
   const [form] = Form.useForm();
-
-  // Filters
-  const [filterDormId, setFilterDormId] = useState<string | undefined>(undefined);
-  const [filterGender, setFilterGender] = useState<string | undefined>(undefined);
-  const [filterSearch, setFilterSearch] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
 
   const selectedDormId = Form.useWatch('dorm', form) as string | undefined;
   const blockCode = Form.useWatch('block_code', form) as string | undefined;
@@ -140,19 +139,10 @@ export default function AdminBlocksPage() {
     }
   };
 
-  const loadBlocks = async (overrides?: { page?: number }) => {
+  const loadBlocks = async () => {
     try {
       setLoadingBlocks(true);
-      const params: Record<string, string | number | boolean> = {
-        page: overrides?.page ?? 1,
-        limit: 50,
-      };
-      if (filterDormId) params.dorm = filterDormId;
-      if (filterGender) params.gender_type = filterGender;
-      if (filterSearch.trim()) params.search = filterSearch.trim();
-       if (filterStatus) params.is_active = filterStatus === 'active';
-
-      const res = await fetchBlocks(params);
+      const res = await fetchBlocks({ page: 1, limit: 50 });
       setBlocks(res.items);
     } catch (error: any) {
       console.error(error);
@@ -167,18 +157,6 @@ export default function AdminBlocksPage() {
     loadBlocks();
   }, []);
 
-  const handleApplyFilter = () => {
-    loadBlocks({ page: 1 });
-  };
-
-  const handleResetFilter = () => {
-    setFilterDormId(undefined);
-    setFilterGender(undefined);
-    setFilterSearch('');
-    setFilterStatus(undefined);
-    loadBlocks({ page: 1 });
-  };
-
   const openCreateModal = () => {
     setEditingBlock(null);
     setModalOpen(true);
@@ -189,11 +167,9 @@ export default function AdminBlocksPage() {
     setModalOpen(true);
   };
 
-  // Set form values when modal opens
   useEffect(() => {
     if (modalOpen) {
       if (editingBlock) {
-        // Edit mode: set values from record
         const dormId = typeof editingBlock.dorm === 'object' ? editingBlock.dorm.id : editingBlock.dorm;
         form.setFieldsValue({
           dorm: dormId,
@@ -274,7 +250,7 @@ export default function AdminBlocksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Block Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Block List</h1>
           <p className="text-sm text-gray-500 mt-1">
             Manage blocks within dormitory buildings.
           </p>
@@ -288,55 +264,6 @@ export default function AdminBlocksPage() {
         <div className="flex items-center gap-2 mb-4">
           <Building2 size={18} className="text-orange-600" />
           <div className="font-semibold text-gray-900">Block List</div>
-        </div>
-
-        <div className="mb-4 flex flex-wrap gap-3 items-center">
-          <Select
-            allowClear
-            placeholder="Filter by dorm"
-            style={{ minWidth: 200 }}
-            value={filterDormId}
-            onChange={(v) => setFilterDormId(v)}
-            options={dorms.map((dorm) => ({
-              label: `${dorm.dorm_name} (${dorm.dorm_code})`,
-              value: dorm.id,
-            }))}
-          />
-          <Select
-            allowClear
-            placeholder="Filter by gender"
-            style={{ minWidth: 160 }}
-            value={filterGender}
-            onChange={(v) => setFilterGender(v)}
-            options={[
-              { label: 'Male', value: 'male' },
-              { label: 'Female', value: 'female' },
-            ]}
-          />
-          <Input
-            placeholder="Search by block name/code"
-            style={{ minWidth: 220 }}
-            value={filterSearch}
-            onChange={(e) => setFilterSearch(e.target.value)}
-            onPressEnter={handleApplyFilter}
-          />
-          <Select
-            allowClear
-            placeholder="Filter by status"
-            style={{ minWidth: 150 }}
-            value={filterStatus}
-            onChange={(v) => setFilterStatus(v)}
-            options={[
-              { label: 'Active', value: 'active' },
-              { label: 'Inactive', value: 'inactive' },
-            ]}
-          />
-          <Space>
-            <Button type="primary" onClick={handleApplyFilter}>
-              Apply
-            </Button>
-            <Button onClick={handleResetFilter}>Reset</Button>
-          </Space>
         </div>
 
         <Table<Block>
@@ -434,7 +361,6 @@ export default function AdminBlocksPage() {
         onOk={async () => {
           if (!deletingBlock) return;
           try {
-            console.log('Deleting block id =', deletingBlock.id);
             await deleteBlock(deletingBlock.id);
             message.success('Block deleted successfully');
             setDeleteModalOpen(false);
