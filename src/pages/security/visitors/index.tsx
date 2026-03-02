@@ -98,7 +98,15 @@ const VisitorsPage = () => {
     }
   };
 
-  const handleCheckin = async (requestId: string, visitorId: string) => {
+  const handleCheckin = async (requestId: string, visitorId: string, timeFrom: string, timeTo: string) => {
+    const now = new Date();
+    const [fh, fm] = timeFrom.split(':').map(Number);
+    const [th, tm] = timeTo.split(':').map(Number);
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    if (nowMin < fh * 60 + fm || nowMin > th * 60 + tm) {
+      alert(`Check-in is only allowed between ${timeFrom} and ${timeTo}`);
+      return;
+    }
     try {
       await checkinVisitor(requestId, visitorId);
       fetchRequests();
@@ -286,7 +294,7 @@ const VisitorsPage = () => {
                       {req.visitors.map((v) => (
                         <div
                           key={v.id}
-                          className="flex items-center justify-between py-1 text-sm"
+                          className="flex items-center justify-between py-1.5 text-sm border-b border-gray-100 last:border-0"
                         >
                           <span>
                             {v.full_name} ({v.relationship}) — {v.citizen_id}
@@ -294,19 +302,35 @@ const VisitorsPage = () => {
                               <span className="text-gray-400 ml-2">📞 {v.phone}</span>
                             )}
                           </span>
-                          {v.checkin ? (
-                            <span className="text-green-600 text-xs flex items-center gap-1">
-                              <RiCheckboxCircleLine /> Checked in
-                            </span>
-                          ) : (
-                            <button
-                              onClick={() => handleCheckin(req.id, v.id)}
-                              className="bg-blue-500 text-white px-3 py-1 rounded text-xs font-medium hover:bg-blue-600 flex items-center gap-1"
-                            >
-                              <RiLoginCircleLine />
-                              Check In
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                            {v.checkin && !v.checkin.check_out_time ? (
+                              <>
+                                <span className="text-xs text-gray-500 flex items-center gap-1">
+                                  <RiTimeLine className="w-3 h-3" />
+                                  {formatTime(v.checkin.check_in_time)}
+                                </span>
+                                <button
+                                  onClick={() => handleCheckout(v.checkin!.id)}
+                                  className="bg-red-500 text-white px-3 py-1 rounded text-xs font-medium hover:bg-red-600 flex items-center gap-1"
+                                >
+                                  <RiLogoutCircleLine />
+                                  Check Out
+                                </button>
+                              </>
+                            ) : v.checkin ? (
+                              <span className="text-gray-400 text-xs flex items-center gap-1">
+                                <RiCheckDoubleLine className="w-3 h-3" /> Checked out
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleCheckin(req.id, v.id, req.visit_time_from, req.visit_time_to)}
+                                className="bg-blue-500 text-white px-3 py-1 rounded text-xs font-medium hover:bg-blue-600 flex items-center gap-1"
+                              >
+                                <RiLoginCircleLine />
+                                Check In
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

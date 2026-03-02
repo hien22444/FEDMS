@@ -28,9 +28,12 @@ import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/dashboard
 import { BedStatisticsPage } from '@/pages/manager/bed-statistics';
 import { ViolationListPage } from '@/pages/manager/violations';
 import { CreateViolationPage } from '@/pages/manager/violations/create';
+import ManagerChatPage from '@/pages/manager/chat';
+import ManagerNotificationsPage from '@/pages/manager/notifications';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
+import StudentChatPage from '@/pages/student/chat';
 import NewsPage from '@/pages/student/news';
 import SchedulePage from '@/pages/student/schedule';
 import BookingPage from '@/pages/student/booking';
@@ -145,6 +148,10 @@ const router = createBrowserRouter([
               {
                 path: ROUTES.STUDENT_NOTIFICATIONS,
                 element: <NotificationsPage />,
+              },
+              {
+                path: ROUTES.STUDENT_CHAT,
+                element: <StudentChatPage />,
               },
             ],
           },
@@ -322,7 +329,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'chat',
-                element: <ComingSoon label="Chat with Students" />,
+                element: <ManagerChatPage />,
               },
               {
                 path: 'email',
@@ -330,7 +337,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'notifications',
-                element: <ComingSoon label="Notifications" />,
+                element: <ManagerNotificationsPage />,
               },
               {
                 path: 'config',

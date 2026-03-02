@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, Table, Tag, Upload, message, Card, Alert, Input, Select, Popconfirm } from 'antd';
+import { Button, Table, Tag, Upload, message, Card, Alert, Input, Select, Popconfirm, Tabs, Collapse } from 'antd';
 import {
   InboxOutlined,
   CheckCircleOutlined,
@@ -8,10 +8,11 @@ import {
   SearchOutlined,
   ReloadOutlined,
   DeleteOutlined,
+  UploadOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { Users, Upload as UploadIcon } from 'lucide-react';
 import {
   importUsersFromExcel,
   fetchUsers,
@@ -107,11 +108,19 @@ const roleConfig: Record<string, { color: string; label: string }> = {
 // ─── Component ────────────────────────────────────────────
 
 export default function AdminUsersPage() {
+  const [activeTab, setActiveTab] = useState('users');
+
   // Import states
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<ImportExcelResponse | null>(null);
-  const [showImport, setShowImport] = useState(false);
+  const [result, setResult] = useState<ImportExcelResponse | null>(() => {
+    try {
+      const saved = localStorage.getItem('adminImportResult');
+      return saved ? (JSON.parse(saved) as ImportExcelResponse) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // User list states
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -119,6 +128,15 @@ export default function AdminUsersPage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [searchText, setSearchText] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+
+  // Persist import result across page reloads
+  useEffect(() => {
+    if (result) {
+      localStorage.setItem('adminImportResult', JSON.stringify(result));
+    } else {
+      localStorage.removeItem('adminImportResult');
+    }
+  }, [result]);
 
   // ─── Fetch users ──────────────────────────────────────────
 
@@ -164,9 +182,10 @@ export default function AdminUsersPage() {
         );
       }
 
-      // Reload user list after import
+      // Reload user list after import and switch to users tab
       if (res.summary.success > 0) {
         loadUsers(1);
+        setActiveTab('users');
       }
     } catch (error: unknown) {
       console.error(error);
@@ -270,216 +289,230 @@ export default function AdminUsersPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage student and staff accounts.
-          </p>
-        </div>
-        <Button
-          type={showImport ? 'default' : 'primary'}
-          icon={<UploadIcon size={14} />}
-          onClick={() => setShowImport(!showImport)}
-        >
-          {showImport ? 'Hide Import' : 'Import Excel'}
-        </Button>
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">User Management</h1>
+        <p className="text-sm text-gray-500 mt-1">Manage student and staff accounts.</p>
       </div>
 
-      {/* ─── Import Section (collapsible) ────────────────── */}
-      {showImport && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <UploadIcon size={18} className="text-orange-600" />
-            <div className="font-semibold text-gray-900">Import Excel</div>
-          </div>
-
-          <Dragger
-            fileList={fileList}
-            beforeUpload={(file) => {
-              const isExcel =
-                file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                file.type === 'application/vnd.ms-excel';
-              if (!isExcel) {
-                message.error('Only Excel files are accepted (.xlsx, .xls)');
-                return Upload.LIST_IGNORE;
-              }
-              setFileList([file as unknown as UploadFile]);
-              return false;
-            }}
-            onRemove={() => {
-              setFileList([]);
-            }}
-            maxCount={1}
-            accept=".xlsx,.xls"
-          >
-            <p className="ant-upload-drag-icon">
-              <InboxOutlined />
-            </p>
-            <p className="ant-upload-text">Click or drag an Excel file here</p>
-            <p className="ant-upload-hint">Supports .xlsx, .xls (max 5MB)</p>
-          </Dragger>
-
-          <div className="flex gap-3 mt-4">
-            <Button
-              type="primary"
-              onClick={handleUpload}
-              loading={uploading}
-              disabled={!fileList.length}
-            >
-              {uploading ? 'Importing...' : 'Import'}
-            </Button>
-            {result && (
-              <Button onClick={handleResetImport}>
-                Reset
-              </Button>
-            )}
-          </div>
-
-          {/* Import Result */}
-          {result && (
-            <div className="mt-6 space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <Card size="small">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">{result.summary.total}</div>
-                    <div className="text-sm text-gray-500">Total</div>
-                  </div>
-                </Card>
-                <Card size="small">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{result.summary.success}</div>
-                    <div className="text-sm text-gray-500">Succeeded</div>
-                  </div>
-                </Card>
-                <Card size="small">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{result.summary.failed}</div>
-                    <div className="text-sm text-gray-500">Failed</div>
-                  </div>
-                </Card>
-              </div>
-
-              {result.warnings && result.warnings.length > 0 && (
-                <div className="space-y-2">
-                  {result.warnings.map((warning, index) => (
-                    <Alert
-                      key={index}
-                      message="Warning"
-                      description={warning}
-                      type="warning"
-                      showIcon
-                      icon={<WarningOutlined />}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          className="px-5 pt-2"
+          items={[
+            {
+              key: 'users',
+              label: (
+                <span className="flex items-center gap-1.5">
+                  <TeamOutlined />
+                  User List {pagination.total > 0 ? `(${pagination.total})` : ''}
+                </span>
+              ),
+              children: (
+                <div className="pb-5">
+                  {/* Filters */}
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    <Input
+                      placeholder="Search by email or name..."
+                      prefix={<SearchOutlined className="text-gray-400" />}
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      onPressEnter={() => loadUsers(1, searchText, roleFilter)}
+                      className="w-64"
+                      allowClear
+                      onClear={() => {
+                        setSearchText('');
+                        loadUsers(1, '', roleFilter);
+                      }}
                     />
-                  ))}
-                </div>
-              )}
-
-              {result.imported.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircleOutlined className="text-green-600" />
-                    <span className="font-semibold text-gray-900">
-                      Imported successfully ({result.imported.length})
-                    </span>
+                    <Select
+                      value={roleFilter}
+                      onChange={(val) => {
+                        setRoleFilter(val);
+                        loadUsers(1, searchText, val);
+                      }}
+                      className="w-36"
+                      options={[
+                        { value: 'all', label: 'All Roles' },
+                        { value: 'admin', label: 'Admin' },
+                        { value: 'manager', label: 'Manager' },
+                        { value: 'security', label: 'Security' },
+                        { value: 'student', label: 'Student' },
+                      ]}
+                    />
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={() => loadUsers(1, searchText, roleFilter)}
+                    >
+                      Reload
+                    </Button>
                   </div>
-                  <Table<ImportedRecord>
-                    rowKey="row"
-                    columns={importedColumns}
-                    dataSource={result.imported}
-                    pagination={false}
+
+                  {/* Table */}
+                  <Table<UserRecord>
+                    rowKey="id"
+                    columns={userColumns}
+                    dataSource={users}
+                    loading={loading}
                     size="small"
+                    pagination={{
+                      current: pagination.page,
+                      pageSize: pagination.limit,
+                      total: pagination.total,
+                      showSizeChanger: true,
+                      pageSizeOptions: ['10', '20', '50'],
+                      showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} users`,
+                      onChange: (page, pageSize) => {
+                        setPagination((prev) => ({ ...prev, limit: pageSize }));
+                        loadUsers(page, searchText, roleFilter);
+                      },
+                    }}
                   />
                 </div>
-              )}
-
-              {result.errors.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <CloseCircleOutlined className="text-red-600" />
-                    <span className="font-semibold text-gray-900">
-                      Errors ({result.errors.length})
-                    </span>
-                  </div>
-                  <Table<ImportError>
-                    rowKey="row"
-                    columns={errorColumns}
-                    dataSource={result.errors}
-                    pagination={false}
-                    size="small"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ─── User List Section ────────────────────────────── */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Users size={18} className="text-orange-600" />
-          <div className="font-semibold text-gray-900">User List ({pagination.total})</div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-4">
-          <Input
-            placeholder="Search by email or name..."
-            prefix={<SearchOutlined className="text-gray-400" />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onPressEnter={() => loadUsers(1, searchText, roleFilter)}
-            className="w-64"
-            allowClear
-            onClear={() => {
-              setSearchText('');
-              loadUsers(1, '', roleFilter);
-            }}
-          />
-          <Select
-            value={roleFilter}
-            onChange={(val) => {
-              setRoleFilter(val);
-              loadUsers(1, searchText, val);
-            }}
-            className="w-36"
-            options={[
-              { value: 'all', label: 'All Roles' },
-              { value: 'admin', label: 'Admin' },
-              { value: 'manager', label: 'Manager' },
-              { value: 'security', label: 'Security' },
-              { value: 'student', label: 'Student' },
-            ]}
-          />
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => loadUsers(1, searchText, roleFilter)}
-          >
-            Reload
-          </Button>
-        </div>
-
-        {/* Table */}
-        <Table<UserRecord>
-          rowKey="id"
-          columns={userColumns}
-          dataSource={users}
-          loading={loading}
-          size="small"
-          pagination={{
-            current: pagination.page,
-            pageSize: pagination.limit,
-            total: pagination.total,
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50'],
-            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} users`,
-            onChange: (page, pageSize) => {
-              setPagination((prev) => ({ ...prev, limit: pageSize }));
-              loadUsers(page, searchText, roleFilter);
+              ),
             },
-          }}
+            {
+              key: 'import',
+              label: (
+                <span className="flex items-center gap-1.5">
+                  <UploadOutlined />
+                  Import Excel
+                </span>
+              ),
+              children: (
+                <div className="pb-5">
+                  <Dragger
+                    fileList={fileList}
+                    beforeUpload={(file) => {
+                      const isExcel =
+                        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                        file.type === 'application/vnd.ms-excel';
+                      if (!isExcel) {
+                        message.error('Only Excel files are accepted (.xlsx, .xls)');
+                        return Upload.LIST_IGNORE;
+                      }
+                      setFileList([file as unknown as UploadFile]);
+                      return false;
+                    }}
+                    onRemove={() => setFileList([])}
+                    maxCount={1}
+                    accept=".xlsx,.xls"
+                  >
+                    <p className="ant-upload-drag-icon">
+                      <InboxOutlined />
+                    </p>
+                    <p className="ant-upload-text">Click or drag an Excel file here</p>
+                    <p className="ant-upload-hint">Supports .xlsx, .xls (max 5MB)</p>
+                  </Dragger>
+
+                  <div className="flex gap-3 mt-4">
+                    <Button
+                      type="primary"
+                      onClick={handleUpload}
+                      loading={uploading}
+                      disabled={!fileList.length}
+                    >
+                      {uploading ? 'Importing...' : 'Import'}
+                    </Button>
+                    {result && (
+                      <Button onClick={handleResetImport}>Reset</Button>
+                    )}
+                  </div>
+
+                  {/* Import Result */}
+                  {result && (
+                    <div className="mt-6 space-y-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        <Card size="small">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-gray-900">{result.summary.total}</div>
+                            <div className="text-sm text-gray-500">Total</div>
+                          </div>
+                        </Card>
+                        <Card size="small">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-green-600">{result.summary.success}</div>
+                            <div className="text-sm text-gray-500">Succeeded</div>
+                          </div>
+                        </Card>
+                        <Card size="small">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-red-600">{result.summary.failed}</div>
+                            <div className="text-sm text-gray-500">Failed</div>
+                          </div>
+                        </Card>
+                      </div>
+
+                      {result.warnings && result.warnings.length > 0 && (
+                        <Collapse
+                          size="small"
+                          items={[{
+                            key: 'warnings',
+                            label: (
+                              <span className="text-yellow-700 font-medium">
+                                <WarningOutlined className="mr-1.5" />
+                                Warnings ({result.warnings.length})
+                              </span>
+                            ),
+                            children: (
+                              <div className="space-y-1.5">
+                                {result.warnings.map((warning, index) => (
+                                  <Alert
+                                    key={index}
+                                    message={warning}
+                                    type="warning"
+                                    showIcon={false}
+                                    className="text-sm"
+                                  />
+                                ))}
+                              </div>
+                            ),
+                          }]}
+                        />
+                      )}
+
+                      {result.imported.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircleOutlined className="text-green-600" />
+                            <span className="font-semibold text-gray-900">
+                              Imported successfully ({result.imported.length})
+                            </span>
+                          </div>
+                          <Table<ImportedRecord>
+                            rowKey="row"
+                            columns={importedColumns}
+                            dataSource={result.imported}
+                            size="small"
+                            pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `${total} records` }}
+                          />
+                        </div>
+                      )}
+
+                      {result.errors.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <CloseCircleOutlined className="text-red-600" />
+                            <span className="font-semibold text-gray-900">
+                              Errors ({result.errors.length})
+                            </span>
+                          </div>
+                          <Table<ImportError>
+                            rowKey="row"
+                            columns={errorColumns}
+                            dataSource={result.errors}
+                            size="small"
+                            pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `${total} errors` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+          ]}
         />
       </div>
     </div>

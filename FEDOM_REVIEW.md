@@ -1,5 +1,5 @@
 # FEDOM Frontend — Review & Documentation
-> Senior Code Review | Updated: 2026-02-22
+> Senior Code Review | Updated: 2026-03-02 (session 4)
 
 ---
 
@@ -48,8 +48,9 @@
 | `/student/faq` | FAQPage | 🔲 Placeholder |
 | `/student/dorm-rules` | DormRulesPage | 🔲 Placeholder |
 | `/student/notifications` | NotificationsPage | ✅ Kết nối API |
+| `/student/chat` | StudentChatPage | ✅ Kết nối API + Socket.io |
 
-**3/13 trang Student có nội dung thực (Dashboard, Requests, Notifications).**
+**4/14 trang Student có nội dung thực (Dashboard, Requests, Notifications, Chat).**
 
 ### 2.3 Security Routes — `role: 'security'` — Layout: `SecurityLayout`
 
@@ -79,13 +80,13 @@
 | `/manager/electricity/*` | ComingSoon (3 sub) | 🔲 Chưa làm |
 | `/manager/invoices` | ComingSoon | 🔲 Chưa làm |
 | `/manager/news` | ComingSoon | 🔲 Chưa làm |
-| `/manager/chat` | ComingSoon | 🔲 Chưa làm |
+| `/manager/chat` | ManagerChatPage | ✅ Kết nối API + Socket.io |
 | `/manager/email` | ComingSoon | 🔲 Chưa làm |
-| `/manager/notifications` | ComingSoon | 🔲 Chưa làm |
+| `/manager/notifications` | ManagerNotificationsPage | ✅ Kết nối API |
 | `/manager/config` | ComingSoon | 🔲 Chưa làm |
 | `/manager/settings` | ComingSoon | 🔲 Chưa làm |
 
-**Chỉ 3/20 trang Manager có nội dung thực.**
+**5/20 trang Manager có nội dung thực.**
 
 ### 2.5 Admin Routes — `role: 'admin'` — Layout: `AdminLayout`
 
@@ -199,7 +200,41 @@
 | `getStudentPenalties` | GET | `violations/student/{code}/penalties` |
 | `getViolationStatistics` | GET | `violations/statistics` |
 
-### 3.6 HTTP Client — `src/lib/apiRequest.ts`
+### 3.6 Chat Actions — `src/lib/actions/chat.ts`
+
+| Function | Method | Endpoint | Role |
+|----------|--------|----------|------|
+| `getMyConversation` | GET | `chat/my-conversation` | student |
+| `closeMyConversation` | PATCH | `chat/my-conversation/close` | student |
+| `getConversations` | GET | `chat/conversations?status&page&limit` | manager |
+| `assignConversation` | PATCH | `chat/conversations/{id}/assign` | manager |
+| `closeConversation` | PATCH | `chat/conversations/{id}/close` | manager |
+| `getMessages` | GET | `chat/conversations/{id}/messages` | both |
+| `markAsRead` | PATCH | `chat/conversations/{id}/read` | both |
+
+### 3.7 Socket.io — `src/lib/socket.ts`
+
+```
+URL: import.meta.env.VITE_SOCKET_URL  (default: http://localhost:3001)
+Auth: { token: localStorage.getItem('token') }  (JWT qua handshake.auth)
+
+Singleton pattern: connectSocket() → tạo hoặc trả về instance đang có
+Disconnect: disconnectSocket() → gọi trong AuthContext.logout()
+
+Events emit:
+  join_conversation    { conversationId }
+  leave_conversation   { conversationId }
+  send_message         { conversationId, text }
+  mark_read            { conversationId }
+
+Events listen:
+  new_message          { message, conversationId, manager_unread, student_unread }
+  conversation_updated { conversationId, manager_unread, last_message_at }  ← manager list badge
+  conversation_read    { conversationId, by }
+  conversation_closed  { conversationId }
+```
+
+### 3.8 HTTP Client — `src/lib/apiRequest.ts`
 
 ```
 Base URL: import.meta.env.VITE_BASE_URL
@@ -256,6 +291,11 @@ Response: { data: T } hoặc { success: true, data: T }
 | `admin-token` | Token admin (dùng khác key!) |
 | `theme` | Theme preference |
 
+**Socket lifecycle:**
+- `connectSocket()` được gọi khi student/manager vào trang chat (lazy connect)
+- `disconnectSocket()` được gọi trong `logout()` — socket bị đóng khi user đăng xuất
+- Socket reconnect tự động tối đa 5 lần khi mất mạng
+
 ### 4.2 PrivateRoute — `src/components/unix/PrivateRoute.tsx`
 
 ```
@@ -308,8 +348,11 @@ Kiểm tra:
 - **Sidebar:** Collapsible — 240px / 80px khi thu gọn
 - **Logo:** "DOM" (FPT Dormitory)
 - **User Info:** Avatar, full_name, student_code, behavioral_score (CFD)
-- **Menu:** Home, News, Schedule, Booking, Utilities, Payment, Requests, CFD Points, Guidelines, Maintenance, FAQ, Dorm Rules, Notifications
+- **Menu:** Home, News, Schedule, Booking, Utilities, Payment, Requests, CFD Points, Guidelines, Maintenance, FAQ, Dorm Rules, Notifications (với Badge unread)
 - **Footer:** Logout button
+- **Persistent Top Header:** Xuất hiện ở TẤT CẢ trang student — "Student Board" title, Search input, Bell Popover (6 notify gần nhất + "View all"), Location badge
+- **Bell state:** `refreshNotifications()` chạy khi mount, khi `pathname` thay đổi, và khi nhận window event `student:notifications:changed`
+- **Real-time:** Socket listener `new_notification` → prepend synthetic notify + antd toast; unsubscribe khi unmount
 
 ### 5.4 SecurityLayout
 - **Header:** Màu `#FF5C00` (orange), logo
@@ -640,6 +683,7 @@ const userData = JSON.parse(decodeURIComponent(userParam));
 | Biến | Bắt buộc | Mô tả |
 |------|---------|-------|
 | `VITE_BASE_URL` | ✅ | Backend API base URL |
+| `VITE_SOCKET_URL` | ✅ | Socket.io server URL (mặc định: http://localhost:3001) |
 | `VITE_BASE_WEB_URL` | — | Frontend base URL |
 
 ---
@@ -681,6 +725,52 @@ const userData = JSON.parse(decodeURIComponent(userParam));
 | Visitor Management (approve/reject/checkin/checkout) | Security |
 | Student Visitor Requests (create/cancel/list) | Student |
 | Student Notifications (list/read/delete) | Student |
+
+### Đã fix / Đã thêm (2026-03-01)
+| Task | Files | Mô tả |
+|------|-------|-------|
+| Bug fix | BE `app.js` (root) | Socket.io 404 — nguyên nhân: `nodemon app.js` chạy root entry point nhưng socket.io chỉ được mount ở `src/app.js`. Fix: thêm `initSocket(httpServer)` vào root `app.js`, xóa `src/app.js` |
+| Feature | `src/lib/socket.ts` (new) | Singleton socket.io client, connectSocket/disconnectSocket, auth qua JWT |
+| Feature | `src/lib/actions/chat.ts` (new) | 7 chat actions: getMyConversation, closeMyConversation, getConversations, assignConversation, closeConversation, getMessages, markAsRead |
+| Feature | `src/pages/student/chat/index.tsx` (new) | Student chat page — real-time với socket.io |
+| Feature | `src/pages/manager/chat/index.tsx` (new) | Manager chat page — split view: conversation list + chat panel |
+| Fix | `src/contexts/AuthContext.tsx` | Gọi `disconnectSocket()` khi logout |
+| Fix | `src/lib/actions/index.ts` | Sửa `deleteUser` export conflict giữa `user.ts` và `admin.ts` |
+| Fix | `src/pages/student/chat/index.tsx` | Thêm `socket.on('error')` handler → toast error + reset sending state |
+| Fix | `src/pages/student/chat/index.tsx` | `handleSend`: check `socket.connected` trước emit; `sending` reset khi nhận `new_message` từ server (thay vì reset ngay lập tức) |
+| Fix | `src/pages/student/chat/index.tsx` | Thêm `socket.on('connect')` → rejoin room sau khi reconnect |
+| Fix | `src/pages/student/chat/index.tsx` | `handleClose`: emit `close_conversation` sau REST close → manager nhận `conversation_closed` real-time |
+| Fix | `src/pages/manager/chat/index.tsx` | Thêm `socket.on('error')` handler → toast error + reset sending state |
+| Fix | `src/pages/manager/chat/index.tsx` | `handleSend`: check `socket.connected` trước emit; `sending` reset khi nhận `new_message` |
+| Fix | `src/pages/manager/chat/index.tsx` | Thêm `activeConvIdRef` + `socket.on('connect')` → rejoin room sau reconnect |
+| Fix | `src/pages/manager/chat/index.tsx` | `handleClose`: emit `close_conversation` → student nhận real-time; thêm Popconfirm confirm trước khi close |
+| Feature | `src/layouts/StudentLayout.tsx` | Persistent top header (Student Board) với Search + Bell Popover + Location — hiện ở TẤT CẢ trang student; Bell fetch real notifications, click Popover hiển thị 6 notify gần nhất + "View all" → `/student/notifications`; Sidebar thêm "Notifications" menu item với Badge unread |
+| Fix | `src/layouts/manager/ManagerHeader.tsx` | Thay hardcoded `count={5}` bằng real unread count từ API; thêm Popover hiển thị notification list khi click chuông |
+| Refactor | `src/pages/student/dashboard/index.tsx` | Xóa duplicate `<header>` (đã chuyển vào StudentLayout) — dashboard chỉ còn phần content |
+| Fix | `src/lib/socket.ts` | `connectSocket()`: nếu socket exists nhưng disconnected → gọi `socket.connect()` (thay vì tạo mới) → tránh orphan listeners; nếu connected → return ngay |
+| Fix | `src/layouts/StudentLayout.tsx` | Connect socket on mount, listen `new_notification` event: prepend synthetic unread notification vào state (bell count tăng ngay) + show antd toast — fix real-time notify khi manager close chat |
+| Fix | `src/layouts/StudentLayout.tsx` | `getMyNotifications` useEffect: đổi dependency `[]` → `[location.pathname]` — bell count sync sau khi student mark-as-read trên notifications page |
+| Fix | `src/layouts/StudentLayout.tsx` | Tách fetch thành `refreshNotifications()` reusable; thêm `useEffect` listen `window` event `student:notifications:changed` → gọi `refreshNotifications()` ngay lập tức — fix bell count không update khi mark-read trên notifications page mà không navigate |
+| Fix | `src/pages/student/notifications/index.tsx` | Thêm `notifyLayoutRefresh()` dispatch `CustomEvent('student:notifications:changed')` sau mỗi mutation thành công (`handleMarkRead`, `handleMarkAllRead`, `handleDelete`) — trigger StudentLayout refresh bell ngay |
+| Feature | `src/pages/manager/chat/index.tsx` | Implement Sáng kiến 2 (Claim trước chat sau): import `useAuth`, tính `isMyConv = !staff \|\| staff.id === user.id`; input area thêm case "Handled by [tên] — view only" khi không phải manager được assign; Close button chỉ hiện khi `isMyConv` |
+| UI | `src/pages/student/chat/index.tsx` | Redesign layout từ narrow centered box → 2-column full-width: Left panel (InfoPanel 288px) chứa status, manager card, common topics, support hours; Right panel là chat full chiều rộng; Messages dùng Avatar + tên; Input đổi sang TextArea (Shift+Enter newline) + circular send button; background chat area bg-gray-50 |
+| Fix | `src/pages/manager/chat/index.tsx` | Tách `isAssigned = !!staff` và `isMyConv = isAssigned && staff.id === user.id` — cũ: `isMyConv = !staff \|\| ...` cho phép nhắn khi chưa pickup. Mới: unassigned conversation bị chặn input ở FE |
+| Feature | `src/pages/manager/chat/index.tsx` | Input area thêm case 3 (unassigned): hiển thị banner "Pick up this conversation to start chatting" + nút Pick up màu cam thay vì input box — enforce Claim before Chat ở FE |
+| Fix | `src/pages/manager/chat/index.tsx` | Thêm `statusFilterRef` (useRef) để tránh stale closure trong socket handler khi filter thay đổi — handler cũ đọc `statusFilter` từ closure bị stale |
+| Feature | `src/pages/manager/chat/index.tsx` | `conversation_updated` handler: nếu conversation chưa có trong list (new conversation từ student) → prepend vào đầu list (khi filter là open/all) — fix realtime: manager thấy conversation mới ngay khi student gửi tin đầu tiên |
+| Feature | `src/lib/actions/chat.ts` | Thêm `getMyConversations(params?)` action → GET `/chat/my-conversations` — lấy tất cả conversations của student |
+| Feature | `src/pages/student/chat/index.tsx` | Redesign hoàn toàn: Left sidebar hiển thị danh sách TẤT CẢ conversations (open + closed) với ConvItem — avatar, agent name, thời gian, status tag, unread badge; Right panel: messages + input (open) hoặc read-only banner + nút "Start new" (closed); "+" new conversation button trong sidebar khi chưa có open conv; Socket chỉ join room của open conv; Closed conversations có thể xem lại (read-only) |
+| Fix | `src/lib/actions/notification.ts` | 2026-03-02 | Thêm `"chat"` vào INotification.category union type — đồng bộ với BE model |
+| Feature | `src/layouts/manager/ManagerHeader.tsx` | 2026-03-02 | Thêm socket useEffect: `connectSocket()` + listen `new_notification` event → prepend notification vào state ngay lập tức (bell count tăng real-time); cleanup on unmount |
+| Bug fix | `src/pages/student/chat/index.tsx` | 2026-03-02 | Import `markAsRead`; `handleSelectConv`: với closed conv có `student_unread > 0` → gọi `markAsRead(convId)` REST API (fire-and-forget) — open conv dùng socket join_conversation; `init()`: khi auto-select closed conv đầu tiên → gọi markAsRead nếu có unread — fix bug unread badge tái hiện sau reload |
+| Feature | `src/layouts/StudentLayout.tsx` | 2026-03-02 | Bell popover: thêm `bellOpen` state + `handleBellOpenChange` — khi mở popover và có unread → gọi `markAllNotificationsRead()` + mark local state; notification items clickable → navigate `/student/notifications` + close popover |
+| Feature | `src/layouts/manager/ManagerHeader.tsx` | 2026-03-02 | Bell popover: thêm `bellOpen` state + `handleBellOpenChange` — khi mở → `markAllNotificationsRead()` + mark local; items clickable → `/manager/notifications`; orange unread dot; "View all notifications →" link at bottom |
+| Feature | `src/pages/manager/notifications/index.tsx` (new) | 2026-03-02 | Trang notifications đầy đủ cho manager: filter tabs (All/Chat/Payments/Booking/Maintenance/Visitor/System), Mark all as read, delete per notification, mark single as read, unread highlight (blue border + dot) |
+| Fix | `src/routers/index.tsx` | 2026-03-02 | `/manager/notifications`: thay `<ComingSoon>` bằng `<ManagerNotificationsPage>` |
+| Bug fix | `src/pages/manager/chat/index.tsx` | 2026-03-02 | `new_message` handler: dùng `activeConvIdRef.current` để check; nếu là active conv → badge `manager_unread: 0` + emit `mark_read`; `conversation_updated` handler: tương tự — override badge về 0 nếu đang xem conversation đó |
+| Bug fix | `src/pages/student/chat/index.tsx` | 2026-03-02 | `new_message` handler: nếu là active conv → badge `student_unread: 0` + emit `mark_read` — fix badge không mất khi đang xem hội thoại |
+
+---
 
 ### Chưa hoàn chỉnh (placeholder / hardcode)
 | Tính năng | Role | Mức độ ưu tiên |
