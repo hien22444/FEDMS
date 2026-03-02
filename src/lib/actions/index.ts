@@ -29,3 +29,4 @@ export type {
 export * from './visitor';
 export * from './notification';
 export * from './chat';
+export * from './news';

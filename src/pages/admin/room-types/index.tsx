@@ -38,11 +38,13 @@ export default function AdminRoomTypesPage() {
     try {
       setLoading(true);
       const res = await fetchRoomTypePricing();
-      const rows = Object.entries(res.prices || {}).map(([key, price]) => {
-        const match = /^(\d+)_person$/i.exec(key);
-        const beds = match ? Number(match[1]) : 2;
-        return { id: key, beds, price };
-      });
+      const rows = Object.entries(res.prices || {})
+        .map(([key, price]) => {
+          const match = /^(\d+)_person$/i.exec(key);
+          const beds = match ? Number(match[1]) : 2;
+          return { id: key, beds, price };
+        })
+        .sort((a, b) => a.beds - b.beds);
       setData(rows);
     } catch (error: any) {
       console.error(error);
@@ -96,11 +98,13 @@ export default function AdminRoomTypesPage() {
       const res = await updateRoomTypePricing(prices);
 
       // Refresh from backend to ensure we have the latest ids/prices
-      const normalized = Object.entries(res.prices || {}).map(([key, price]) => {
-        const match = /^(\d+)_person$/i.exec(key);
-        const beds = match ? Number(match[1]) : 2;
-        return { id: key, beds, price };
-      });
+      const normalized = Object.entries(res.prices || {})
+        .map(([key, price]) => {
+          const match = /^(\d+)_person$/i.exec(key);
+          const beds = match ? Number(match[1]) : 2;
+          return { id: key, beds, price };
+        })
+        .sort((a, b) => a.beds - b.beds);
       setData(normalized);
 
       if (showSuccess) {
