@@ -17,7 +17,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { Layers, Box, Settings2, Plus, Package } from 'lucide-react';
+import { Layers, Box, Settings2, Plus, Package, ClipboardList, Trash2 } from 'lucide-react';
 import dayjs from 'dayjs';
 
 import {
@@ -33,26 +33,41 @@ import {
   createRoomTypeConfig,
   updateRoomTypeConfig,
   deleteRoomTypeConfig,
+  fetchRoomTypePricing,
+  fetchRoomEquipments,
+  addRoomEquipment,
+  updateRoomEquipment,
+  deleteRoomEquipment,
+  fetchRooms,
   type EquipmentCategory,
   type EquipmentTemplate,
   type RoomTypeEquipmentConfig,
+  type RoomEquipment,
+  type Room,
 } from '@/lib/actions/admin';
 
 // ==================== HELPERS ====================
 
-const roomTypeLabels: Record<string, string> = {
-  '2_person': '2-Person Room',
-  '4_person': '4-Person Room',
-  '6_person': '6-Person Room',
-  '8_person': '8-Person Room',
-};
+const ROOM_TYPE_COLOR_PALETTE = ['blue', 'green', 'orange', 'purple', 'cyan', 'gold', 'magenta', 'volcano'];
 
-const roomTypeColors: Record<string, string> = {
-  '2_person': 'blue',
-  '4_person': 'green',
-  '6_person': 'orange',
-  '8_person': 'purple',
-};
+interface RoomTypeOption {
+  value: string;
+  label: string;
+  color: string;
+}
+
+const parseRoomTypeOptions = (prices: Record<string, number>): RoomTypeOption[] =>
+  Object.keys(prices)
+    .sort()
+    .map((key, idx) => {
+      const match = /^(\d+)_person$/i.exec(key);
+      const num = match ? match[1] : key;
+      return {
+        value: key,
+        label: `${num}-Person Room`,
+        color: ROOM_TYPE_COLOR_PALETTE[idx % ROOM_TYPE_COLOR_PALETTE.length],
+      };
+    });
 
 // ==================== CATEGORIES TAB ====================
 
@@ -430,6 +445,7 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
 function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () => void; refreshKey: number }) {
   const [configs, setConfigs] = useState<RoomTypeEquipmentConfig[]>([]);
   const [templates, setTemplates] = useState<EquipmentTemplate[]>([]);
+  const [roomTypeOptions, setRoomTypeOptions] = useState<RoomTypeOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<RoomTypeEquipmentConfig | null>(null);
@@ -437,6 +453,16 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
   const [deleting, setDeleting] = useState<RoomTypeEquipmentConfig | null>(null);
   const [filterRoomType, setFilterRoomType] = useState<string | undefined>(undefined);
   const [form] = Form.useForm();
+
+  const getRoomTypeLabel = (key: string) => roomTypeOptions.find((o) => o.value === key)?.label || key;
+  const getRoomTypeColor = (key: string) => roomTypeOptions.find((o) => o.value === key)?.color || 'default';
+
+  const loadRoomTypes = async () => {
+    try {
+      const res = await fetchRoomTypePricing();
+      setRoomTypeOptions(parseRoomTypeOptions(res.prices || {}));
+    } catch { /* silent */ }
+  };
 
   const loadTemplates = async () => {
     try {
@@ -459,6 +485,7 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
     }
   };
 
+  useEffect(() => { loadRoomTypes(); }, []);
   useEffect(() => { loadTemplates(); }, [refreshKey]);
   useEffect(() => { loadData(); }, [filterRoomType, refreshKey]);
 
@@ -512,7 +539,7 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
       dataIndex: 'room_type',
       key: 'room_type',
       width: 150,
-      render: (type: string) => <Tag color={roomTypeColors[type] || 'default'}>{roomTypeLabels[type] || type}</Tag>,
+      render: (type: string) => <Tag color={getRoomTypeColor(type)}>{getRoomTypeLabel(type)}</Tag>,
     },
     {
       title: 'Equipment',
@@ -579,7 +606,7 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
           onChange={(v) => setFilterRoomType(v)}
           allowClear
           className="w-48"
-          options={Object.entries(roomTypeLabels).map(([value, label]) => ({ label, value }))}
+          options={roomTypeOptions}
         />
         <Button type="primary" icon={<Plus size={14} />} onClick={() => { setEditing(null); setModalOpen(true); }}>
           Add Default Equipment
@@ -610,7 +637,7 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
           <Form.Item label="Room Type" name="room_type" rules={[{ required: true, message: 'Please select room type' }]}>
             <Select
               placeholder="Select room type..."
-              options={Object.entries(roomTypeLabels).map(([value, label]) => ({ label, value }))}
+              options={roomTypeOptions}
             />
           </Form.Item>
           <Form.Item label="Equipment Template" name="template" rules={[{ required: true, message: 'Please select a template' }]}>
@@ -664,12 +691,544 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
             <div>
               <p>
                 Remove <span className="font-semibold text-red-600">"{getTemplateName(deleting.template)}"</span> from{' '}
-                <span className="font-semibold">{roomTypeLabels[deleting.room_type]}</span> defaults?
+                <span className="font-semibold">{getRoomTypeLabel(deleting.room_type)}</span> defaults?
               </p>
               <p className="text-xs text-gray-500 mt-1">This won't affect equipment already assigned to rooms.</p>
             </div>
           </div>
         )}
+      </Modal>
+    </>
+  );
+}
+
+// ==================== ROOM EQUIPMENT TAB ====================
+
+const STATUS_COLORS: Record<string, string> = {
+  good: 'green', normal: 'blue', damaged: 'orange', broken: 'red', missing: 'default',
+};
+
+function RoomEquipmentTab() {
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>(undefined);
+  const [equipments, setEquipments] = useState<RoomEquipment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  // Add optional modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState<RoomEquipment | null>(null);
+  const [editing, setEditing] = useState<RoomEquipment | null>(null);
+  const [pendingAdd, setPendingAdd] = useState<any>(null);
+  const [optionalConfigs, setOptionalConfigs] = useState<RoomTypeEquipmentConfig[]>([]);
+  const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
+
+  const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
+
+  const loadRooms = async () => {
+    try {
+      const res = await fetchRooms({ page: 1, limit: 500 });
+      setRooms(res.items || []);
+    } catch { /* silent */ }
+  };
+
+  const loadEquipments = async (roomId: string) => {
+    try {
+      setLoading(true);
+      const res = await fetchRoomEquipments({ room: roomId, page: 1, limit: 100 });
+      console.log('loadEquipments - fetched for room:', roomId, 'equipments:', res.items);
+      setEquipments(res.items);
+    } catch {
+      message.error('Failed to load room equipment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAllConfigs = async (roomType: string) => {
+    try {
+      const res = await fetchRoomTypeConfigs({ room_type: roomType, page: 1, limit: 100 });
+      // Load all configs (both Mandatory and Optional)
+      setOptionalConfigs(res.items);
+    } catch { /* silent */ }
+  };
+
+  useEffect(() => { loadRooms(); }, []);
+
+  useEffect(() => {
+    if (selectedRoomId) loadEquipments(selectedRoomId);
+    else setEquipments([]);
+  }, [selectedRoomId]);
+
+  const handleOpenModal = () => {
+    if (!selectedRoom) return;
+    console.log('handleOpenModal called - selectedRoom:', selectedRoom);
+    console.log('Current equipments at modal open:', equipments);
+    form.resetFields();
+    form.setFieldsValue({ quantity: 1 });
+    loadAllConfigs(selectedRoom.room_type as string);
+    setModalOpen(true);
+  };
+
+  const handleAddOptional = async () => {
+    try {
+      const values = await form.validateFields();
+      const selectedTemplateId = values.template;
+
+      console.log('handleAddOptional - selectedTemplateId:', selectedTemplateId);
+      console.log('handleAddOptional - equipments:', equipments);
+
+      // Get the selected equipment name for display
+      const selectedConfig = optionalConfigs.find((c) => {
+        const tpl = typeof c.template === 'object' ? c.template : null;
+        return tpl && String(tpl.id) === String(selectedTemplateId);
+      });
+
+      const selectedEquipmentName = selectedConfig
+        ? (typeof selectedConfig.template === 'object' ? selectedConfig.template.equipment_name : 'Unknown')
+        : 'Unknown';
+
+      // Check if equipment already exists in this room
+      const existingEquipment = equipments.find((e) => {
+        const tpl = typeof e.template === 'object' ? e.template : null;
+        const match = tpl && String(tpl.id) === String(selectedTemplateId);
+        console.log('Checking equipment:', {
+          equipment_id: e.id,
+          template: tpl,
+          tpl_id: tpl?.id,
+          selected_id: selectedTemplateId,
+          match
+        });
+        return match;
+      });
+
+      console.log('handleAddOptional - existingEquipment found:', existingEquipment);
+
+      if (existingEquipment) {
+        // Show confirmation modal before adding duplicate
+        setPendingAdd({ ...values, equipmentName: selectedEquipmentName, existingQuantity: existingEquipment.quantity });
+        setDuplicateModalOpen(true);
+        return;
+      }
+
+      // Proceed with adding equipment
+      await performAddEquipment(values);
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to add equipment';
+      message.error(errMsg);
+    }
+  };
+
+  const performAddEquipment = async (values: any) => {
+    try {
+      setAddLoading(true);
+      await addRoomEquipment({ room: selectedRoomId!, template: values.template, quantity: values.quantity });
+      message.success('Equipment added successfully');
+      setModalOpen(false);
+      setDuplicateModalOpen(false);
+      setPendingAdd(null);
+      form.resetFields();
+      loadEquipments(selectedRoomId!);
+    } catch (error: any) {
+      const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to add equipment';
+      message.error(errMsg);
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleEditEquipment = (equipment: RoomEquipment) => {
+    setEditing(equipment);
+    editForm.setFieldsValue({
+      quantity: equipment.quantity,
+      status: equipment.status,
+      condition_notes: equipment.condition_notes,
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+    try {
+      const values = await editForm.validateFields();
+      setEditLoading(true);
+      await updateRoomEquipment(editing.id, {
+        quantity: values.quantity,
+        status: values.status,
+        condition_notes: values.condition_notes,
+      });
+      message.success('Equipment updated successfully');
+      setEditModalOpen(false);
+      setEditing(null);
+      loadEquipments(selectedRoomId!);
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to update equipment';
+      message.error(errMsg);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteEquipment = async () => {
+    if (!deleting) return;
+    try {
+      setDeleteLoading(true);
+      await deleteRoomEquipment(deleting.id);
+      message.success('Equipment removed successfully');
+      setDeleteModalOpen(false);
+      setDeleting(null);
+      loadEquipments(selectedRoomId!);
+    } catch (error: any) {
+      const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to remove equipment';
+      message.error(errMsg);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const openDeleteModal = (equipment: RoomEquipment) => {
+    setDeleting(equipment);
+    setDeleteModalOpen(true);
+  };
+
+  const columns: ColumnsType<RoomEquipment> = [
+    {
+      title: 'Equipment Code',
+      dataIndex: 'equipment_code',
+      key: 'equipment_code',
+      width: 180,
+      render: (code: string) => <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{code}</span>,
+    },
+    {
+      title: 'Equipment',
+      dataIndex: 'template',
+      key: 'template',
+      render: (tpl: RoomEquipment['template']) => {
+        if (typeof tpl === 'object' && tpl !== null) {
+          return (
+            <div>
+              <div className="font-medium text-gray-900">{tpl.equipment_name}</div>
+              {tpl.brand && <div className="text-xs text-gray-400">{tpl.brand}{tpl.model ? ` - ${tpl.model}` : ''}</div>}
+            </div>
+          );
+        }
+        return '-';
+      },
+    },
+    {
+      title: 'Category',
+      dataIndex: 'template',
+      key: 'category',
+      width: 130,
+      render: (tpl: RoomEquipment['template']) => {
+        if (typeof tpl === 'object' && tpl?.category && typeof tpl.category === 'object') {
+          return <Tag color="geekblue">{tpl.category.category_name}</Tag>;
+        }
+        return '-';
+      },
+    },
+    {
+      title: 'Type',
+      key: 'type',
+      width: 100,
+      render: () => <Tag color="default">Mandatory</Tag>,
+    },
+    {
+      title: 'Qty',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 60,
+      align: 'center',
+      render: (qty: number) => <span className="font-semibold">{qty}</span>,
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: string) => (
+        <Tag color={STATUS_COLORS[status] || 'default'} className="capitalize">{status}</Tag>
+      ),
+    },
+    {
+      title: 'Assigned At',
+      dataIndex: 'assigned_at',
+      key: 'assigned_at',
+      width: 120,
+      render: (date: string) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      width: 100,
+      align: 'center',
+      render: (_: any, record: RoomEquipment) => (
+        <div className="flex gap-1 justify-center">
+          <Button
+            type="text"
+            size="small"
+            onClick={() => handleEditEquipment(record)}
+            title="Edit equipment"
+          >
+            Edit
+          </Button>
+          <Button
+            type="text"
+            danger
+            size="small"
+            icon={<Trash2 size={14} />}
+            onClick={() => openDeleteModal(record)}
+            title="Remove equipment"
+          />
+        </div>
+      ),
+    },
+  ];
+
+  const roomOptions = rooms.map((r) => {
+    const blockName = typeof r.block === 'object' && r.block !== null ? (r.block as any).block_name : '';
+    return {
+      value: r.id,
+      label: `${r.room_number}${blockName ? ` — ${blockName}` : ''} (${String(r.room_type).replace('_', ' ')})`,
+    };
+  });
+
+  const optionalTemplateOptions = optionalConfigs.map((c) => {
+    const tpl = typeof c.template === 'object' && c.template !== null ? c.template : null;
+    if (!tpl) return null;
+    const mandatoryLabel = c.is_mandatory ? '[Mandatory]' : '[Optional]';
+    return {
+      value: tpl.id,
+      label: `${tpl.equipment_name} ${mandatoryLabel}${tpl.brand ? ` (${tpl.brand})` : ''}`,
+    };
+  }).filter(Boolean) as { value: string; label: string }[];
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Select
+            placeholder="Select a room to view equipment..."
+            value={selectedRoomId}
+            onChange={(v) => setSelectedRoomId(v)}
+            showSearch
+            optionFilterProp="label"
+            allowClear
+            className="w-80"
+            options={roomOptions}
+          />
+          {selectedRoomId && (
+            <span className="text-xs text-gray-400">{equipments.length} item(s)</span>
+          )}
+        </div>
+        {selectedRoomId && (
+          <Button type="primary" icon={<Plus size={14} />} onClick={handleOpenModal}>
+            Add Equipment
+          </Button>
+        )}
+      </div>
+
+      {!selectedRoomId ? (
+        <div className="text-center py-16 text-gray-400">
+          <ClipboardList size={40} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Select a room above to view its equipment</p>
+        </div>
+      ) : (
+        <Table<RoomEquipment>
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={equipments}
+          pagination={false}
+          size="small"
+          scroll={{ x: 800 }}
+          locale={{ emptyText: 'No equipment assigned to this room yet.' }}
+        />
+      )}
+
+      <Modal
+        open={modalOpen}
+        title="Add Equipment to Room"
+        onCancel={() => setModalOpen(false)}
+        onOk={handleAddOptional}
+        okText="Add"
+        okButtonProps={{ loading: addLoading }}
+        cancelText="Cancel"
+        destroyOnHidden
+        width={460}
+      >
+        {optionalTemplateOptions.length === 0 ? (
+          <div className="py-6 text-center text-gray-400 text-sm">
+            No equipment configured for this room type.<br />
+            <span className="text-xs">Go to "Default Room Setup" tab to configure equipment.</span>
+          </div>
+        ) : (
+          <Form form={form} layout="vertical" className="mt-4">
+            <Form.Item
+              label="Equipment"
+              name="template"
+              rules={[{ required: true, message: 'Please select equipment' }]}
+            >
+              <Select
+                placeholder="Select equipment (Mandatory or Optional)..."
+                showSearch
+                optionFilterProp="label"
+                options={optionalTemplateOptions}
+              />
+            </Form.Item>
+            {form.getFieldValue('template') && (() => {
+              const selectedTemplateId = form.getFieldValue('template');
+              const existsInRoom = equipments.some((e) => {
+                const tpl = typeof e.template === 'object' ? e.template : null;
+                return tpl && String(tpl.id) === String(selectedTemplateId);
+              });
+              const existingEq = equipments.find((e) => {
+                const tpl = typeof e.template === 'object' ? e.template : null;
+                return tpl && String(tpl.id) === String(selectedTemplateId);
+              });
+              return existsInRoom && existingEq ? (
+                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg flex gap-2">
+                  <ExclamationCircleOutlined className="text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-orange-800">This equipment already exists in this room</p>
+                    <p className="text-orange-700 text-xs mt-1">
+                      Current quantity: <span className="font-semibold">{existingEq.quantity}</span>
+                      <br />
+                      You can use the "Edit" button to update the quantity instead.
+                    </p>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+            <Form.Item
+              label="Quantity"
+              name="quantity"
+              rules={[{ required: true, message: 'Please enter quantity' }]}
+            >
+              <InputNumber style={{ width: '100%' }} min={1} />
+            </Form.Item>
+          </Form>
+        )}
+      </Modal>
+
+      <Modal
+        open={deleteModalOpen}
+        title="Remove Equipment"
+        onCancel={() => setDeleteModalOpen(false)}
+        onOk={handleDeleteEquipment}
+        okText="Remove"
+        okButtonProps={{ danger: true, loading: deleteLoading }}
+        cancelText="Cancel"
+        destroyOnHidden
+      >
+        <div className="flex gap-3">
+          <ExclamationCircleOutlined className="text-lg text-orange-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Are you sure you want to remove this equipment?</p>
+            {deleting && (
+              <div className="text-sm text-gray-600 mt-2">
+                <p><strong>Equipment:</strong> {typeof deleting.template === 'object' ? deleting.template.equipment_name : 'Unknown'}</p>
+                <p><strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{deleting.equipment_code}</span></p>
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-2">This action cannot be undone.</p>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={editModalOpen}
+        title="Edit Equipment"
+        onCancel={() => {
+          setEditModalOpen(false);
+          setEditing(null);
+        }}
+        onOk={handleSaveEdit}
+        okText="Save"
+        okButtonProps={{ loading: editLoading }}
+        cancelText="Cancel"
+        destroyOnHidden
+        width={480}
+      >
+        {editing && (
+          <>
+            <div className="mb-4 pb-4 border-b">
+              <p className="text-sm text-gray-600">
+                <strong>Equipment:</strong> {typeof editing.template === 'object' ? editing.template.equipment_name : 'Unknown'}
+              </p>
+              <p className="text-sm text-gray-600">
+                <strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{editing.equipment_code}</span>
+              </p>
+            </div>
+            <Form form={editForm} layout="vertical">
+              <Form.Item
+                label="Quantity"
+                name="quantity"
+                rules={[{ required: true, message: 'Please enter quantity' }]}
+              >
+                <InputNumber style={{ width: '100%' }} min={1} />
+              </Form.Item>
+              <Form.Item
+                label="Status"
+                name="status"
+                rules={[{ required: true, message: 'Please select status' }]}
+              >
+                <Select
+                  placeholder="Select status..."
+                  options={[
+                    { label: 'Good', value: 'good' },
+                    { label: 'Normal', value: 'normal' },
+                    { label: 'Damaged', value: 'damaged' },
+                    { label: 'Broken', value: 'broken' },
+                    { label: 'Missing', value: 'missing' },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item
+                label="Condition Notes"
+                name="condition_notes"
+              >
+                <Input.TextArea rows={3} placeholder="Add any notes about the equipment condition..." />
+              </Form.Item>
+            </Form>
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        open={duplicateModalOpen}
+        title="Equipment Already Exists"
+        onCancel={() => {
+          setDuplicateModalOpen(false);
+          setPendingAdd(null);
+        }}
+        footer={null}
+        destroyOnHidden
+      >
+        <div className="flex gap-3">
+          <ExclamationCircleOutlined className="text-lg text-orange-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">This equipment is already assigned to this room!</p>
+            {pendingAdd && (
+              <div className="text-sm text-gray-600 mt-3 bg-gray-50 p-3 rounded">
+                <p><strong>Equipment:</strong> {pendingAdd.equipmentName}</p>
+                <p><strong>Current Quantity:</strong> {pendingAdd.existingQuantity}</p>
+                <p><strong>New Quantity:</strong> {pendingAdd.quantity}</p>
+              </div>
+            )}
+            <p className="text-sm text-gray-500 mt-3">
+              Do you want to add another entry of the same equipment? <br />
+              <span className="text-xs">Alternatively, use the Edit button to update the quantity.</span>
+            </p>
+          </div>
+        </div>
       </Modal>
     </>
   );
@@ -722,6 +1281,22 @@ export default function AdminFacilitiesPage() {
             Define which equipment is automatically assigned when a room of this type is created.
           </p>
           <DefaultRoomSetupTab onDataChange={triggerRefresh} refreshKey={refreshKey} />
+        </div>
+      ),
+    },
+    {
+      key: 'room-equipment',
+      label: (<span className="flex items-center gap-2"><ClipboardList size={15} />Room Equipment</span>),
+      children: (
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <ClipboardList size={18} className="text-orange-600" />
+            <div className="font-semibold text-gray-900">Equipment in Room</div>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">
+            View all equipment assigned to a specific room (auto-assigned on room creation).
+          </p>
+          <RoomEquipmentTab />
         </div>
       ),
     },

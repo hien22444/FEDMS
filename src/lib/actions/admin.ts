@@ -415,7 +415,7 @@ export const deleteEquipmentTemplate = async (id: string) => {
 
 export interface RoomTypeEquipmentConfig {
   id: string;
-  room_type: '2_person' | '4_person' | '6_person' | '8_person';
+  room_type: string;
   template: {
     id: string;
     equipment_name: string;
@@ -461,4 +461,51 @@ export const updateRoomTypeConfig = async (id: string, body: Partial<RoomTypeEqu
 
 export const deleteRoomTypeConfig = async (id: string) => {
   return api.delete<{ message: string }>(`equipment/room-type-configs/${id}`);
+};
+
+// ===== Room Equipment types & APIs =====
+
+export interface RoomEquipment {
+  id: string;
+  room: string;
+  template: {
+    id: string;
+    equipment_name: string;
+    brand?: string;
+    model?: string;
+    category?: { id: string; category_name: string };
+  } | string;
+  equipment_code: string;
+  quantity: number;
+  status: 'good' | 'normal' | 'damaged' | 'broken' | 'missing';
+  condition_notes?: string;
+  assigned_at: string;
+}
+
+export interface RoomEquipmentListResponse {
+  items: RoomEquipment[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export const addRoomEquipment = async (body: { room: string; template: string; quantity?: number }) => {
+  return api.post<RoomEquipment>('equipment/room-equipments', body);
+};
+
+export const fetchRoomEquipments = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) searchParams.append(key, String(value));
+    });
+  }
+  const query = searchParams.toString();
+  return api.get<RoomEquipmentListResponse>(`equipment/room-equipments${query ? `?${query}` : ''}`);
+};
+
+export const deleteRoomEquipment = async (id: string) => {
+  return api.delete<{ message: string }>(`equipment/room-equipments/${id}`);
+};
+
+export const updateRoomEquipment = async (id: string, body: { quantity?: number; status?: string; condition_notes?: string }) => {
+  return api.patch<RoomEquipment>(`equipment/room-equipments/${id}`, body);
 };
