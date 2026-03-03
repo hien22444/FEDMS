@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, message } from 'antd';
+import { App, Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, message } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Activity } from 'lucide-react';
@@ -13,12 +13,6 @@ const dormColumns = (
     title: 'Dorm Name',
     dataIndex: 'dorm_name',
     key: 'dorm_name',
-  },
-  {
-    title: 'Code',
-    dataIndex: 'dorm_code',
-    key: 'dorm_code',
-    render: (code: string) => <span className="font-mono text-xs">{code}</span>,
   },
   {
     title: 'Floors',
@@ -61,6 +55,7 @@ const dormColumns = (
 ];
 
 export default function AdminDormsPage() {
+  const { modal: appModal } = App.useApp();
   const [dorms, setDorms] = useState<Dorm[]>([]);
   const [loadingDorms, setLoadingDorms] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -100,9 +95,11 @@ export default function AdminDormsPage() {
   useEffect(() => {
     if (modalOpen) {
       if (editingDorm) {
+        const shortName = editingDorm.dorm_name?.toLowerCase().startsWith('dorm ')
+          ? editingDorm.dorm_name.replace(/^[Dd]orm\s+/, '')
+          : editingDorm.dorm_name;
         form.setFieldsValue({
-          dorm_name: editingDorm.dorm_name,
-          dorm_code: editingDorm.dorm_code,
+          dorm_name: shortName,
           total_floors: editingDorm.total_floors ?? 1,
           description: editingDorm.description,
           is_active: editingDorm.is_active,
@@ -122,11 +119,33 @@ export default function AdminDormsPage() {
   const handleSubmitDorm = async () => {
     try {
       const values = await form.validateFields();
+      const rawName = String(values.dorm_name || '').trim();
+      const shortName = rawName.toLowerCase().startsWith('dorm ')
+        ? rawName.replace(/^[Dd]orm\s+/, '').trim()
+        : rawName;
+      if (!shortName) {
+        message.error('Please enter dorm name');
+        return;
+      }
+      if (!/^[A-Za-z]$/.test(shortName)) {
+        message.error('Dorm name must be 1 letter (A-Z)');
+        return;
+      }
+
+      const dorm_name = `Dorm ${shortName.toUpperCase()}`;
+      const dorm_code = shortName.toUpperCase();
+
+      const payload = {
+        ...values,
+        dorm_name,
+        dorm_code,
+      };
+
       if (editingDorm) {
-        await updateDorm(editingDorm.id, values);
+        await updateDorm(editingDorm.id, payload);
         message.success('Dorm updated successfully');
       } else {
-        await createDorm(values);
+        await createDorm(payload);
         message.success('Dorm created successfully');
       }
       setModalOpen(false);
@@ -134,7 +153,15 @@ export default function AdminDormsPage() {
     } catch (error: any) {
       if (error?.errorFields) return;
       console.error(error);
-      message.error('Failed to save dorm');
+      const errMsg = Array.isArray(error?.message)
+        ? error.message.join(', ')
+        : error?.message || 'Failed to save dorm';
+      appModal.error({
+        title: 'Dorm save error',
+        content: errMsg,
+        okText: 'Close',
+        zIndex: 2000,
+      });
     }
   };
 
@@ -181,16 +208,24 @@ export default function AdminDormsPage() {
           <Form.Item
             label="Dorm Name"
             name="dorm_name"
-            rules={[{ required: true, message: 'Please enter dorm name' }]}
+            rules={[
+              { required: true, message: 'Please enter dorm name' },
+              {
+                validator: (_, value) => {
+                  const raw = String(value || '').trim();
+                  const short = raw.toLowerCase().startsWith('dorm ')
+                    ? raw.replace(/^[Dd]orm\s+/, '')
+                    : raw;
+                  if (!short) return Promise.resolve();
+                  if (!/^[A-Za-z]$/.test(short)) {
+                    return Promise.reject(new Error('Dorm name must be 1 letter (A-Z)'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
           >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            label="Dorm Code"
-            name="dorm_code"
-            rules={[{ required: true, message: 'Please enter dorm code' }]}
-          >
-            <Input />
+            <Input maxLength={1} placeholder="A" />
           </Form.Item>
           <Form.Item
             label="Number of floors"

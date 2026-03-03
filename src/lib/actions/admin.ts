@@ -185,6 +185,12 @@ export interface Room {
 
 export interface RoomListResponse {
   items: Room[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 // ===== Room type pricing APIs =====

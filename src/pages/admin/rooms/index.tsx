@@ -147,6 +147,7 @@ const roomColumns = (
 export default function AdminRoomsPage() {
   const { modal } = App.useApp();
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [dorms, setDorms] = useState<Dorm[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [roomTypePrices, setRoomTypePrices] = useState<Record<RoomType, number> | null>(null);
@@ -157,6 +158,7 @@ export default function AdminRoomsPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [blockPickerOpen, setBlockPickerOpen] = useState(false);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingRoom, setDeletingRoom] = useState<Room | null>(null);
@@ -208,12 +210,36 @@ export default function AdminRoomsPage() {
       if (filterStatus) params.status = filterStatus;
 
       const res = await fetchRooms(params);
-      setRooms(res.items);
+      const sorted = [...res.items].sort((a, b) => {
+        const getBlockName = (r: Room) =>
+          typeof r.block === 'object' && r.block !== null ? r.block.block_name : '';
+        const aBlock = getBlockName(a);
+        const bBlock = getBlockName(b);
+        if (aBlock !== bBlock) {
+          return aBlock.localeCompare(bBlock);
+        }
+        // Fallback: sort by room_number within the same block (numeric aware)
+        return String(a.room_number).localeCompare(String(b.room_number), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        });
+      });
+      setRooms(sorted);
     } catch (error: any) {
       console.error(error);
       message.error('Failed to load room list');
     } finally {
       setLoadingRooms(false);
+    }
+  };
+
+  const loadAllRoomsForCapacity = async () => {
+    try {
+      const res = await fetchRooms({ page: 1, limit: 1000 });
+      setAllRooms(res.items);
+    } catch (error: any) {
+      console.error(error);
+      // Silent fail; capacity info is only for UX
     }
   };
 
@@ -231,6 +257,7 @@ export default function AdminRoomsPage() {
     loadDorms();
     loadBlocks();
     loadRooms();
+    loadAllRoomsForCapacity();
     loadRoomTypePrices();
   }, []);
 
@@ -285,17 +312,98 @@ export default function AdminRoomsPage() {
     [blocks, selectedBlockId],
   );
 
-  const blockOptions = useMemo(() => {
-    const filtered =
-      selectedDormId && selectedDormId !== 'all'
-        ? blocks.filter((b) => (typeof b.dorm === 'object' ? b.dorm.id : b.dorm) === selectedDormId)
-        : blocks;
+  const blocksOfSelectedDorm = useMemo(
+    () =>
+      selectedDormId
+        ? blocks.filter(
+            (b) => (typeof b.dorm === 'object' ? b.dorm.id : b.dorm) === selectedDormId,
+          )
+        : [],
+    [blocks, selectedDormId],
+  );
 
-    return filtered.map((b) => ({
-      label: `${b.block_name} (${b.block_code})`,
-      value: b.id,
-    }));
-  }, [blocks, selectedDormId]);
+  const blockRoomCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allRooms.forEach((r) => {
+      const blockId = typeof r.block === 'object' && r.block !== null ? r.block.id : r.block;
+      if (!blockId) return;
+      counts[blockId] = (counts[blockId] ?? 0) + 1;
+    });
+    return counts;
+  }, [allRooms]);
+
+  const isBlockFull = (block: Block) => {
+    const capacity = typeof block.total_rooms === 'number' ? block.total_rooms : undefined;
+    if (!capacity || capacity <= 0) return false;
+    const count = blockRoomCounts[block.id] ?? 0;
+    return count >= capacity;
+  };
+
+  const availableRoomNumbers = useMemo(() => {
+    if (!selectedBlockId) return [];
+
+    const block = blocks.find((b) => b.id === selectedBlockId);
+    if (!block) return [];
+
+    const capacity =
+      typeof block.total_rooms === 'number' && Number.isFinite(block.total_rooms)
+        ? block.total_rooms
+        : undefined;
+
+    // All rooms in this block, excluding the room being edited (if same block)
+    const roomsInBlock = allRooms.filter((r) => {
+      const blockId = typeof r.block === 'object' && r.block !== null ? r.block.id : r.block;
+      if (blockId !== selectedBlockId) return false;
+      if (editingRoom && r.id === editingRoom.id) return false;
+      return true;
+    });
+
+    let currentRoomNumber: number | undefined;
+    let editingSameBlock = false;
+    if (editingRoom) {
+      const editingBlockId =
+        typeof editingRoom.block === 'object' && editingRoom.block !== null
+          ? editingRoom.block.id
+          : editingRoom.block;
+      if (editingBlockId === selectedBlockId) {
+        const n = parseInt(String(editingRoom.room_number), 10);
+        if (Number.isFinite(n) && n > 0) {
+          currentRoomNumber = n;
+          editingSameBlock = true;
+        }
+      }
+    }
+
+    // When editing a room inside the same block, just keep its current number
+    if (editingSameBlock && currentRoomNumber) {
+      return [currentRoomNumber];
+    }
+
+    const usedNumbers = new Set<number>();
+    roomsInBlock.forEach((r) => {
+      const n = parseInt(String(r.room_number), 10);
+      if (Number.isFinite(n) && n > 0) {
+        usedNumbers.add(n);
+      }
+    });
+
+    // If block has no rooms yet, force creating room 1 first
+    if (roomsInBlock.length === 0) {
+      return [1];
+    }
+
+    // Sequential rule: always propose the smallest missing number 1 -> 2 -> 3 ...
+    let next = 1;
+    while (usedNumbers.has(next)) {
+      next += 1;
+    }
+
+    if (capacity && capacity > 0 && next > capacity) {
+      return [];
+    }
+
+    return [next];
+  }, [selectedBlockId, blocks, allRooms, editingRoom]);
 
   useEffect(() => {
     if (!modalOpen || !selectedBlockId) return;
@@ -339,6 +447,26 @@ export default function AdminRoomsPage() {
     }
   }, [modalOpen, editingRoom, form]);
 
+  // Require selecting dorm before choosing block; reset block if dorm changes
+  useEffect(() => {
+    if (!modalOpen) return;
+    if (!selectedDormId) {
+      form.setFieldValue('block', undefined);
+      return;
+    }
+    const currentBlockId = form.getFieldValue('block') as string | undefined;
+    if (currentBlockId) {
+      const inSameDorm = blocks.some(
+        (b) =>
+          b.id === currentBlockId &&
+          (typeof b.dorm === 'object' ? b.dorm.id : b.dorm) === selectedDormId,
+      );
+      if (!inSameDorm) {
+        form.setFieldValue('block', undefined);
+      }
+    }
+  }, [modalOpen, selectedDormId, blocks, form]);
+
   const handleDeleteRoom = (record: Room) => {
     setDeletingRoom(record);
     setDeleteModalOpen(true);
@@ -359,6 +487,7 @@ export default function AdminRoomsPage() {
       }
       setModalOpen(false);
       loadRooms();
+      loadAllRoomsForCapacity();
     } catch (error: any) {
       if (error?.errorFields) return;
       const raw = Array.isArray(error?.message) ? error.message.join(', ') : (error?.message || '');
@@ -469,11 +598,15 @@ export default function AdminRoomsPage() {
       >
         <Form form={form} layout="vertical">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Form.Item label="Dorm (optional)" name="dorm">
+            <Form.Item
+              label="Dorm"
+              name="dorm"
+              rules={[{ required: true, message: 'Please select a dorm first' }]}
+            >
               <Select
-                placeholder="Filter blocks by dorm..."
-                allowClear
+                placeholder="Select dorm to see blocks"
                 loading={loadingDorms}
+                disabled={!!editingRoom}
                 options={dorms.map((d) => ({
                   label: d.dorm_name,
                   value: d.id,
@@ -486,16 +619,35 @@ export default function AdminRoomsPage() {
               name="block"
               rules={[{ required: true, message: 'Please select a block' }]}
             >
-              <Select
-                placeholder="Select block..."
-                loading={loadingBlocks}
-                showSearch
-                optionFilterProp="children"
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                options={blockOptions}
-              />
+              <div className="flex gap-2">
+                {/*
+                  Show block name reliably when editing by preferring editingRoom.block
+                  instead of relying only on selectedBlock/useWatch.
+                */}
+                {/*
+                  displayBlockName is computed inline to avoid extra hooks.
+                */}
+                {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */}
+                <Input
+                  value={
+                    editingRoom && typeof editingRoom.block === 'object' && editingRoom.block !== null
+                      ? editingRoom.block.block_name
+                      : selectedBlock
+                        ? selectedBlock.block_name
+                        : ''
+                  }
+                  placeholder={selectedDormId ? 'Choose a block' : 'Select dorm first'}
+                  readOnly
+                  disabled
+                />
+                <Button
+                  type="default"
+                  onClick={() => setBlockPickerOpen(true)}
+                  disabled={!!editingRoom || !selectedDormId || loadingBlocks}
+                >
+                  Select Block
+                </Button>
+              </div>
             </Form.Item>
           </div>
 
@@ -503,9 +655,22 @@ export default function AdminRoomsPage() {
             <Form.Item
               label="Room Number"
               name="room_number"
-              rules={[{ required: true, message: 'Please enter room number' }]}
+              rules={[{ required: true, message: 'Please select room number' }]}
             >
-              <Input placeholder="e.g. 301" />
+              {editingRoom ? (
+                <Input disabled />
+              ) : availableRoomNumbers.length > 0 && selectedBlockId ? (
+                <Select
+                  placeholder={selectedBlock ? 'Select room number' : 'Select block first'}
+                  disabled={!selectedBlock}
+                  options={availableRoomNumbers.map((n) => ({
+                    label: String(n),
+                    value: String(n),
+                  }))}
+                />
+              ) : (
+                <Input placeholder="e.g. 1" />
+              )}
             </Form.Item>
 
             <Form.Item
@@ -605,6 +770,71 @@ export default function AdminRoomsPage() {
       </Modal>
 
       <Modal
+        open={blockPickerOpen}
+        title="Select Block"
+        onCancel={() => setBlockPickerOpen(false)}
+        footer={null}
+        width={800}
+      >
+        {!selectedDormId ? (
+          <p className="text-sm text-gray-500">Please select a dorm first.</p>
+        ) : blocksOfSelectedDorm.length === 0 ? (
+          <p className="text-sm text-gray-500">No blocks found for this dorm.</p>
+        ) : (
+          <div className="space-y-6 max-h-[480px] overflow-y-auto pr-1">
+            {Array.from(
+              new Set(
+                blocksOfSelectedDorm
+                  .map((b) => b.floor ?? 0)
+                  .filter((f) => typeof f === 'number' && f > 0),
+              ),
+            )
+              .sort((a, b) => a - b)
+              .map((floor) => (
+                <div key={floor} className="space-y-3">
+                  <div className="font-semibold text-gray-800">{`Floor ${floor}`}</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {blocksOfSelectedDorm
+                      .filter((b) => b.floor === floor)
+                      .map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          disabled={isBlockFull(b)}
+                          onClick={() => {
+                            if (isBlockFull(b)) return;
+                            form.setFieldValue('block', b.id);
+                            if (b.floor != null) {
+                              form.setFieldValue('floor', b.floor);
+                            }
+                            setBlockPickerOpen(false);
+                          }}
+                          className={`rounded-xl border px-3 py-3 text-left transition ${
+                            isBlockFull(b)
+                              ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-70'
+                              : selectedBlockId === b.id
+                                ? 'border-orange-500 bg-orange-50 shadow-sm'
+                                : 'border-gray-200 hover:border-orange-400 hover:bg-orange-50'
+                          }`}
+                        >
+                          <div className="font-semibold text-gray-900 text-sm">
+                            {b.block_name}
+                          </div>
+                          {isBlockFull(b) && (
+                            <div className="mt-1 text-[11px] uppercase tracking-wide text-red-500">
+                              Full rooms
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </Modal>
+
+      <Modal
         open={deleteModalOpen}
         title="Confirm Delete Room"
         onCancel={() => {
@@ -619,6 +849,7 @@ export default function AdminRoomsPage() {
             setDeleteModalOpen(false);
             setDeletingRoom(null);
             loadRooms();
+            loadAllRoomsForCapacity();
           } catch (error: any) {
             console.error(error);
             const errMsg = Array.isArray(error?.message)
