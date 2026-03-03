@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, Select, message, Space } from 'antd';
+import { App, Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, Select, message, Space } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Building2 } from 'lucide-react';
@@ -56,7 +56,6 @@ const blockColumns = (
       const colorMap: Record<string, string> = {
         male: 'blue',
         female: 'pink',
-        mixed: 'purple',
       };
       return <Tag color={colorMap[type] || 'default'}>{type.toUpperCase()}</Tag>;
     },
@@ -88,6 +87,7 @@ const blockColumns = (
 ];
 
 export default function AdminBlocksPage() {
+  const { modal: appModal } = App.useApp();
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [dorms, setDorms] = useState<Dorm[]>([]);
   const [loadingBlocks, setLoadingBlocks] = useState(false);
@@ -206,7 +206,7 @@ export default function AdminBlocksPage() {
         });
       } else {
         form.resetFields();
-        form.setFieldsValue({ is_active: true, gender_type: 'mixed' });
+        form.setFieldsValue({ is_active: true, gender_type: 'male' });
       }
     }
   }, [modalOpen, editingBlock, form]);
@@ -266,7 +266,13 @@ export default function AdminBlocksPage() {
       const errMsg = Array.isArray(error?.message)
         ? error.message.join(', ')
         : error?.message || 'Failed to save block';
-      message.error(errMsg);
+      // Ensure error is visible above the modal/mask
+      appModal.error({
+        title: 'Block save error',
+        content: errMsg,
+        okText: 'Close',
+        zIndex: 2000,
+      });
     }
   };
 
@@ -298,7 +304,7 @@ export default function AdminBlocksPage() {
             value={filterDormId}
             onChange={(v) => setFilterDormId(v)}
             options={dorms.map((dorm) => ({
-              label: `${dorm.dorm_name} (${dorm.dorm_code})`,
+              label: dorm.dorm_name,
               value: dorm.id,
             }))}
           />
@@ -374,7 +380,7 @@ export default function AdminBlocksPage() {
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
               options={dorms.map((dorm) => ({
-                label: `${dorm.dorm_name} (${dorm.dorm_code})`,
+                label: dorm.dorm_name,
                 value: dorm.id,
               }))}
             />
