@@ -25,6 +25,10 @@ import VisitorsPage from '@/pages/security/visitors';
 
 // Manager pages
 import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/dashboard';
+import ManagerDormsPage from '@/pages/manager/dorm';
+import ManagerBlocksPage from '@/pages/manager/blocks';
+import ManagerNewsPage from '@/pages/manager/news';
+import ManagerNewsDetailPage from '@/pages/manager/news/detail';
 import { BedStatisticsPage } from '@/pages/manager/bed-statistics';
 import { ViolationListPage } from '@/pages/manager/violations';
 import { CreateViolationPage } from '@/pages/manager/violations/create';
@@ -32,6 +36,7 @@ import { CreateViolationPage } from '@/pages/manager/violations/create';
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
 import NewsPage from '@/pages/student/news';
+import StudentNewsDetailPage from '@/pages/student/news/detail';
 import SchedulePage from '@/pages/student/schedule';
 import BookingPage from '@/pages/student/booking';
 import UtilitiesPage from '@/pages/student/utilities';
@@ -101,6 +106,10 @@ const router = createBrowserRouter([
               {
                 path: ROUTES.STUDENT_NEWS,
                 element: <NewsPage />,
+              },
+              {
+                path: `${ROUTES.STUDENT_NEWS}/:id`,
+                element: <StudentNewsDetailPage />,
               },
               {
                 path: ROUTES.STUDENT_SCHEDULE,
@@ -250,11 +259,11 @@ const router = createBrowserRouter([
               },
               {
                 path: 'dorms',
-                element: <ComingSoon label="Dorm List Page" />,
+                element: <ManagerDormsPage />,
               },
               {
                 path: 'blocks',
-                element: <ComingSoon label="Block List Page" />,
+                element: <ManagerBlocksPage />,
               },
               {
                 path: 'rooms',
@@ -294,7 +303,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'facilities',
-                element: <ComingSoon label="Facilities Management" />,
+                element: <AdminFacilitiesPage />,
               },
               {
                 path: 'requests',
@@ -318,7 +327,11 @@ const router = createBrowserRouter([
               },
               {
                 path: 'news',
-                element: <ComingSoon label="News Management" />,
+                element: <ManagerNewsPage />,
+              },
+              {
+                path: 'news/:id',
+                element: <ManagerNewsDetailPage />,
               },
               {
                 path: 'chat',

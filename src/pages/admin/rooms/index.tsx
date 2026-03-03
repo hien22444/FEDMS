@@ -11,6 +11,7 @@ import {
   Switch,
   Select,
   message,
+  Space,
 } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -61,19 +62,42 @@ const roomColumns = (
   onDeleteClick: (record: Room) => void,
 ): ColumnsType<Room> => [
   {
-    title: 'Room',
-    dataIndex: 'room_number',
-    key: 'room_number',
-    render: (v: string) => <span className="font-mono text-xs">{v}</span>,
+    title: 'Block',
+    dataIndex: 'block',
+    key: 'block',
+    render: (b: Room['block']) => {
+      if (typeof b === 'object' && b !== null) {
+        return b.block_name;
+      }
+      return '-';
+    },
   },
   {
-    title: 'Floor',
-    dataIndex: 'floor',
-    key: 'floor',
-    width: 70,
+    title: 'Room Name',
+    key: 'room_name',
+    render: (r: Room) => {
+      if (typeof r.block === 'object' && r.block !== null) {
+        return (
+          <span className="font-mono text-xs">
+            {r.block.block_name}-{r.room_number}
+          </span>
+        );
+      }
+      return <span className="font-mono text-xs">{r.room_number}</span>;
+    },
   },
   {
-    title: 'Type',
+    title: 'Student Type',
+    dataIndex: 'student_type',
+    key: 'student_type',
+    width: 160,
+    render: (type: string) => {
+      const label = type === 'international' ? 'International students' : 'Vietnamese students';
+      return <Tag color={type === 'international' ? 'cyan' : 'green'}>{label}</Tag>;
+    },
+  },
+  {
+    title: 'Room Type',
     dataIndex: 'room_type',
     key: 'room_type',
     width: 110,
@@ -102,27 +126,6 @@ const roomColumns = (
     key: 'status',
     width: 120,
     render: (v: RoomStatus) => <Tag color={statusColorMap[v]}>{v.toUpperCase()}</Tag>,
-  },
-  {
-    title: 'Block',
-    dataIndex: 'block',
-    key: 'block',
-    render: (b: Room['block']) => {
-      if (typeof b === 'object' && b !== null) {
-        return `${b.block_name} (${b.block_code})`;
-      }
-      return '-';
-    },
-  },
-  {
-    title: 'Student type',
-    dataIndex: 'student_type',
-    key: 'student_type',
-    width: 140,
-    render: (type: string) => {
-      const label = type === 'international' ? 'International students' : 'Vietnamese students';
-      return <Tag color={type === 'international' ? 'cyan' : 'green'}>{label}</Tag>;
-    },
   },
   {
     title: 'Actions',
@@ -160,6 +163,12 @@ export default function AdminRoomsPage() {
 
   const [form] = Form.useForm();
 
+  // Filters
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterRoomType, setFilterRoomType] = useState<RoomType | undefined>(undefined);
+  const [filterStudentType, setFilterStudentType] = useState<string | undefined>(undefined);
+  const [filterStatus, setFilterStatus] = useState<RoomStatus | undefined>(undefined);
+
   const loadDorms = async () => {
     try {
       setLoadingDorms(true);
@@ -189,7 +198,16 @@ export default function AdminRoomsPage() {
   const loadRooms = async () => {
     try {
       setLoadingRooms(true);
-      const res = await fetchRooms({ page: 1, limit: 50 });
+      const params: Record<string, string | number | boolean> = {
+        page: 1,
+        limit: 50,
+      };
+      if (filterSearch.trim()) params.search = filterSearch.trim();
+      if (filterRoomType) params.room_type = filterRoomType;
+      if (filterStudentType) params.student_type = filterStudentType;
+      if (filterStatus) params.status = filterStatus;
+
+      const res = await fetchRooms(params);
       setRooms(res.items);
     } catch (error: any) {
       console.error(error);
@@ -376,6 +394,59 @@ export default function AdminRoomsPage() {
           <div className="font-semibold text-gray-900">Room List</div>
         </div>
 
+        <div className="mb-4 flex flex-wrap gap-3 items-center">
+          <Input
+            placeholder="Search by block or room name (e.g. A101 or A101-2)"
+            style={{ minWidth: 240 }}
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            onPressEnter={loadRooms}
+          />
+          <Select
+            allowClear
+            placeholder="Filter by room type"
+            style={{ minWidth: 180 }}
+            value={filterRoomType}
+            onChange={(v) => setFilterRoomType(v)}
+            options={roomTypeOptions}
+          />
+          <Select
+            allowClear
+            placeholder="Filter by student type"
+            style={{ minWidth: 200 }}
+            value={filterStudentType}
+            onChange={(v) => setFilterStudentType(v)}
+            options={[
+              { label: 'Vietnamese students', value: 'vietnamese' },
+              { label: 'International students', value: 'international' },
+            ]}
+          />
+          <Select
+            allowClear
+            placeholder="Filter by status"
+            style={{ minWidth: 160 }}
+            value={filterStatus}
+            onChange={(v) => setFilterStatus(v)}
+            options={roomStatusOptions}
+          />
+          <Space>
+            <Button type="primary" onClick={loadRooms}>
+              Apply
+            </Button>
+            <Button
+              onClick={() => {
+                setFilterSearch('');
+                setFilterRoomType(undefined);
+                setFilterStudentType(undefined);
+                setFilterStatus(undefined);
+                loadRooms();
+              }}
+            >
+              Reset
+            </Button>
+          </Space>
+        </div>
+
         <Table<Room>
           rowKey="id"
           loading={loadingRooms}
@@ -404,7 +475,7 @@ export default function AdminRoomsPage() {
                 allowClear
                 loading={loadingDorms}
                 options={dorms.map((d) => ({
-                  label: `${d.dorm_name} (${d.dorm_code})`,
+                  label: d.dorm_name,
                   value: d.id,
                 }))}
               />

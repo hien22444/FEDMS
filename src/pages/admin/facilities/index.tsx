@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   Button,
   Table,
   Tag,
@@ -17,7 +18,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { Layers, Box, Settings2, Plus, Package, ClipboardList, Trash2 } from 'lucide-react';
+import { Layers, Box, Settings2, Plus, Package, ClipboardList } from 'lucide-react';
 import dayjs from 'dayjs';
 
 import {
@@ -78,6 +79,7 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
   const [editing, setEditing] = useState<EquipmentCategory | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<EquipmentCategory | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [form] = Form.useForm();
 
@@ -159,7 +161,7 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
       render: (_, record) => (
         <div className="flex gap-2">
           <Button size="small" onClick={() => { setEditing(record); setModalOpen(true); }}>Edit</Button>
-          <Button danger size="small" onClick={() => { setDeleting(record); setDeleteModalOpen(true); }}>Delete</Button>
+          <Button danger size="small" onClick={() => { setDeleting(record); setDeleteError(null); setDeleteModalOpen(true); }}>Delete</Button>
         </div>
       ),
     },
@@ -212,9 +214,10 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
       <Modal
         open={deleteModalOpen}
         title="Confirm Delete Category"
-        onCancel={() => { setDeleteModalOpen(false); setDeleting(null); }}
+        onCancel={() => { setDeleteModalOpen(false); setDeleting(null); setDeleteError(null); }}
         onOk={async () => {
           if (!deleting) return;
+          setDeleteError(null);
           try {
             await deleteEquipmentCategory(deleting.id);
             message.success('Category deleted successfully');
@@ -224,7 +227,7 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
             onDataChange();
           } catch (error: any) {
             const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to delete category';
-            message.error(errMsg);
+            setDeleteError(errMsg);
           }
         }}
         okText="Delete"
@@ -233,12 +236,15 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
         centered
       >
         {deleting && (
-          <div className="flex items-start gap-2">
-            <ExclamationCircleOutlined className="mt-1 text-orange-500" />
-            <div>
-              <p>Are you sure you want to delete category <span className="font-semibold text-red-600">"{deleting.category_name}"</span>?</p>
-              <p className="text-xs text-gray-500 mt-1">Categories with linked templates cannot be deleted.</p>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <ExclamationCircleOutlined className="mt-1 text-orange-500" />
+              <div>
+                <p>Are you sure you want to delete category <span className="font-semibold text-red-600">"{deleting.category_name}"</span>?</p>
+                <p className="text-xs text-gray-500 mt-1">Categories with linked templates cannot be deleted.</p>
+              </div>
             </div>
+            {deleteError && <Alert type="error" message={deleteError} showIcon />}
           </div>
         )}
       </Modal>
@@ -256,6 +262,7 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
   const [editing, setEditing] = useState<EquipmentTemplate | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<EquipmentTemplate | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<string | undefined>(undefined);
   const [form] = Form.useForm();
@@ -371,7 +378,7 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
       render: (_, record) => (
         <div className="flex gap-2">
           <Button size="small" onClick={() => { setEditing(record); setModalOpen(true); }}>Edit</Button>
-          <Button danger size="small" onClick={() => { setDeleting(record); setDeleteModalOpen(true); }}>Delete</Button>
+          <Button danger size="small" onClick={() => { setDeleting(record); setDeleteError(null); setDeleteModalOpen(true); }}>Delete</Button>
         </div>
       ),
     },
@@ -412,8 +419,9 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
         </Form>
       </Modal>
 
-      <Modal open={deleteModalOpen} title="Confirm Delete Template" onCancel={() => { setDeleteModalOpen(false); setDeleting(null); }} onOk={async () => {
+      <Modal open={deleteModalOpen} title="Confirm Delete Template" onCancel={() => { setDeleteModalOpen(false); setDeleting(null); setDeleteError(null); }} onOk={async () => {
         if (!deleting) return;
+        setDeleteError(null);
         try {
           await deleteEquipmentTemplate(deleting.id);
           message.success('Template deleted successfully');
@@ -423,16 +431,19 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
           onDataChange();
         } catch (error: any) {
           const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to delete template';
-          message.error(errMsg);
+          setDeleteError(errMsg);
         }
       }} okText="Delete" cancelText="Cancel" okButtonProps={{ danger: true }} centered>
         {deleting && (
-          <div className="flex items-start gap-2">
-            <ExclamationCircleOutlined className="mt-1 text-orange-500" />
-            <div>
-              <p>Are you sure you want to delete template <span className="font-semibold text-red-600">"{deleting.equipment_name}"</span>?</p>
-              <p className="text-xs text-gray-500 mt-1">Templates used in room equipment or default room setup configs cannot be deleted.</p>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <ExclamationCircleOutlined className="mt-1 text-orange-500" />
+              <div>
+                <p>Are you sure you want to delete template <span className="font-semibold text-red-600">"{deleting.equipment_name}"</span>?</p>
+                <p className="text-xs text-gray-500 mt-1">Templates used in room equipment or default room setup configs cannot be deleted.</p>
+              </div>
             </div>
+            {deleteError && <Alert type="error" message={deleteError} showIcon />}
           </div>
         )}
       </Modal>
@@ -582,7 +593,7 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
       dataIndex: 'is_mandatory',
       key: 'is_mandatory',
       width: 100,
-      render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? 'Yes' : 'Optional'}</Tag>,
+      render: (v: boolean) => <Tag color={v ? 'green' : 'orange'}>{v ? 'Yes' : 'Optional'}</Tag>,
     },
     {
       title: 'Actions',
@@ -720,10 +731,9 @@ function RoomEquipmentTab() {
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<RoomEquipment | null>(null);
   const [editing, setEditing] = useState<RoomEquipment | null>(null);
-  const [pendingAdd, setPendingAdd] = useState<any>(null);
+  const [addError, setAddError] = useState<string | null>(null);
   const [optionalConfigs, setOptionalConfigs] = useState<RoomTypeEquipmentConfig[]>([]);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
@@ -767,10 +777,9 @@ function RoomEquipmentTab() {
 
   const handleOpenModal = () => {
     if (!selectedRoom) return;
-    console.log('handleOpenModal called - selectedRoom:', selectedRoom);
-    console.log('Current equipments at modal open:', equipments);
     form.resetFields();
     form.setFieldsValue({ quantity: 1 });
+    setAddError(null);
     loadAllConfigs(selectedRoom.room_type as string);
     setModalOpen(true);
   };
@@ -796,32 +805,21 @@ function RoomEquipmentTab() {
       // Check if equipment already exists in this room
       const existingEquipment = equipments.find((e) => {
         const tpl = typeof e.template === 'object' ? e.template : null;
-        const match = tpl && String(tpl.id) === String(selectedTemplateId);
-        console.log('Checking equipment:', {
-          equipment_id: e.id,
-          template: tpl,
-          tpl_id: tpl?.id,
-          selected_id: selectedTemplateId,
-          match
-        });
-        return match;
+        return tpl && String(tpl.id) === String(selectedTemplateId);
       });
 
-      console.log('handleAddOptional - existingEquipment found:', existingEquipment);
-
       if (existingEquipment) {
-        // Show confirmation modal before adding duplicate
-        setPendingAdd({ ...values, equipmentName: selectedEquipmentName, existingQuantity: existingEquipment.quantity });
-        setDuplicateModalOpen(true);
+        setAddError(`"${selectedEquipmentName}" already exists in this room (current quantity: ${existingEquipment.quantity}). Use the Edit button to update the quantity instead.`);
         return;
       }
 
+      setAddError(null);
       // Proceed with adding equipment
       await performAddEquipment(values);
     } catch (error: any) {
       if (error?.errorFields) return;
       const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to add equipment';
-      message.error(errMsg);
+      setAddError(errMsg);
     }
   };
 
@@ -831,13 +829,12 @@ function RoomEquipmentTab() {
       await addRoomEquipment({ room: selectedRoomId!, template: values.template, quantity: values.quantity });
       message.success('Equipment added successfully');
       setModalOpen(false);
-      setDuplicateModalOpen(false);
-      setPendingAdd(null);
+      setAddError(null);
       form.resetFields();
       loadEquipments(selectedRoomId!);
     } catch (error: any) {
       const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to add equipment';
-      message.error(errMsg);
+      setAddError(errMsg);
     } finally {
       setAddLoading(false);
     }
@@ -970,43 +967,36 @@ function RoomEquipmentTab() {
       width: 100,
       align: 'center',
       render: (_: any, record: RoomEquipment) => (
-        <div className="flex gap-1 justify-center">
-          <Button
-            type="text"
-            size="small"
-            onClick={() => handleEditEquipment(record)}
-            title="Edit equipment"
-          >
-            Edit
-          </Button>
-          <Button
-            type="text"
-            danger
-            size="small"
-            icon={<Trash2 size={14} />}
-            onClick={() => openDeleteModal(record)}
-            title="Remove equipment"
-          />
+        <div className="flex gap-2">
+          <Button size="small" onClick={() => handleEditEquipment(record)}>Edit</Button>
+          <Button danger size="small" onClick={() => openDeleteModal(record)}>Delete</Button>
         </div>
       ),
     },
   ];
 
-  const roomOptions = rooms.map((r) => {
-    const blockName = typeof r.block === 'object' && r.block !== null ? (r.block as any).block_name : '';
-    return {
-      value: r.id,
-      label: `${r.room_number}${blockName ? ` — ${blockName}` : ''} (${String(r.room_type).replace('_', ' ')})`,
-    };
-  });
+  const roomOptions = rooms
+    .map((r) => {
+      const blockName = typeof r.block === 'object' && r.block !== null ? (r.block as any).block_name : '';
+      return {
+        value: r.id,
+        label: blockName ? `${blockName}-${r.room_number}` : r.room_number,
+        blockName,
+        roomNumber: r.room_number,
+      };
+    })
+    .sort((a, b) => {
+      if (a.blockName !== b.blockName) return a.blockName.localeCompare(b.blockName);
+      return a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true });
+    })
+    .map(({ value, label }) => ({ value, label }));
 
   const optionalTemplateOptions = optionalConfigs.map((c) => {
     const tpl = typeof c.template === 'object' && c.template !== null ? c.template : null;
     if (!tpl) return null;
-    const mandatoryLabel = c.is_mandatory ? '[Mandatory]' : '[Optional]';
     return {
       value: tpl.id,
-      label: `${tpl.equipment_name} ${mandatoryLabel}${tpl.brand ? ` (${tpl.brand})` : ''}`,
+      label: tpl.equipment_name,
     };
   }).filter(Boolean) as { value: string; label: string }[];
 
@@ -1056,7 +1046,7 @@ function RoomEquipmentTab() {
       <Modal
         open={modalOpen}
         title="Add Equipment to Room"
-        onCancel={() => setModalOpen(false)}
+        onCancel={() => { setModalOpen(false); setAddError(null); }}
         onOk={handleAddOptional}
         okText="Add"
         okButtonProps={{ loading: addLoading }}
@@ -1081,32 +1071,9 @@ function RoomEquipmentTab() {
                 showSearch
                 optionFilterProp="label"
                 options={optionalTemplateOptions}
+                onChange={() => setAddError(null)}
               />
             </Form.Item>
-            {form.getFieldValue('template') && (() => {
-              const selectedTemplateId = form.getFieldValue('template');
-              const existsInRoom = equipments.some((e) => {
-                const tpl = typeof e.template === 'object' ? e.template : null;
-                return tpl && String(tpl.id) === String(selectedTemplateId);
-              });
-              const existingEq = equipments.find((e) => {
-                const tpl = typeof e.template === 'object' ? e.template : null;
-                return tpl && String(tpl.id) === String(selectedTemplateId);
-              });
-              return existsInRoom && existingEq ? (
-                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg flex gap-2">
-                  <ExclamationCircleOutlined className="text-orange-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium text-orange-800">This equipment already exists in this room</p>
-                    <p className="text-orange-700 text-xs mt-1">
-                      Current quantity: <span className="font-semibold">{existingEq.quantity}</span>
-                      <br />
-                      You can use the "Edit" button to update the quantity instead.
-                    </p>
-                  </div>
-                </div>
-              ) : null;
-            })()}
             <Form.Item
               label="Quantity"
               name="quantity"
@@ -1114,6 +1081,7 @@ function RoomEquipmentTab() {
             >
               <InputNumber style={{ width: '100%' }} min={1} />
             </Form.Item>
+            {addError && <Alert type="error" message={addError} showIcon className="mt-1" />}
           </Form>
         )}
       </Modal>
@@ -1202,34 +1170,6 @@ function RoomEquipmentTab() {
         )}
       </Modal>
 
-      <Modal
-        open={duplicateModalOpen}
-        title="Equipment Already Exists"
-        onCancel={() => {
-          setDuplicateModalOpen(false);
-          setPendingAdd(null);
-        }}
-        footer={null}
-        destroyOnHidden
-      >
-        <div className="flex gap-3">
-          <ExclamationCircleOutlined className="text-lg text-orange-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">This equipment is already assigned to this room!</p>
-            {pendingAdd && (
-              <div className="text-sm text-gray-600 mt-3 bg-gray-50 p-3 rounded">
-                <p><strong>Equipment:</strong> {pendingAdd.equipmentName}</p>
-                <p><strong>Current Quantity:</strong> {pendingAdd.existingQuantity}</p>
-                <p><strong>New Quantity:</strong> {pendingAdd.quantity}</p>
-              </div>
-            )}
-            <p className="text-sm text-gray-500 mt-3">
-              Do you want to add another entry of the same equipment? <br />
-              <span className="text-xs">Alternatively, use the Edit button to update the quantity.</span>
-            </p>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 }
