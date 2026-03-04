@@ -34,6 +34,10 @@ import { ViolationListPage } from '@/pages/manager/violations';
 import { CreateViolationPage } from '@/pages/manager/violations/create';
 import ManagerChatPage from '@/pages/manager/chat';
 import ManagerNotificationsPage from '@/pages/manager/notifications';
+import ManagerRoomsPage from '@/pages/manager/rooms';
+import ManagerBedsPage from '@/pages/manager/beds';
+import UpdateBedStatusPage from '@/pages/manager/beds/status';
+import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -274,19 +278,19 @@ const router = createBrowserRouter([
               },
               {
                 path: 'rooms',
-                element: <ComingSoon label="Room List Page" />,
+                element: <ManagerRoomsPage />,
               },
               {
                 path: 'beds',
-                element: <ComingSoon label="Bed Management Page" />,
+                element: <ManagerBedsPage />,
               },
               {
                 path: 'beds/status',
-                element: <ComingSoon label="Update Bed Status" />,
+                element: <UpdateBedStatusPage />,
               },
               {
                 path: 'beds/assignment',
-                element: <ComingSoon label="Change Assignment" />,
+                element: <ChangeBedAssignmentPage />,
               },
               {
                 path: 'bookings',
@@ -310,7 +314,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'facilities',
-                element: <ComingSoon label="Facilities Management" />,
+                element: <AdminFacilitiesPage />,
               },
               {
                 path: 'requests',

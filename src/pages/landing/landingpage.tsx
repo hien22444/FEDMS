@@ -33,9 +33,6 @@ const LandingPage = () => {
 
         <div className="flex items-center gap-4">
           <Link to="/signin" className="text-[#FF5C00] font-semibold px-4 py-2 hover:bg-orange-50 rounded-lg">Sign In</Link>
-          <button className="bg-[#FF5C00] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#e65300] transition-colors">
-            Try For Free
-          </button>
         </div>
       </nav>
 
@@ -117,9 +114,6 @@ const LandingPage = () => {
             <p className="text-orange-100 text-lg">
               Start your digital transformation journey today. Free 30-day trial, no credit card required.
             </p>
-            <button className="bg-white text-[#FF5C00] px-10 py-4 rounded-xl font-bold text-lg hover:bg-orange-50 transition-colors inline-flex items-center gap-2">
-              Try For Free <ChevronRight size={20} />
-            </button>
           </div>
           {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20"></div>
