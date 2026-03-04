@@ -4,9 +4,9 @@ import AdminSidebar from './AdminSidebar';
 export default function AdminLayout() {
   // Role-based access is now handled by PrivateRoute in the router config
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="h-screen bg-gray-100 flex overflow-hidden">
       <AdminSidebar />
-      <main className="flex-1 min-w-0 p-6">
+      <main className="flex-1 min-w-0 p-6 overflow-y-auto">
         <Outlet />
       </main>
     </div>

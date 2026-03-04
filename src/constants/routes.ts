@@ -28,6 +28,7 @@ export const ROUTES = {
   STUDENT_FAQ: '/student/faq',
   STUDENT_DORM_RULES: '/student/dorm-rules',
   STUDENT_NOTIFICATIONS: '/student/notifications',
+  STUDENT_CHAT: '/student/chat',
   
   // Admin routes
   ADMIN_LOGIN: '/admin/login',

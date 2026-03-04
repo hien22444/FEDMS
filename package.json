@@ -26,6 +26,7 @@
     "autoprefixer": "^10.4.21",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "eslint-plugin-tailwindcss": "^3.18.0",
     "framer-motion": "^12.18.1",
