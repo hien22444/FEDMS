@@ -11,7 +11,7 @@ import { ROUTES } from './routes';
 export const PRIVATE_HEADER_MENU = [
   {
     title: 'Dashboard',
-    path: ROUTES.DASHBOARD,
+    path: ROUTES.LANDING,
     children: [],
   },
   {

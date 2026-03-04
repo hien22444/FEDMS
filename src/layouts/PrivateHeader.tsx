@@ -80,7 +80,7 @@ const PrivateHeader = observer(() => {
       <div className='max-w-heading flex justify-between items-center'>
         <div className='flex items-center gap-2'>
           <Link
-            to={ROUTES.DASHBOARD}
+            to={ROUTES.LANDING}
             className='flex items-center gap-2'
           >
             <IcLogo className='size-8' />
@@ -127,7 +127,7 @@ const PrivateHeader = observer(() => {
                 className='border-none'
                 icon={
                   <span className='p-2 bg-orange-500 text-white rounded-full w-full text-xs'>
-                    {fullname.charAt(0)}
+                    {fullname?.charAt(0) || 'U'}
                   </span>
                 }
               />

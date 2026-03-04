@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -11,6 +14,7 @@
     "format": "prettier --write 'src/**/*.{js,ts,tsx,css,md}'"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "@builder.io/react": "^8.2.8",
     "@measured/puck": "^0.20.2",
     "@plasmicapp/cli": "^0.1.347",
@@ -27,6 +31,7 @@
     "framer-motion": "^12.18.1",
     "froala-editor": "^4.7.0",
     "grapesjs": "^0.22.13",
+    "lucide-react": "^0.563.0",
     "mobx": "^6.15.0",
     "mobx-react-lite": "^4.1.1",
     "object-to-formdata": "^4.5.1",
@@ -36,12 +41,14 @@
     "react-dom": "^19.1.0",
     "react-froala-wysiwyg": "^4.7.0",
     "react-hot-toast": "^2.5.2",
+    "react-icons": "^5.5.0",
     "react-infinite-scroll-component": "^6.1.1",
     "react-markdown": "^10.1.0",
     "react-quill-new": "^3.4.6",
     "react-router-dom": "^6.30.3",
     "recharts": "^2.15.3",
     "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.3.1",
@@ -54,7 +61,7 @@
     "@types/qs": "^6.14.0",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^4.5.1",
+    "@vitejs/plugin-react": "^5.1.2",
     "eslint": "^9.28.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",

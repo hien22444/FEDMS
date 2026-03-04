@@ -90,10 +90,10 @@ const PrivateSideBar = observer(() => {
         <p className='font-medium text-[15px]'>Workspace</p>
       </div>
       <Link
-        to={ROUTES.DASHBOARD}
+        to={ROUTES.LANDING}
         className={cn(
           'py-1.5  rounded-sm px-3 mt-4 flex items-center gap-2',
-          pathname === ROUTES.DASHBOARD
+          pathname === ROUTES.LANDING
             ? 'bg-gray-default/60'
             : 'hover:bg-gray-subtle',
         )}
