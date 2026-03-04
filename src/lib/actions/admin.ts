@@ -421,7 +421,7 @@ export const deleteEquipmentTemplate = async (id: string) => {
 
 export interface RoomTypeEquipmentConfig {
   id: string;
-  room_type: '2_person' | '4_person' | '6_person' | '8_person';
+  room_type: string;
   template: {
     id: string;
     equipment_name: string;
@@ -467,4 +467,164 @@ export const updateRoomTypeConfig = async (id: string, body: Partial<RoomTypeEqu
 
 export const deleteRoomTypeConfig = async (id: string) => {
   return api.delete<{ message: string }>(`equipment/room-type-configs/${id}`);
+};
+
+// ===== Room Equipment types & APIs =====
+
+export interface RoomEquipment {
+  id: string;
+  room: string;
+  template: {
+    id: string;
+    equipment_name: string;
+    brand?: string;
+    model?: string;
+    category?: { id: string; category_name: string };
+  } | string;
+  equipment_code: string;
+  quantity: number;
+  status: 'good' | 'normal' | 'damaged' | 'broken' | 'missing';
+  condition_notes?: string;
+  assigned_at: string;
+}
+
+export interface RoomEquipmentListResponse {
+  items: RoomEquipment[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export const addRoomEquipment = async (body: { room: string; template: string; quantity?: number }) => {
+  return api.post<RoomEquipment>('equipment/room-equipments', body);
+};
+
+export const fetchRoomEquipments = async (params?: Record<string, string | number | boolean>) => {
+  const searchParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) searchParams.append(key, String(value));
+    });
+  }
+  const query = searchParams.toString();
+  return api.get<RoomEquipmentListResponse>(`equipment/room-equipments${query ? `?${query}` : ''}`);
+};
+
+export const deleteRoomEquipment = async (id: string) => {
+  return api.delete<{ message: string }>(`equipment/room-equipments/${id}`);
+};
+
+export const updateRoomEquipment = async (id: string, body: { quantity?: number; status?: string; condition_notes?: string }) => {
+  return api.patch<RoomEquipment>(`equipment/room-equipments/${id}`, body);
+};
+
+// ===== Bed Management =====
+
+export type BedStatus = 'available' | 'occupied' | 'maintenance' | 'reserved';
+
+export interface BedStudent {
+  id: string;
+  full_name: string;
+  student_code: string;
+  phone?: string;
+  gender?: string;
+  user?: { email: string };
+}
+
+export interface BedContract {
+  id: string;
+  student: BedStudent;
+  semester: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
+
+export interface Bed {
+  id: string;
+  bed_id: number;
+  bed_number: string;
+  status: BedStatus;
+  room: {
+    id: string;
+    room_number: string;
+    total_beds: number;
+    available_beds: number;
+    student_type: string;
+    block: {
+      id: string;
+      block_name: string;
+      block_code: string;
+      gender_type: string;
+      dorm: { id: string; dorm_name: string; dorm_code: string };
+    };
+  };
+  contract: BedContract | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BedListResponse {
+  items: Bed[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+const buildQuery = (params?: Record<string, string | number | boolean>) => {
+  const sp = new URLSearchParams();
+  if (params) Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') sp.append(k, String(v)); });
+  return sp.toString();
+};
+
+export const fetchBeds = async (params?: Record<string, string | number | boolean>) => {
+  const q = buildQuery(params);
+  return api.get<BedListResponse>(`beds${q ? `?${q}` : ''}`);
+};
+
+export const fetchBedsByRoom = async (roomId: string) => {
+  return api.get<Bed[]>(`beds/room/${roomId}`);
+};
+
+export const fetchBedById = async (id: string) => {
+  return api.get<Bed>(`beds/${id}`);
+};
+
+export const updateBedStatus = async (id: string, status: BedStatus) => {
+  return api.patch<Bed>(`beds/${id}/status`, { status });
+};
+
+export const changeBedAssignment = async (sourceBedId: string, targetBedId: string) => {
+  return api.patch<{ message: string }>('beds/assignment/change', {
+    source_bed: sourceBedId,
+    target_bed: targetBedId,
+  });
+};
+
+// ===== Dashboard Stats =====
+
+export interface DashboardStatsResponse {
+  totalDorms: number;
+  totalBlocks: number;
+  totalRooms: number;
+  totalBeds: number;
+  occupiedBeds: number;
+  availableBeds: number;
+  maintenanceBeds: number;
+  pendingRequests: number;
+  unpaidInvoices: number;
+  unpaidAmount: number;
+  bedUsageByBlock: { block: string; occupancyRate: number }[];
+}
+
+let _dashboardCache: DashboardStatsResponse | null = null;
+let _dashboardCacheTime = 0;
+const DASHBOARD_CACHE_TTL = 60_000; // 1 minute
+
+export const fetchDashboardStats = async (force = false): Promise<DashboardStatsResponse> => {
+  if (!force && _dashboardCache && Date.now() - _dashboardCacheTime < DASHBOARD_CACHE_TTL) {
+    return _dashboardCache;
+  }
+  const result = await api.get<DashboardStatsResponse>('stats/dashboard');
+  if (result) {
+    _dashboardCache = result;
+    _dashboardCacheTime = Date.now();
+  }
+  return result;
 };

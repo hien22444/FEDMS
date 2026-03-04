@@ -696,3 +696,281 @@ const userData = JSON.parse(decodeURIComponent(userParam));
 | Admin Reports | Admin | 🟡 Thấp |
 | Chat / Email | Manager | 🟡 Thấp |
 | Invoice / Electricity | Manager | 🟠 Trung bình |
+
+---
+
+## 10. BED MANAGEMENT PAGES (2026-03-03)
+
+### Các trang đã tạo
+
+| Path | File | Mô tả |
+|------|------|-------|
+| `/manager/beds` | `src/pages/manager/beds/index.tsx` | Danh sách toàn bộ giường, filter theo Dorm→Block→Room→Status, cập nhật status inline |
+| `/manager/beds/status` | `src/pages/manager/beds/status/index.tsx` | Chọn phòng → grid card từng giường, đổi status bằng Select |
+| `/manager/beds/assignment` | `src/pages/manager/beds/assignment/index.tsx` | Di chuyển sinh viên từ giường occupied sang giường available |
+
+### API actions đã thêm (`src/lib/actions/admin.ts`)
+
+```ts
+// Types
+export type BedStatus = 'available' | 'occupied' | 'maintenance' | 'reserved';
+export interface Bed { id, room, bed_number, status, contract? }
+
+// Functions
+fetchBeds(params)                        // GET /beds (filter: room/block/dorm/status/page/limit)
+fetchBedsByRoom(roomId)                  // GET /beds/room/:roomId
+fetchBedById(id)                         // GET /beds/:id
+updateBedStatus(id, status)              // PATCH /beds/:id/status
+changeBedAssignment(sourceBedId, targetBedId) // PATCH /beds/assignment/change
+```
+
+### Luồng dữ liệu
+
+```
+Dorm → Block → Room → Bed → Contract → Student
+```
+
+- **Bed Management**: manager chọn Dorm → Block → Room → xem danh sách beds
+- **Status Update**: chỉ cho phép đổi `available ↔ maintenance ↔ reserved`; không đổi `occupied` (phải unassign trước)
+- **Assignment Change**: chọn giường occupied (có contract) → chọn giường available → confirm → API di chuyển contract
+
+### Fix liên quan: Bed Auto-Creation (2026-03-03)
+
+**Vấn đề:** FE hiển thị "No beds found in this room" vì BE không tạo Bed documents khi tạo phòng.
+
+**Fix (BE side):** Xem chi tiết trong `BEDOM_REVIEW.md` section 10.
+
+**Kết quả sau fix:**
+- Tạo phòng `total_beds=10, available_beds=5` → API tự tạo 10 Bed documents (5 available + 5 maintenance)
+- `GET /beds/room/:roomId` trả về đầy đủ beds → FE hiển thị đúng grid
+- Khi xóa phòng → tất cả Bed documents của phòng đó cũng bị xóa
+- Khi cập nhật `total_beds` → beds được thêm/bớt tương ứng
+
+---
+
+## 11. BLOCK MANAGEMENT UI IMPROVEMENTS (2026-03-04)
+
+### File thay đổi
+
+`src/pages/admin/blocks/index.tsx`
+
+### Thay đổi
+
+#### 11.1 Block Code — Chỉ cho nhập số
+- Input `block_code` thêm `onChange` filter: `e.target.value.replace(/\D/g, '')`
+- Thêm validation rule: `{ pattern: /^\d+$/, message: 'Block code must contain numbers only' }`
+- Logic hiện có: chữ số đầu của block_code tự suy ra floor (e.g. `101` → floor 1)
+
+#### 11.2 Cột "Set Status" (width: 150)
+
+| Trạng thái block | Button hiển thị | Màu |
+|-----------------|----------------|-----|
+| `is_active: true` | Set Maintenance | Orange (#f97316) |
+| `is_active: false` | Set Available | Green (#22c55e) |
+
+- Click button → mở Modal xác nhận (giống pattern bed management)
+- Confirm → `PATCH /blocks/:id { is_active: boolean }` — dùng `updateBlock` sẵn có
+- State: `confirmStatusTarget`, `updatingStatusId`
+
+#### 11.3 Cột "Change Gender" (width: 140)
+
+| Gender hiện tại | Button hiển thị | Màu |
+|-----------------|----------------|-----|
+| `male` | Set Female | Pink (#ec4899) |
+| `female` | Set Male | Blue (#3b82f6) |
+
+- Click button → mở Modal xác nhận
+- Confirm → `PATCH /blocks/:id { gender_type: string }` — dùng `updateBlock` sẵn có
+- State: `confirmGenderTarget`, `updatingGenderId`
+
+#### 11.4 Status column — đổi label
+
+| is_active | Label cũ | Label mới | Tag màu |
+|-----------|---------|---------|---------|
+| `true` | Active | Available | green |
+| `false` | Inactive | Maintenance | orange |
+
+Filter dropdown: "Active/Inactive" → "Available/Maintenance"
+
+#### 11.5 Column widths
+
+| Column | Trước | Sau |
+|--------|-------|-----|
+| Dorm | auto | 120 |
+| Block Name | auto | 110 |
+| Floor | 80 | 65 |
+| Total Rooms | 100 | 95 |
+| Gender | 100 | 85 |
+| Status | 110 | 110 |
+| Set Status | — | 150 (mới) |
+| Change Gender | — | 140 (mới) |
+| Actions | 160 | 130 |
+
+Thêm `scroll={{ x: 1100 }}` vào Table.
+
+#### 11.6 Refactor columns
+
+`blockColumns()` function (standalone, bên ngoài component) → `columns` array inline bên trong component.
+
+### Không cần thay đổi BE
+
+API `PATCH /blocks/:id` hiện tại đã xử lý đầy đủ `is_active` và `gender_type`. Không cần thêm route hay endpoint mới.
+
+---
+
+## 12. ROOM MANAGEMENT UI FIXES & IMPROVEMENTS (2026-03-04)
+
+### File thay đổi
+
+`src/pages/admin/rooms/index.tsx`
+
+### 12.1 Bug fix — Block Picker Modal hiện phía sau khi tạo phòng 2 lần liên tiếp
+
+**Root cause:**
+- Block picker modal (`open={blockPickerOpen}`) không có `destroyOnClose` → portal giữ nguyên trong DOM sau khi đóng
+- Khi main modal mở lần 2, Ant Design gán z-index mới cao hơn cho main modal → block picker (vẫn ở DOM với z-index cũ thấp hơn) bị khuất phía sau
+- `blockPickerOpen` không được reset khi main modal đóng → state bất đồng bộ
+
+**Fix:**
+1. Thêm `destroyOnClose` vào block picker modal → unmount hoàn toàn khi đóng, đảm bảo z-index fresh khi mở lại
+2. Thêm `zIndex={1010}` vào block picker modal → luôn cao hơn main modal (default 1000)
+3. Tạo hàm `closeMainModal()` tập trung: gọi cả `setModalOpen(false)` và `setBlockPickerOpen(false)` → đảm bảo state nhất quán
+4. Thay `onCancel={() => setModalOpen(false)}` → `onCancel={closeMainModal}`
+5. Trong `handleSubmitRoom` sau khi submit thành công → gọi `closeMainModal()` thay vì `setModalOpen(false)` trực tiếp
+
+### 12.2 Bỏ cột "Beds", thêm cột "Set Status"
+
+**Cột bị xóa:** `Beds` (hiển thị `available_beds/total_beds`, width 110)
+
+**Cột mới:** `Set Status` (width 155)
+
+| Room status | Button hiển thị | Màu |
+|-------------|----------------|-----|
+| `available` | Set Maintenance | Orange (#f97316) |
+| `maintenance` / `inactive` | Set Available | Green (#22c55e) |
+| `full` | "Auto-managed" (text, no button) | — |
+
+- Click → mở Modal xác nhận (giống pattern block/bed management)
+- Confirm → `PATCH /rooms/:id { status }` — dùng `updateRoom` sẵn có
+- State: `confirmStatusTarget`, `updatingStatusId`
+
+### 12.3 Bỏ Description và Private Bathroom khỏi form
+
+- Xóa `<Form.Item label="Description">` (textarea)
+- Xóa `<Form.Item label="Private Bathroom">` (switch `has_private_bathroom`)
+- Form `setFieldsValue` trong edit mode cũng bỏ 2 field này
+
+### 12.4 Column widths điều chỉnh
+
+| Column | Trước | Sau |
+|--------|-------|-----|
+| Block | auto | 90 |
+| Room Name | auto | 110 |
+| Student Type | 160 | 150 |
+| Room Type | 110 | 100 |
+| Beds | 110 | — (xóa) |
+| Price/Sem | 120 | 120 |
+| Status | 120 | 110 |
+| Set Status | — | 155 (mới) |
+| Actions | 160 | 130 |
+
+Thêm `scroll={{ x: 1000 }}` vào Table.
+
+### 12.5 Refactor columns
+
+`roomColumns()` function (standalone) → `columns` array inline bên trong component (để truy cập `updatingStatusId` và `setConfirmStatusTarget`).
+
+### Không cần thay đổi BE
+
+API `PATCH /rooms/:id` hiện tại đã xử lý `status` update. Không cần thêm route hay endpoint mới.
+
+---
+
+## 13. BLOCK FORM VALIDATION FIX + MANAGER PAGE SYNC (2026-03-04)
+
+### 13.1 Fix — Block field validation bug khi edit room
+
+**File:** `src/pages/admin/rooms/index.tsx`, `src/pages/manager/rooms/index.tsx`
+
+**Vấn đề:**
+Khi edit room và thay đổi Room Type, Ant Design kích hoạt validation và bắn lỗi "Please select a block" dù block đã được chọn sẵn.
+
+**Root cause:**
+`Form.Item name="block"` wrap một `<div>` thay vì form control thực sự. Ant Design truyền `value`/`onChange` qua `cloneElement` tới child trực tiếp — nhưng `<div>` không phải form control, không nhận/relay các props này → field value không được track đúng cách → validate fail.
+
+**Fix:**
+```tsx
+// TRƯỚC (lỗi):
+<Form.Item name="block" rules={[{ required: true, message: 'Please select a block' }]}>
+  <div className="flex gap-2">
+    <Input value={displayBlockName} readOnly disabled />
+    <Button onClick={() => setBlockPickerOpen(true)}>Select Block</Button>
+  </div>
+</Form.Item>
+
+// SAU (đúng):
+<Form.Item label="Block" required>
+  <div className="flex gap-2">
+    <Form.Item name="block" noStyle rules={[{ required: true, message: 'Please select a block' }]}>
+      <Select
+        style={{ flex: 1 }}
+        placeholder={selectedDormId ? 'Choose a block' : 'Select dorm first'}
+        disabled
+        options={blocks.map((b) => ({ label: b.block_name, value: b.id }))}
+        suffixIcon={null}
+      />
+    </Form.Item>
+    <Button onClick={() => setBlockPickerOpen(true)} disabled={!!editingRoom || !selectedDormId || loadingBlocks}>
+      Select Block
+    </Button>
+  </div>
+</Form.Item>
+```
+
+- `Form.Item noStyle` → tham gia validate mà không render wrapper label/error
+- `<Select disabled>` → form control thực, Ant Design track value qua `options` lookup → hiển thị block_name đúng
+- `suffixIcon={null}` → ẩn dropdown arrow (vì disabled + custom button)
+
+### 13.2 Sync — Manager Block Management
+
+**File:** `src/pages/manager/blocks/index.tsx`
+
+Đồng bộ hoàn toàn với `src/pages/admin/blocks/index.tsx` (Section 11). Các thay đổi áp dụng:
+
+| Tính năng | Trước (manager cũ) | Sau (sync với admin) |
+|-----------|-------------------|---------------------|
+| Block Code input | Nhập tự do | Chỉ nhập số (filter `/\D/g`) |
+| Status label | Active / Inactive | Available / Maintenance |
+| Status column color | green / red | green / orange |
+| Cột Set Status | Không có | Có (width 150) |
+| Cột Change Gender | Không có | Có (width 140) |
+| Filter status options | Active / Inactive | Available / Maintenance |
+| Column widths | Cũ | Cập nhật (xem Section 11.5) |
+| scroll | Không có | `scroll={{ x: 1100 }}` |
+| columns definition | Standalone `blockColumns()` | Inline trong component |
+
+Export name giữ nguyên: `ManagerBlocksPage`.
+
+### 13.3 Sync — Manager Room Management
+
+**File:** `src/pages/manager/rooms/index.tsx`
+
+Đồng bộ hoàn toàn với `src/pages/admin/rooms/index.tsx` (Section 12 + fix 13.1). Các thay đổi áp dụng:
+
+| Tính năng | Trước (manager cũ) | Sau (sync với admin) |
+|-----------|-------------------|---------------------|
+| Block Form.Item | `<div>` wrapper → validation bug | `Form.Item noStyle` + `<Select disabled>` |
+| Block picker z-index | Không có `destroyOnClose`/`zIndex` → bug | `destroyOnClose` + `zIndex={1010}` |
+| `closeMainModal()` | Không có | Có (reset cả modal + block picker state) |
+| Cột Beds | Có (`available_beds/total_beds`) | Xóa |
+| Cột Set Status | Không có | Có (width 155) |
+| Description field | Có trong form | Xóa |
+| Private Bathroom field | Có trong form (Switch) | Xóa |
+| columns definition | Standalone `roomColumns()` | Inline trong component |
+| scroll | Không có | `scroll={{ x: 1000 }}` |
+
+Export name giữ nguyên: `ManagerRoomsPage`.
+
+### Không cần thay đổi BE
+
+Tất cả thay đổi là FE-only. API hiện có đã đủ.

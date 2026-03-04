@@ -59,7 +59,7 @@ const statusColorMap: Record<RoomStatus, string> = {
   inactive: 'default',
 };
 
-export default function AdminRoomsPage() {
+export default function ManagerRoomsPage() {
   const { modal } = App.useApp();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
@@ -78,17 +78,17 @@ export default function AdminRoomsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingRoom, setDeletingRoom] = useState<Room | null>(null);
 
+  // Details drawer
+  const [detailsRoom, setDetailsRoom] = useState<Room | null>(null);
+  const [detailsBeds, setDetailsBeds] = useState<Bed[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
   // Quick status change
   const [confirmStatusTarget, setConfirmStatusTarget] = useState<{
     room: Room;
     newStatus: RoomStatus;
   } | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
-
-  // Details drawer
-  const [detailsRoom, setDetailsRoom] = useState<Room | null>(null);
-  const [detailsBeds, setDetailsBeds] = useState<Bed[]>([]);
-  const [detailsLoading, setDetailsLoading] = useState(false);
 
   const [form] = Form.useForm();
 
@@ -179,20 +179,6 @@ export default function AdminRoomsPage() {
     loadAllRoomsForCapacity();
     loadRoomTypePrices();
   }, []);
-
-  const openDetails = async (record: Room) => {
-    setDetailsRoom(record);
-    setDetailsBeds([]);
-    setDetailsLoading(true);
-    try {
-      const beds = await fetchBedsByRoom(record.id);
-      setDetailsBeds(beds);
-    } catch {
-      message.error('Failed to load beds');
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
 
   const closeMainModal = () => {
     setModalOpen(false);
@@ -373,6 +359,20 @@ export default function AdminRoomsPage() {
       if (!inSameDorm) form.setFieldValue('block', undefined);
     }
   }, [modalOpen, selectedDormId, blocks, form, editingRoom]);
+
+  const openDetails = async (record: Room) => {
+    setDetailsRoom(record);
+    setDetailsBeds([]);
+    setDetailsLoading(true);
+    try {
+      const beds = await fetchBedsByRoom(record.id);
+      setDetailsBeds(beds);
+    } catch {
+      message.error('Failed to load beds');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   const handleDeleteRoom = (record: Room) => {
     setDeletingRoom(record);
@@ -932,10 +932,11 @@ export default function AdminRoomsPage() {
 
       {/* Details Drawer — Beds in this room */}
       <Drawer
-        title={detailsRoom ? (() => {
-          const blockName = typeof detailsRoom.block === 'object' && detailsRoom.block ? detailsRoom.block.block_name : '';
-          return `${blockName}-${detailsRoom.room_number} — Beds (${detailsRoom.total_beds} total)`;
-        })() : 'Beds'}
+        title={
+          detailsRoom
+            ? `${typeof detailsRoom.block === 'object' && detailsRoom.block ? `${detailsRoom.block.block_name}-` : ''}${detailsRoom.room_number} — Beds`
+            : 'Beds'
+        }
         open={!!detailsRoom}
         onClose={() => setDetailsRoom(null)}
         width={480}
@@ -955,20 +956,14 @@ export default function AdminRoomsPage() {
               width: 70,
               render: (v: number) => <span className="font-mono text-xs text-gray-500">#{v}</span>,
             },
-            {
-              title: 'Bed',
-              dataIndex: 'bed_number',
-              key: 'bed_number',
-              width: 70,
-              render: (v: string) => <span className="font-mono font-semibold">{v}</span>,
-            },
+            { title: 'Bed', dataIndex: 'bed_number', key: 'bed_number', width: 70 },
             {
               title: 'Status',
               dataIndex: 'status',
               key: 'status',
               render: (v: string) => {
-                const colorMap: Record<string, string> = { available: 'green', occupied: 'blue', maintenance: 'orange', reserved: 'purple' };
-                return <Tag color={colorMap[v] ?? 'default'} className="capitalize">{v}</Tag>;
+                const colorMap: Record<string, string> = { available: 'green', occupied: 'red', reserved: 'blue', maintenance: 'orange' };
+                return <Tag color={colorMap[v] ?? 'default'}>{v?.toUpperCase()}</Tag>;
               },
             },
           ]}
