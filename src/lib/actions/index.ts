@@ -30,3 +30,4 @@ export * from './visitor';
 export * from './notification';
 export * from './chat';
 export * from './news';
+export * from './booking';
