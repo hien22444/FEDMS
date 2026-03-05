@@ -1,5 +1,5 @@
 # FEDOM Frontend — Review & Documentation
-> Senior Code Review | Updated: 2026-03-02 (session 4)
+> Senior Code Review | Updated: 2026-03-05 (session 6)
 
 ---
 
@@ -38,7 +38,7 @@
 | `/student/dashboard` | StudentDashboard | ✅ Có UI (data hardcode) |
 | `/student/news` | NewsPage | 🔲 Placeholder |
 | `/student/schedule` | SchedulePage | 🔲 Placeholder |
-| `/student/booking` | BookingPage | 🔲 Placeholder |
+| `/student/booking` | BookingPage | ✅ Kết nối API — cascading filter + payment |
 | `/student/utilities` | UtilitiesPage | 🔲 Placeholder |
 | `/student/payment` | PaymentPage | 🔲 Placeholder |
 | `/student/requests` | RequestsPage | ✅ Kết nối API |
@@ -50,7 +50,7 @@
 | `/student/notifications` | NotificationsPage | ✅ Kết nối API |
 | `/student/chat` | StudentChatPage | ✅ Kết nối API + Socket.io |
 
-**4/14 trang Student có nội dung thực (Dashboard, Requests, Notifications, Chat).**
+**5/14 trang Student có nội dung thực (Dashboard, Booking, Requests, Notifications, Chat).**
 
 ### 2.3 Security Routes — `role: 'security'` — Layout: `SecurityLayout`
 
@@ -73,7 +73,7 @@
 | `/manager/blocks` | ComingSoon | 🔲 Chưa làm |
 | `/manager/rooms` | ComingSoon | 🔲 Chưa làm |
 | `/manager/beds` | ComingSoon | 🔲 Chưa làm |
-| `/manager/bookings` | ComingSoon | 🔲 Chưa làm |
+| `/manager/bookings` | ManagerBookingsPage | ✅ Kết nối API — read-only table |
 | `/manager/checkout` | ComingSoon | 🔲 Chưa làm |
 | `/manager/facilities` | ComingSoon | 🔲 Chưa làm |
 | `/manager/requests` | ComingSoon | 🔲 Chưa làm |
@@ -86,7 +86,7 @@
 | `/manager/config` | ComingSoon | 🔲 Chưa làm |
 | `/manager/settings` | ComingSoon | 🔲 Chưa làm |
 
-**5/20 trang Manager có nội dung thực.**
+**6/20 trang Manager có nội dung thực.**
 
 ### 2.5 Admin Routes — `role: 'admin'` — Layout: `AdminLayout`
 
@@ -1064,3 +1064,71 @@ Export name giữ nguyên: `ManagerRoomsPage`.
 ### Không cần thay đổi BE
 
 Tất cả thay đổi là FE-only. API hiện có đã đủ.
+
+---
+
+## 14. BOOKING ROOMS FEATURE (2026-03-05)
+
+### 14.1 Student Booking Page — `src/pages/student/booking/index.tsx`
+
+**Rewrite hoàn toàn** từ placeholder sang full booking flow:
+
+| Tính năng | Chi tiết |
+|-----------|---------|
+| Cascading Selection | Room Type → Dorm → Floor → Block → Room → Bed |
+| Auto Semester | Tự tính next semester (Spring/Summer/Fall) |
+| Gender + Type Filter | Backend tự filter theo student gender + student_type |
+| Room Cards | Hiển thị grid cards khi chọn block, có bed count + price |
+| Bed Selection | Radio buttons cho available beds |
+| Confirm Modal | Hiển thị summary: dorm, floor, room, bed, room type, semester, price |
+| Payment Page | VietQR display, 10-minute countdown timer, check payment status button |
+| My Requests Tab | List booking history với status tags, resume payment, cancel |
+| State: `view` | `form` (cascading selection) / `payment` (payment page) |
+
+**Components sử dụng:** Tabs, Card, Select, Radio.Group, Modal, Descriptions, Alert, Countdown timer (custom), Pagination, Popconfirm
+
+### 14.2 Manager Bookings Page — `src/pages/manager/bookings/index.tsx`
+
+**Mới tạo** — read-only table:
+
+| Tính năng | Chi tiết |
+|-----------|---------|
+| Table columns | Student, Room, Dorm/Block, Bed, Room Type, Semester, Invoice, Status, Requested At |
+| Filters | Status (Select) + Semester (Input) |
+| Pagination | Server-side, showSizeChanger, showTotal |
+| Không có actions | Read-only, không approve/reject |
+
+### 14.3 API Actions — `src/lib/actions/booking.ts`
+
+**Mới tạo** — 12 API functions + types:
+
+| Function | Method | Endpoint |
+|----------|--------|----------|
+| `getNextSemester` | GET | `bookings/next-semester` |
+| `getAvailableRoomTypes` | GET | `bookings/options/room-types` |
+| `getDormsForBooking` | GET | `bookings/options/dorms` |
+| `getFloorsForBooking` | GET | `bookings/options/floors` |
+| `getBlocksForBooking` | GET | `bookings/options/blocks` |
+| `getRoomsForBooking` | GET | `bookings/options/rooms` |
+| `getBedsForBooking` | GET | `bookings/options/beds` |
+| `submitBooking` | POST | `bookings` |
+| `checkPaymentStatus` | GET | `bookings/:id/payment-status` |
+| `getMyBookings` | GET | `bookings/my` |
+| `cancelBookingRequest` | PATCH | `bookings/:id/cancel` |
+| `getAllBookings` | GET | `bookings` |
+
+### 14.4 Router — `src/routers/index.tsx`
+
+- Import `ManagerBookingsPage` from `@/pages/manager/bookings`
+- Replace `ComingSoon` tại `path: 'bookings'` trong Manager routes
+
+### Files thay đổi
+
+| File | Action |
+|------|--------|
+| `src/lib/actions/booking.ts` | CREATE — types + 12 API functions |
+| `src/lib/actions/index.ts` | MODIFY — export booking |
+| `src/pages/student/booking/index.tsx` | REWRITE — full booking flow |
+| `src/pages/student/booking/index.tsx` | UI redesign 2026-03-05 — layout khớp mockup: title h1, 4 dropdowns hàng ngang + slot count, bed cards emoji+badge+room, confirm modal 2-col form |
+| `src/pages/manager/bookings/index.tsx` | CREATE — read-only table |
+| `src/routers/index.tsx` | MODIFY — wire ManagerBookingsPage |

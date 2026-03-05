@@ -38,6 +38,7 @@ import ManagerRoomsPage from '@/pages/manager/rooms';
 import ManagerBedsPage from '@/pages/manager/beds';
 import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
+import ManagerBookingsPage from '@/pages/manager/bookings';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -294,7 +295,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'bookings',
-                element: <ComingSoon label="Booking History Page" />,
+                element: <ManagerBookingsPage />,
               },
               {
                 path: 'checkout',
