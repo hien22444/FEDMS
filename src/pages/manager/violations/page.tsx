@@ -39,7 +39,10 @@ const statusConfig: Record<ViolationStatus, { color: string; label: string }> = 
 };
 
 const violationTypeConfig: Record<ViolationType, { label: string }> = {
-  [ViolationType.POLICY_VIOLATION]: { label: 'Policy Violation' },
+  [ViolationType.NOISE]: { label: 'Noise Disturbance' },
+  [ViolationType.CLEANLINESS]: { label: 'Cleanliness Issue' },
+  [ViolationType.UNAUTHORIZED_GUEST]: { label: 'Unauthorized Guest' },
+  [ViolationType.ALCOHOL]: { label: 'Alcohol / Smoking' },
   [ViolationType.OTHER]: { label: 'Other' },
 };
 

@@ -21,6 +21,14 @@ export const getViolationReports = async (query: IViolation.ViolationQuery = {})
 };
 
 /**
+ * Get violation reports created by the current student (for "My Requests")
+ */
+export const getMyViolationReports = async () => {
+  const res = await api.get<IViolation.ViolationReport[]>(`${API_PREFIX}/my-reports`);
+  return res;
+};
+
+/**
  * Get violation report by ID
  */
 export const getViolationReportById = async (id: string) => {
@@ -86,3 +94,18 @@ export const getViolationStatistics = async () => {
 
   return res;
 };
+
+// Optional default export to allow importing as an object without named bindings
+const violationActions = {
+  getViolationReports,
+  getMyViolationReports,
+  getViolationReportById,
+  createViolationReport,
+  reviewViolationReport,
+  deleteViolationReport,
+  searchStudentByCode,
+  getStudentPenalties,
+  getViolationStatistics,
+};
+
+export default violationActions;

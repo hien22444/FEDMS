@@ -36,6 +36,9 @@ import {
   cancelVisitorRequest as cancelVisitorRequestAction,
 } from '@/lib/actions';
 import type { IVisitor } from '@/interfaces';
+import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
+import violationActions from '@/lib/actions/violation';
+const { getMyViolationReports, createViolationReport } = violationActions;
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -73,13 +76,18 @@ const Requests: React.FC = () => {
   const [filterType, setFilterType] = useState<RequestType | 'all'>('all');
   const [showForm, setShowForm] = useState(false);
   const [visitorRequests, setVisitorRequests] = useState<IVisitor.VisitorRequest[]>([]);
+  const [violationReports, setViolationReports] = useState<IViolation.ViolationReport[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchMyRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getMyVisitorRequests();
-      setVisitorRequests(data);
+      const [visitorData, reportData] = await Promise.all([
+        getMyVisitorRequests(),
+        getMyViolationReports().catch(() => []),
+      ]);
+      setVisitorRequests(visitorData);
+      setViolationReports(Array.isArray(reportData) ? reportData : []);
     } catch {
       // silent — API may not be ready
     } finally {
@@ -105,6 +113,15 @@ const Requests: React.FC = () => {
         return <Tag color="error">Rejected</Tag>;
       case 'cancelled':
         return <Tag color="default">Cancelled</Tag>;
+      // Violation report statuses
+      case 'new':
+        return <Tag color="processing">New</Tag>;
+      case 'under_review':
+        return <Tag color="warning">Under Review</Tag>;
+      case 'resolved_penalized':
+        return <Tag color="error">Penalized</Tag>;
+      case 'resolved_no_action':
+        return <Tag color="success">Resolved</Tag>;
       default:
         return <Tag>{status}</Tag>;
     }
@@ -143,7 +160,14 @@ const Requests: React.FC = () => {
     other: 'Other',
   };
 
-  // Map visitor requests to a common display format
+  // Map visitor requests and violation reports to a common display format
+  const violationTypeLabel: Record<string, string> = {
+    noise: 'Noise Disturbance',
+    cleanliness: 'Cleanliness Issue',
+    guest: 'Unauthorized Guest',
+    alcohol: 'Alcohol / Smoking',
+    other: 'Other',
+  };
   const allRequests = [
     ...visitorRequests.map((r) => ({
       id: r.id,
@@ -155,6 +179,18 @@ const Requests: React.FC = () => {
       detail: `${r.visit_time_from ?? '07:00'} - ${r.visit_time_to ?? '17:00'}`,
       rejection_reason: r.rejection_reason,
       visitors: r.visitors,
+      raw: r,
+    })),
+    ...violationReports.map((r) => ({
+      id: r.id,
+      type: 'report' as const,
+      title: r.violation_other_detail || violationTypeLabel[r.violation_type] || r.violation_type || 'Violation Report',
+      subtitle: r.report_code,
+      status: r.status,
+      date: dayjs(r.violation_date).format('DD/MM/YYYY'),
+      detail: r.location || '—',
+      rejection_reason: undefined,
+      visitors: undefined,
       raw: r,
     })),
   ];
@@ -175,6 +211,11 @@ const Requests: React.FC = () => {
   };
 
   const handleVisitorCreated = () => {
+    handleCloseForm();
+    fetchMyRequests();
+  };
+
+  const handleReportCreated = () => {
     handleCloseForm();
     fetchMyRequests();
   };
@@ -408,7 +449,7 @@ const Requests: React.FC = () => {
         >
           {selectedType === 'visitor' && <VisitorForm onSuccess={handleVisitorCreated} />}
           {selectedType === 'maintenance' && <MaintenanceForm />}
-          {selectedType === 'report' && <ReportForm />}
+          {selectedType === 'report' && <ReportForm onSuccess={handleReportCreated} />}
         </Modal>
       </div>
     </div>
@@ -633,46 +674,135 @@ const MaintenanceForm: React.FC = () => (
 );
 
 // ─── Violation Report Form (placeholder — no API yet) ───
-const ReportForm: React.FC = () => (
-  <Space direction="vertical" size="large" style={{ width: '100%' }}>
-    <div>
-      <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-        Violation Type <Text type="danger">*</Text>
-      </Text>
-      <Select
-        placeholder="Select violation type..."
-        style={{ width: '100%' }}
-        size="large"
-        options={[
-          { label: 'Noise Disturbance', value: 'noise' },
-          { label: 'Cleanliness Issue', value: 'cleanliness' },
-          { label: 'Unauthorized Guest', value: 'guest' },
-          { label: 'Alcohol/Smoking', value: 'alcohol' },
-          { label: 'Other', value: 'other' },
-        ]}
+const violationTypeOptions = [
+  { label: 'Noise Disturbance', value: ViolationType.NOISE },
+  { label: 'Cleanliness Issue', value: ViolationType.CLEANLINESS },
+  { label: 'Unauthorized Guest', value: ViolationType.UNAUTHORIZED_GUEST },
+  { label: 'Alcohol / Smoking', value: ViolationType.ALCOHOL },
+  { label: 'Other', value: ViolationType.OTHER },
+];
+
+const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setSubmitting(true);
+
+      const dto: IViolation.CreateViolationDto = {
+        reporter_type: ReporterType.STUDENT,
+        violation_type: values.violation_type,
+        violation_other_detail: values.violation_other_detail,
+        description: values.description,
+        violation_date: values.violation_date
+          ? values.violation_date.format('YYYY-MM-DD')
+          : dayjs().format('YYYY-MM-DD'),
+        location: values.location,
+        evidence_urls: values.evidence_urls || [],
+      };
+
+      await createViolationReport(dto);
+      message.success('Violation report submitted successfully');
+      form.resetFields();
+      onSuccess?.();
+    } catch (err: any) {
+      if (err?.message) {
+        message.error(Array.isArray(err.message) ? err.message[0] : err.message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      initialValues={{
+        violation_type: ViolationType.NOISE,
+        violation_date: dayjs(),
+      }}
+    >
+      <Alert
+        message="Use this form to report violations or safety concerns. Your identity will be visible to managers for follow‑up."
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
       />
-    </div>
-    <div>
-      <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-        Description <Text type="danger">*</Text>
-      </Text>
-      <TextArea placeholder="Provide detailed description..." rows={4} size="large" />
-    </div>
-    <div>
-      <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-        Evidence Photos
-      </Text>
-      <Upload.Dragger multiple listType="picture" beforeUpload={() => false}>
-        <p className="ant-upload-drag-icon">
-          <UploadOutlined style={{ fontSize: '36px', color: '#fa541c' }} />
-        </p>
-        <Text>Click to upload or drag and drop</Text>
-      </Upload.Dragger>
-    </div>
-    <Button type="primary" size="large" disabled>
-      Coming Soon
-    </Button>
-  </Space>
-);
+
+      <Row gutter={16}>
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="violation_date"
+            label="Violation Date"
+            rules={[{ required: true, message: 'Please select violation date' }]}
+          >
+            <DatePicker
+              style={{ width: '100%' }}
+              format="DD/MM/YYYY"
+              disabledDate={(current) => current && current > dayjs().endOf('day')}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Form.Item
+        name="violation_type"
+        label="Violation Type"
+        rules={[{ required: true, message: 'Please select violation type' }]}
+      >
+        <Select
+          placeholder="Select violation type..."
+          style={{ width: '100%' }}
+          size="large"
+          options={violationTypeOptions}
+        />
+      </Form.Item>
+
+      <Form.Item noStyle shouldUpdate>
+        {({ getFieldValue }) =>
+          getFieldValue('violation_type') === ViolationType.OTHER ? (
+            <Form.Item
+              name="violation_other_detail"
+              label="Specify Violation Type"
+              rules={[{ required: true, message: 'Please specify violation type' }]}
+            >
+              <Input placeholder="e.g. Fighting, Property Damage..." />
+            </Form.Item>
+          ) : null
+        }
+      </Form.Item>
+
+      <Form.Item name="location" label="Location">
+        <Input placeholder="E.g: A101-1" />
+      </Form.Item>
+
+      <Form.Item
+        name="description"
+        label="Description"
+        rules={[
+          { required: true, message: 'Please enter description' },
+          { min: 10, message: 'Description must be at least 10 characters' },
+        ]}
+      >
+        <TextArea placeholder="Provide detailed description..." rows={4} size="large" />
+      </Form.Item>
+
+      <Form.Item name="evidence_urls" label="Evidence Links (images)">
+        <Select
+          mode="tags"
+          placeholder="Paste image URLs and press Enter"
+          tokenSeparators={[',']}
+        />
+      </Form.Item>
+
+      <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>
+        Submit Report
+      </Button>
+    </Form>
+  );
+};
 
 export default Requests;

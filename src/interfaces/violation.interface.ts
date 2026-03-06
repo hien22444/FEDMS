@@ -9,7 +9,10 @@ export enum ViolationStatus {
 }
 
 export enum ViolationType {
-  POLICY_VIOLATION = 'policy_violation',
+  NOISE = 'noise',
+  CLEANLINESS = 'cleanliness',
+  UNAUTHORIZED_GUEST = 'guest',
+  ALCOHOL = 'alcohol',
   OTHER = 'other',
 }
 
@@ -38,6 +41,7 @@ export namespace IViolation {
     id: string;
     fullname: string;
     email: string;
+    student_code?: string;
   }
 
   export interface Reviewer {
@@ -51,7 +55,9 @@ export namespace IViolation {
     reported_student: Student;
     reporter: Reporter;
     reporter_type: ReporterType;
+    reporter_code?: string;
     violation_type: ViolationType;
+    violation_other_detail?: string;
     description: string;
     evidence_urls: string[];
     violation_date: string;
@@ -65,19 +71,26 @@ export namespace IViolation {
   }
 
   export interface CreateViolationDto {
-    student_code: string;
+    student_code?: string;
     reporter_type: ReporterType;
     violation_type: ViolationType;
+    violation_other_detail?: string;
     description: string;
     evidence_urls?: string[];
     violation_date: string;
     location?: string;
+    initial_penalty?: {
+      penalty_type: PenaltyType;
+      points_deducted: number;
+      reason?: string;
+    };
   }
 
   export interface ReviewViolationDto {
     status: ViolationStatus;
     review_notes?: string;
     penalty?: {
+      student_code: string;
       penalty_type: PenaltyType;
       points_deducted: number;
       reason?: string;
