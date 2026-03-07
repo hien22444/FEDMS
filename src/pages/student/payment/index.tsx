@@ -1,291 +1,186 @@
-import React from 'react';
-import { Card, Button, Row, Col, Typography, Tag, Space, Alert, theme } from 'antd';
-import {
-  CreditCardOutlined,
-  DownloadOutlined,
-  ExclamationCircleOutlined,
-  CheckCircleOutlined,
-} from '@ant-design/icons';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Card, Col, Empty, Row, Space, Tag, Typography, message, theme } from 'antd';
+import { ReloadOutlined, CloseCircleOutlined, ClockCircleOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { cancelBookingRequest, checkPaymentStatus, getMyBookings } from '@/lib/actions';
+import type { BookingRequestItem } from '@/lib/actions';
+import { ROUTES } from '@/constants';
 
 const { Title, Text } = Typography;
 
-interface Invoice {
-  id: number;
-  month: string;
-  roomFee: string;
-  electricity: string;
-  water: string;
-  service: string;
-  total: string;
-  status: string;
-  dueDate: string;
-  paidDate?: string;
-}
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
+
+const formatCountdown = (expiresAt?: string) => {
+  if (!expiresAt) return '—';
+  const remaining = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+  const mm = Math.floor(remaining / 60).toString().padStart(2, '0');
+  const ss = (remaining % 60).toString().padStart(2, '0');
+  return `${mm}:${ss}`;
+};
 
 const Payment: React.FC = () => {
   const { token } = theme.useToken();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<BookingRequestItem[]>([]);
 
-  const invoices: Invoice[] = [
-    {
-      id: 1,
-      month: 'December 2024',
-      roomFee: '800,000',
-      electricity: '50,000',
-      water: '30,000',
-      service: '20,000',
-      total: '900,000',
-      status: 'Unpaid',
-      dueDate: '31/12/2024'
-    },
-    {
-      id: 2,
-      month: 'November 2024',
-      roomFee: '800,000',
-      electricity: '45,000',
-      water: '25,000',
-      service: '20,000',
-      total: '890,000',
-      status: 'Unpaid',
-      dueDate: '30/11/2024'
-    },
-    {
-      id: 3,
-      month: 'October 2024',
-      roomFee: '800,000',
-      electricity: '48,000',
-      water: '28,000',
-      service: '20,000',
-      total: '896,000',
-      status: 'Paid',
-      dueDate: '31/10/2024',
-      paidDate: '25/10/2024'
-    },
-  ];
+  const pending = useMemo(
+    () => items.filter((b) => b.status === 'awaiting_payment'),
+    [items]
+  );
+  const history = useMemo(
+    () => items.filter((b) => b.status !== 'awaiting_payment'),
+    [items]
+  );
 
-  const paymentMethods = [
-    { name: 'VNPay', icon: '💳', description: 'Pay with debit/credit card' },
-    { name: 'Momo', icon: '📱', description: 'Mobile wallet payment' },
-    { name: 'Bank Transfer', icon: '🏦', description: 'Direct bank transfer' },
-  ];
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await getMyBookings({ page: 1, limit: 50 });
+      setItems(data.items);
+    } catch {
+      message.error('Failed to load payment data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  // Khi user quay lại tab sau khi thao tác trên PayOS → tự check status các booking đang pending
+  useEffect(() => {
+    const handleFocus = async () => {
+      const hasPending = items.some((b) => b.status === 'awaiting_payment');
+      if (!hasPending) return;
+      try {
+        const checks = items
+          .filter((b) => b.status === 'awaiting_payment')
+          .map((b) => checkPaymentStatus(b.id).catch(() => null));
+        const results = await Promise.all(checks);
+        const hasUpdate = results.some(
+          (r) => r && (r.paid || r.status === 'approved' || r.status === 'cancelled' || r.status === 'expired')
+        );
+        if (hasUpdate) load();
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [items]);
+
+  const handleCancel = async (bookingId: string) => {
+    try {
+      await cancelBookingRequest(bookingId);
+      message.success('Cancelled');
+      load();
+    } catch (e: unknown) {
+      message.error((e as { message?: string })?.message || 'Cancel failed');
+    }
+  };
+
+  const handleCheck = async (bookingId: string) => {
+    try {
+      const res = await checkPaymentStatus(bookingId);
+      if (res.paid || res.status === 'paid' || res.status === 'approved') {
+        message.success('Payment successful');
+        load();
+      } else if (res.status === 'cancelled' || res.status === 'expired') {
+        message.info('Booking đã bị hủy. Giường đã được giải phóng.');
+        load();
+      } else {
+        message.error(res.message || 'Chưa thanh toán');
+      }
+    } catch (e: unknown) {
+      message.error((e as { message?: string })?.message || 'Check failed');
+      load();
+    }
+  };
 
   return (
-    <div style={{ padding: '32px', background: token.colorBgLayout }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <Title level={2} style={{ marginBottom: '8px' }}>Payments</Title>
-          <Text type="secondary">View and manage your invoices and payments</Text>
+    <div style={{ padding: 32, background: token.colorBgLayout, minHeight: '100vh' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <Title level={2} style={{ marginBottom: 4 }}>Payment</Title>
+            <Text type="secondary">View pending invoices and complete/cancel payment</Text>
+          </div>
+          <Button icon={<ReloadOutlined />} loading={loading} onClick={load}>Reload</Button>
         </div>
 
-        {/* Summary Cards */}
-        <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
-          <Col xs={24} md={8}>
-            <Card style={{ borderLeft: `4px solid ${token.colorError}` }}>
-              <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                Amount Due
-              </Text>
-              <Title level={2} style={{ color: token.colorError, margin: '0 0 8px 0' }}>
-                ₫1,790,000
-              </Title>
-              <Text type="secondary" style={{ fontSize: '12px' }}>2 unpaid invoices</Text>
-            </Card>
-          </Col>
-
-          <Col xs={24} md={8}>
-            <Card style={{ borderLeft: `4px solid ${token.colorSuccess}` }}>
-              <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                Paid This Month
-              </Text>
-              <Title level={2} style={{ color: token.colorSuccess, margin: '0 0 8px 0' }}>
-                ₫896,000
-              </Title>
-              <Text type="secondary" style={{ fontSize: '12px' }}>On 25/10/2024</Text>
-            </Card>
-          </Col>
-
-          <Col xs={24} md={8}>
-            <Card style={{ borderLeft: `4px solid ${token.colorPrimary}` }}>
-              <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
-                Next Due Date
-              </Text>
-              <Title level={2} style={{ color: token.colorPrimary, margin: '0 0 8px 0' }}>
-                31/12/2024
-              </Title>
-              <Text type="secondary" style={{ fontSize: '12px' }}>5 days remaining</Text>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Quick Pay Alert */}
-        <Alert
-          message="Unpaid Invoices Reminder"
-          description={
-            <div>
-              <Text style={{ display: 'block', marginBottom: '16px' }}>
-                You have 2 unpaid invoices. Please pay within the due date to avoid penalties.
-              </Text>
-              <Space>
-                <Button
-                  danger
-                  type="primary"
-                  icon={<CreditCardOutlined />}
-                >
-                  Pay Now
-                </Button>
-                <Button>View Details</Button>
-              </Space>
-            </div>
-          }
-          type="error"
-          icon={<ExclamationCircleOutlined />}
-          style={{ marginBottom: '32px' }}
-          showIcon
-        />
-
-        {/* Invoices List */}
-        <Title level={3} style={{ marginBottom: '16px' }}>Invoice History</Title>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-          {invoices.map((invoice) => (
-            <Card key={invoice.id}>
-              <div style={{ marginBottom: '16px' }}>
-                <Row align="middle" justify="space-between" gutter={[16, 16]}>
-                  <Col xs={24} md={12}>
-                    <Title level={4} style={{ margin: 0 }}>{invoice.month}</Title>
-                    <Text type="secondary" style={{ fontSize: '14px' }}>Due: {invoice.dueDate}</Text>
-                  </Col>
-                  <Col xs={24} md={12} style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '16px' }}>
+        <Title level={4} style={{ marginTop: 24 }}>Pending invoices</Title>
+        {pending.length === 0 ? (
+          <Empty description="No pending invoices" />
+        ) : (
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            {pending.map((b) => (
+              <Card key={b.id}>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={14}>
+                    <Space direction="vertical" size={6}>
                       <div>
-                        <Text type="secondary" style={{ display: 'block', fontSize: '14px' }}>
-                          Total Amount
-                        </Text>
-                        <Title level={3} style={{ margin: 0 }}>₫{invoice.total}</Title>
+                        <Tag color="warning" icon={<ClockCircleOutlined />}>Awaiting Payment</Tag>
                       </div>
-                      <Tag
-                        color={invoice.status === 'Paid' ? 'success' : 'error'}
-                        style={{ margin: 0 }}
+                      <Text strong>Invoice: {b.invoice?.invoice_code}</Text>
+                      <Text type="secondary">
+                        Amount: {formatCurrency(b.invoice?.total_amount || 0)}
+                      </Text>
+                      <Text type="secondary">
+                        Hold time left: <Text strong style={{ color: token.colorError }}>{formatCountdown(b.expires_at)}</Text>
+                      </Text>
+                      <Text type="secondary">
+                        Room {b.room?.room_number}{b.bed ? ` · Bed ${b.bed.bed_number}` : ''}
+                      </Text>
+                    </Space>
+                  </Col>
+
+                  <Col xs={24} md={10}>
+                    <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      <Button
+                        type="primary"
+                        icon={<FileSearchOutlined />}
+                        onClick={() => navigate(ROUTES.STUDENT_BOOKING, { state: { resumeBookingId: b.id } })}
                       >
-                        {invoice.status}
-                      </Tag>
+                        Details
+                      </Button>
+
+                      <Button danger icon={<CloseCircleOutlined />} onClick={() => handleCancel(b.id)}>
+                        Cancel
+                      </Button>
                     </div>
+
                   </Col>
                 </Row>
-              </div>
-
-              <Row
-                gutter={[16, 16]}
-                style={{
-                  padding: '16px',
-                  background: token.colorBgTextHover,
-                  borderRadius: token.borderRadius,
-                  marginBottom: '16px',
-                }}
-              >
-                <Col xs={12} sm={6}>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                    Room Fee
-                  </Text>
-                  <Text strong>₫{invoice.roomFee}</Text>
-                </Col>
-                <Col xs={12} sm={6}>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                    Electricity
-                  </Text>
-                  <Text strong>₫{invoice.electricity}</Text>
-                </Col>
-                <Col xs={12} sm={6}>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                    Water
-                  </Text>
-                  <Text strong>₫{invoice.water}</Text>
-                </Col>
-                <Col xs={12} sm={6}>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                    Service
-                  </Text>
-                  <Text strong>₫{invoice.service}</Text>
-                </Col>
-              </Row>
-
-              <Row gutter={[16, 16]}>
-                {invoice.status === 'Unpaid' ? (
-                  <>
-                    <Col xs={24} sm={12}>
-                      <Button type="primary" block size="large">
-                        Pay Invoice
-                      </Button>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Button block size="large">
-                        View Details
-                      </Button>
-                    </Col>
-                  </>
-                ) : (
-                  <>
-                    <Col xs={24} sm={12}>
-                      <Button
-                        icon={<DownloadOutlined />}
-                        block
-                        size="large"
-                        style={{
-                          borderColor: token.colorSuccess,
-                          color: token.colorSuccess,
-                        }}
-                      >
-                        Download Receipt
-                      </Button>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '8px 16px',
-                          background: `${token.colorSuccess}10`,
-                          borderRadius: token.borderRadius,
-                        }}
-                      >
-                        <CheckCircleOutlined style={{ fontSize: '20px', color: token.colorSuccess }} />
-                        <div>
-                          <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>
-                            Paid on
-                          </Text>
-                          <Text strong>{invoice.paidDate}</Text>
-                        </div>
-                      </div>
-                    </Col>
-                  </>
-                )}
-              </Row>
-            </Card>
-          ))}
-        </div>
-
-        {/* Payment Methods */}
-        <Title level={3} style={{ marginBottom: '16px' }}>Payment Methods</Title>
-        <Row gutter={[24, 24]}>
-          {paymentMethods.map((method) => (
-            <Col xs={24} md={8} key={method.name}>
-              <Card hoverable style={{ height: '100%' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>{method.icon}</div>
-                <Title level={4} style={{ marginBottom: '8px' }}>{method.name}</Title>
-                <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>
-                  {method.description}
-                </Text>
-                <Button
-                  block
-                  style={{
-                    borderColor: token.colorPrimary,
-                    color: token.colorPrimary,
-                  }}
-                >
-                  Pay with {method.name}
-                </Button>
               </Card>
-            </Col>
-          ))}
-        </Row>
+            ))}
+          </Space>
+        )}
+
+        <Title level={4} style={{ marginTop: 32 }}>History</Title>
+        {history.length === 0 ? (
+          <Empty description="No history yet" />
+        ) : (
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            {history.slice(0, 20).map((b) => (
+              <Card key={b.id} size="small">
+                <Row justify="space-between" align="middle" gutter={[12, 12]}>
+                  <Col>
+                    <Text strong>{b.invoice?.invoice_code || '—'}</Text>
+                    <Text type="secondary" style={{ display: 'block' }}>
+                      {formatCurrency(b.invoice?.total_amount || 0)} · {b.status}
+                    </Text>
+                  </Col>
+                  <Col>
+                    <Tag color={b.status === 'approved' ? 'success' : b.status === 'cancelled' ? 'default' : 'error'}>
+                      {b.status}
+                    </Tag>
+                  </Col>
+                </Row>
+              </Card>
+            ))}
+          </Space>
+        )}
       </div>
     </div>
   );
