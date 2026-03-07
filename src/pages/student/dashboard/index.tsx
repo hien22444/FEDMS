@@ -1,8 +1,5 @@
-import { Input, Button, Badge, Row, Col, Typography, Space, theme } from 'antd';
+import { Row, Col, Typography, theme } from 'antd';
 import {
-  SearchOutlined,
-  BellOutlined,
-  EnvironmentOutlined,
   ThunderboltOutlined,
   DropboxOutlined,
   CreditCardOutlined,
@@ -21,63 +18,13 @@ const StudentDashboard = () => {
   const displayName = profile?.full_name || user?.fullname || user?.email?.split('@')[0] || 'Student';
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <header
-        style={{
-          backgroundColor: token.colorBgContainer,
-          borderBottom: `1px solid ${token.colorBorder}`,
-          padding: '24px 32px',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Title level={3} style={{ margin: 0 }}>
-            Student <span style={{ color: token.colorPrimary }}>Board</span>
-          </Title>
-          <Space size="middle">
-            <Input
-              placeholder="Search..."
-              prefix={<SearchOutlined />}
-              style={{ width: 250 }}
-            />
-            <Badge count={1} dot>
-              <Button
-                type="text"
-                icon={<BellOutlined style={{ fontSize: '20px' }} />}
-                size="large"
-              />
-            </Badge>
-            <div
-              style={{
-                borderLeft: `1px solid ${token.colorBorder}`,
-                paddingLeft: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <EnvironmentOutlined
-                style={{ color: token.colorPrimary, fontSize: '18px' }}
-              />
-              <Text strong>Da Nang</Text>
-            </div>
-          </Space>
-        </div>
-      </header>
-
+    <div>
       {/* Main Content */}
       <main
         style={{
-          flex: 1,
           padding: '32px',
           backgroundColor: token.colorBgLayout,
-          overflowY: 'auto',
+          minHeight: 'calc(100vh - 64px)',
         }}
       >
         {/* Greeting */}

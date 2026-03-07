@@ -32,9 +32,17 @@ import ManagerNewsDetailPage from '@/pages/manager/news/detail';
 import { BedStatisticsPage } from '@/pages/manager/bed-statistics';
 import { ViolationListPage } from '@/pages/manager/violations';
 import { CreateViolationPage } from '@/pages/manager/violations/create';
+import ManagerChatPage from '@/pages/manager/chat';
+import ManagerNotificationsPage from '@/pages/manager/notifications';
+import ManagerRoomsPage from '@/pages/manager/rooms';
+import ManagerBedsPage from '@/pages/manager/beds';
+import UpdateBedStatusPage from '@/pages/manager/beds/status';
+import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
+import ManagerBookingsPage from '@/pages/manager/bookings';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
+import StudentChatPage from '@/pages/student/chat';
 import NewsPage from '@/pages/student/news';
 import StudentNewsDetailPage from '@/pages/student/news/detail';
 import SchedulePage from '@/pages/student/schedule';
@@ -155,6 +163,10 @@ const router = createBrowserRouter([
                 path: ROUTES.STUDENT_NOTIFICATIONS,
                 element: <NotificationsPage />,
               },
+              {
+                path: ROUTES.STUDENT_CHAT,
+                element: <StudentChatPage />,
+              },
             ],
           },
         ],
@@ -267,23 +279,23 @@ const router = createBrowserRouter([
               },
               {
                 path: 'rooms',
-                element: <ComingSoon label="Room List Page" />,
+                element: <ManagerRoomsPage />,
               },
               {
                 path: 'beds',
-                element: <ComingSoon label="Bed Management Page" />,
+                element: <ManagerBedsPage />,
               },
               {
                 path: 'beds/status',
-                element: <ComingSoon label="Update Bed Status" />,
+                element: <UpdateBedStatusPage />,
               },
               {
                 path: 'beds/assignment',
-                element: <ComingSoon label="Change Assignment" />,
+                element: <ChangeBedAssignmentPage />,
               },
               {
                 path: 'bookings',
-                element: <ComingSoon label="Booking History Page" />,
+                element: <ManagerBookingsPage />,
               },
               {
                 path: 'checkout',
@@ -303,7 +315,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'facilities',
-                element: <ComingSoon label="Facilities Management" />,
+                element: <AdminFacilitiesPage />,
               },
               {
                 path: 'requests',
@@ -335,7 +347,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'chat',
-                element: <ComingSoon label="Chat with Students" />,
+                element: <ManagerChatPage />,
               },
               {
                 path: 'email',
@@ -343,7 +355,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'notifications',
-                element: <ComingSoon label="Notifications" />,
+                element: <ManagerNotificationsPage />,
               },
               {
                 path: 'config',

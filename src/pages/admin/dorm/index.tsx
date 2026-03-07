@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Table, Tag, Modal, Form, Input, InputNumber, Switch, message } from 'antd';
+import { App, Button, Table, Tag, Modal, Drawer, Form, Input, InputNumber, Switch, message } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Activity } from 'lucide-react';
-import { createDorm, deleteDorm, fetchDorms, updateDorm, type Dorm } from '@/lib/actions/admin';
+import { createDorm, deleteDorm, fetchDorms, updateDorm, fetchBlocks, type Dorm, type Block } from '@/lib/actions/admin';
 
 const dormColumns = (
   onEdit: (record: Dorm) => void,
   onDeleteClick: (record: Dorm) => void,
+  onDetails: (record: Dorm) => void,
 ): ColumnsType<Dorm> => [
   {
     title: 'Dorm Name',
@@ -40,9 +41,12 @@ const dormColumns = (
   {
     title: 'Actions',
     key: 'actions',
-    width: 160,
+    width: 210,
     render: (_, record) => (
       <div className="flex gap-2">
+        <Button size="small" onClick={() => onDetails(record)}>
+          Details
+        </Button>
         <Button size="small" onClick={() => onEdit(record)}>
           Edit
         </Button>
@@ -64,6 +68,11 @@ export default function AdminDormsPage() {
   const [deletingDorm, setDeletingDorm] = useState<Dorm | null>(null);
   const [form] = Form.useForm();
 
+  // Details drawer
+  const [detailsDorm, setDetailsDorm] = useState<Dorm | null>(null);
+  const [detailsBlocks, setDetailsBlocks] = useState<Block[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
   const loadDorms = async () => {
     try {
       setLoadingDorms(true);
@@ -80,6 +89,20 @@ export default function AdminDormsPage() {
   useEffect(() => {
     loadDorms();
   }, []);
+
+  const openDetails = async (record: Dorm) => {
+    setDetailsDorm(record);
+    setDetailsBlocks([]);
+    setDetailsLoading(true);
+    try {
+      const res = await fetchBlocks({ dorm: record.id, page: 1, limit: 200 });
+      setDetailsBlocks(res.items);
+    } catch {
+      message.error('Failed to load blocks');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   const openCreateModal = () => {
     setEditingDorm(null);
@@ -119,33 +142,32 @@ export default function AdminDormsPage() {
   const handleSubmitDorm = async () => {
     try {
       const values = await form.validateFields();
-      const rawName = String(values.dorm_name || '').trim();
-      const shortName = rawName.toLowerCase().startsWith('dorm ')
-        ? rawName.replace(/^[Dd]orm\s+/, '').trim()
-        : rawName;
-      if (!shortName) {
-        message.error('Please enter dorm name');
-        return;
-      }
-      if (!/^[A-Za-z]$/.test(shortName)) {
-        message.error('Dorm name must be 1 letter (A-Z)');
-        return;
-      }
-
-      const dorm_name = `Dorm ${shortName.toUpperCase()}`;
-      const dorm_code = shortName.toUpperCase();
-
-      const payload = {
-        ...values,
-        dorm_name,
-        dorm_code,
-      };
 
       if (editingDorm) {
-        await updateDorm(editingDorm.id, payload);
+        await updateDorm(editingDorm.id, {
+          total_floors: values.total_floors,
+          description: values.description,
+          is_active: values.is_active,
+        });
         message.success('Dorm updated successfully');
       } else {
-        await createDorm(payload);
+        const rawName = String(values.dorm_name || '').trim();
+        const shortName = rawName.toLowerCase().startsWith('dorm ')
+          ? rawName.replace(/^[Dd]orm\s+/, '').trim()
+          : rawName;
+        if (!shortName) {
+          message.error('Please enter dorm name');
+          return;
+        }
+        if (!/^[A-Za-z]$/.test(shortName)) {
+          message.error('Dorm name must be 1 letter (A-Z)');
+          return;
+        }
+        await createDorm({
+          ...values,
+          dorm_name: `Dorm ${shortName.toUpperCase()}`,
+          dorm_code: shortName.toUpperCase(),
+        });
         message.success('Dorm created successfully');
       }
       setModalOpen(false);
@@ -157,7 +179,7 @@ export default function AdminDormsPage() {
         ? error.message.join(', ')
         : error?.message || 'Failed to save dorm';
       appModal.error({
-        title: 'Dorm save error',
+        title: editingDorm ? 'Cannot Update Dorm' : 'Cannot Create Dorm',
         content: errMsg,
         okText: 'Close',
         zIndex: 2000,
@@ -188,7 +210,7 @@ export default function AdminDormsPage() {
         <Table<Dorm>
           rowKey="id"
           loading={loadingDorms}
-          columns={dormColumns(openEditModal, handleDeleteDorm)}
+          columns={dormColumns(openEditModal, handleDeleteDorm, openDetails)}
           dataSource={dorms}
           pagination={false}
           size="small"
@@ -205,28 +227,34 @@ export default function AdminDormsPage() {
         destroyOnClose
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            label="Dorm Name"
-            name="dorm_name"
-            rules={[
-              { required: true, message: 'Please enter dorm name' },
-              {
-                validator: (_, value) => {
-                  const raw = String(value || '').trim();
-                  const short = raw.toLowerCase().startsWith('dorm ')
-                    ? raw.replace(/^[Dd]orm\s+/, '')
-                    : raw;
-                  if (!short) return Promise.resolve();
-                  if (!/^[A-Za-z]$/.test(short)) {
-                    return Promise.reject(new Error('Dorm name must be 1 letter (A-Z)'));
-                  }
-                  return Promise.resolve();
+          {editingDorm ? (
+            <Form.Item label="Dorm Name">
+              <Input disabled value={editingDorm.dorm_name} />
+            </Form.Item>
+          ) : (
+            <Form.Item
+              label="Dorm Name"
+              name="dorm_name"
+              rules={[
+                { required: true, message: 'Please enter dorm name' },
+                {
+                  validator: (_, value) => {
+                    const raw = String(value || '').trim();
+                    const short = raw.toLowerCase().startsWith('dorm ')
+                      ? raw.replace(/^[Dd]orm\s+/, '')
+                      : raw;
+                    if (!short) return Promise.resolve();
+                    if (!/^[A-Za-z]$/.test(short)) {
+                      return Promise.reject(new Error('Dorm name must be 1 letter (A-Z)'));
+                    }
+                    return Promise.resolve();
+                  },
                 },
-              },
-            ]}
-          >
-            <Input maxLength={1} placeholder="A" />
-          </Form.Item>
+              ]}
+            >
+              <Input maxLength={1} placeholder="A" />
+            </Form.Item>
+          )}
           <Form.Item
             label="Number of floors"
             name="total_floors"
@@ -264,7 +292,12 @@ export default function AdminDormsPage() {
             const errMsg = Array.isArray(error?.message)
               ? error.message.join(', ')
               : error?.message || 'Failed to delete dorm';
-            message.error(errMsg);
+            appModal.error({
+              title: 'Cannot Delete Dorm',
+              content: errMsg,
+              okText: 'Close',
+              centered: true,
+            });
           }
         }}
         okText="Delete"
@@ -292,6 +325,45 @@ export default function AdminDormsPage() {
           </div>
         )}
       </Modal>
+
+      {/* Details Drawer — Blocks in this dorm */}
+      <Drawer
+        title={detailsDorm ? `${detailsDorm.dorm_name} — Blocks` : 'Blocks'}
+        open={!!detailsDorm}
+        onClose={() => setDetailsDorm(null)}
+        width={600}
+      >
+        <Table<Block>
+          rowKey="id"
+          loading={detailsLoading}
+          size="small"
+          pagination={false}
+          dataSource={detailsBlocks}
+          locale={{ emptyText: 'No blocks in this dorm.' }}
+          columns={[
+            { title: 'Block Name', dataIndex: 'block_name', key: 'block_name', width: 110 },
+            { title: 'Floor', dataIndex: 'floor', key: 'floor', width: 70, render: (v) => v ?? '-' },
+            { title: 'Total Rooms', dataIndex: 'total_rooms', key: 'total_rooms', width: 100, render: (v) => v ?? '-' },
+            {
+              title: 'Gender',
+              dataIndex: 'gender_type',
+              key: 'gender_type',
+              width: 90,
+              render: (v: string) => {
+                const colorMap: Record<string, string> = { male: 'blue', female: 'pink', mixed: 'purple' };
+                return <Tag color={colorMap[v] ?? 'default'}>{v?.toUpperCase()}</Tag>;
+              },
+            },
+            {
+              title: 'Status',
+              dataIndex: 'is_active',
+              key: 'is_active',
+              width: 110,
+              render: (v: boolean) => <Tag color={v ? 'green' : 'orange'}>{v ? 'Available' : 'Maintenance'}</Tag>,
+            },
+          ]}
+        />
+      </Drawer>
     </div>
   );
 }

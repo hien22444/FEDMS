@@ -1,5 +1,5 @@
 # FEDOM Frontend — Review & Documentation
-> Senior Code Review | Updated: 2026-02-22
+> Senior Code Review | Updated: 2026-03-05 (session 6)
 
 ---
 
@@ -38,7 +38,7 @@
 | `/student/dashboard` | StudentDashboard | ✅ Có UI (data hardcode) |
 | `/student/news` | NewsPage | 🔲 Placeholder |
 | `/student/schedule` | SchedulePage | 🔲 Placeholder |
-| `/student/booking` | BookingPage | 🔲 Placeholder |
+| `/student/booking` | BookingPage | ✅ Kết nối API — cascading filter + payment |
 | `/student/utilities` | UtilitiesPage | 🔲 Placeholder |
 | `/student/payment` | PaymentPage | 🔲 Placeholder |
 | `/student/requests` | RequestsPage | ✅ Kết nối API |
@@ -48,8 +48,9 @@
 | `/student/faq` | FAQPage | 🔲 Placeholder |
 | `/student/dorm-rules` | DormRulesPage | 🔲 Placeholder |
 | `/student/notifications` | NotificationsPage | ✅ Kết nối API |
+| `/student/chat` | StudentChatPage | ✅ Kết nối API + Socket.io |
 
-**3/13 trang Student có nội dung thực (Dashboard, Requests, Notifications).**
+**5/14 trang Student có nội dung thực (Dashboard, Booking, Requests, Notifications, Chat).**
 
 ### 2.3 Security Routes — `role: 'security'` — Layout: `SecurityLayout`
 
@@ -72,20 +73,20 @@
 | `/manager/blocks` | ComingSoon | 🔲 Chưa làm |
 | `/manager/rooms` | ComingSoon | 🔲 Chưa làm |
 | `/manager/beds` | ComingSoon | 🔲 Chưa làm |
-| `/manager/bookings` | ComingSoon | 🔲 Chưa làm |
+| `/manager/bookings` | ManagerBookingsPage | ✅ Kết nối API — read-only table |
 | `/manager/checkout` | ComingSoon | 🔲 Chưa làm |
 | `/manager/facilities` | ComingSoon | 🔲 Chưa làm |
 | `/manager/requests` | ComingSoon | 🔲 Chưa làm |
 | `/manager/electricity/*` | ComingSoon (3 sub) | 🔲 Chưa làm |
 | `/manager/invoices` | ComingSoon | 🔲 Chưa làm |
 | `/manager/news` | ComingSoon | 🔲 Chưa làm |
-| `/manager/chat` | ComingSoon | 🔲 Chưa làm |
+| `/manager/chat` | ManagerChatPage | ✅ Kết nối API + Socket.io |
 | `/manager/email` | ComingSoon | 🔲 Chưa làm |
-| `/manager/notifications` | ComingSoon | 🔲 Chưa làm |
+| `/manager/notifications` | ManagerNotificationsPage | ✅ Kết nối API |
 | `/manager/config` | ComingSoon | 🔲 Chưa làm |
 | `/manager/settings` | ComingSoon | 🔲 Chưa làm |
 
-**Chỉ 3/20 trang Manager có nội dung thực.**
+**6/20 trang Manager có nội dung thực.**
 
 ### 2.5 Admin Routes — `role: 'admin'` — Layout: `AdminLayout`
 
@@ -199,7 +200,41 @@
 | `getStudentPenalties` | GET | `violations/student/{code}/penalties` |
 | `getViolationStatistics` | GET | `violations/statistics` |
 
-### 3.6 HTTP Client — `src/lib/apiRequest.ts`
+### 3.6 Chat Actions — `src/lib/actions/chat.ts`
+
+| Function | Method | Endpoint | Role |
+|----------|--------|----------|------|
+| `getMyConversation` | GET | `chat/my-conversation` | student |
+| `closeMyConversation` | PATCH | `chat/my-conversation/close` | student |
+| `getConversations` | GET | `chat/conversations?status&page&limit` | manager |
+| `assignConversation` | PATCH | `chat/conversations/{id}/assign` | manager |
+| `closeConversation` | PATCH | `chat/conversations/{id}/close` | manager |
+| `getMessages` | GET | `chat/conversations/{id}/messages` | both |
+| `markAsRead` | PATCH | `chat/conversations/{id}/read` | both |
+
+### 3.7 Socket.io — `src/lib/socket.ts`
+
+```
+URL: import.meta.env.VITE_SOCKET_URL  (default: http://localhost:3001)
+Auth: { token: localStorage.getItem('token') }  (JWT qua handshake.auth)
+
+Singleton pattern: connectSocket() → tạo hoặc trả về instance đang có
+Disconnect: disconnectSocket() → gọi trong AuthContext.logout()
+
+Events emit:
+  join_conversation    { conversationId }
+  leave_conversation   { conversationId }
+  send_message         { conversationId, text }
+  mark_read            { conversationId }
+
+Events listen:
+  new_message          { message, conversationId, manager_unread, student_unread }
+  conversation_updated { conversationId, manager_unread, last_message_at }  ← manager list badge
+  conversation_read    { conversationId, by }
+  conversation_closed  { conversationId }
+```
+
+### 3.8 HTTP Client — `src/lib/apiRequest.ts`
 
 ```
 Base URL: import.meta.env.VITE_BASE_URL
@@ -256,6 +291,11 @@ Response: { data: T } hoặc { success: true, data: T }
 | `admin-token` | Token admin (dùng khác key!) |
 | `theme` | Theme preference |
 
+**Socket lifecycle:**
+- `connectSocket()` được gọi khi student/manager vào trang chat (lazy connect)
+- `disconnectSocket()` được gọi trong `logout()` — socket bị đóng khi user đăng xuất
+- Socket reconnect tự động tối đa 5 lần khi mất mạng
+
 ### 4.2 PrivateRoute — `src/components/unix/PrivateRoute.tsx`
 
 ```
@@ -308,8 +348,11 @@ Kiểm tra:
 - **Sidebar:** Collapsible — 240px / 80px khi thu gọn
 - **Logo:** "DOM" (FPT Dormitory)
 - **User Info:** Avatar, full_name, student_code, behavioral_score (CFD)
-- **Menu:** Home, News, Schedule, Booking, Utilities, Payment, Requests, CFD Points, Guidelines, Maintenance, FAQ, Dorm Rules, Notifications
+- **Menu:** Home, News, Schedule, Booking, Utilities, Payment, Requests, CFD Points, Guidelines, Maintenance, FAQ, Dorm Rules, Notifications (với Badge unread)
 - **Footer:** Logout button
+- **Persistent Top Header:** Xuất hiện ở TẤT CẢ trang student — "Student Board" title, Search input, Bell Popover (6 notify gần nhất + "View all"), Location badge
+- **Bell state:** `refreshNotifications()` chạy khi mount, khi `pathname` thay đổi, và khi nhận window event `student:notifications:changed`
+- **Real-time:** Socket listener `new_notification` → prepend synthetic notify + antd toast; unsubscribe khi unmount
 
 ### 5.4 SecurityLayout
 - **Header:** Màu `#FF5C00` (orange), logo
@@ -640,6 +683,7 @@ const userData = JSON.parse(decodeURIComponent(userParam));
 | Biến | Bắt buộc | Mô tả |
 |------|---------|-------|
 | `VITE_BASE_URL` | ✅ | Backend API base URL |
+| `VITE_SOCKET_URL` | ✅ | Socket.io server URL (mặc định: http://localhost:3001) |
 | `VITE_BASE_WEB_URL` | — | Frontend base URL |
 
 ---
@@ -682,6 +726,52 @@ const userData = JSON.parse(decodeURIComponent(userParam));
 | Student Visitor Requests (create/cancel/list) | Student |
 | Student Notifications (list/read/delete) | Student |
 
+### Đã fix / Đã thêm (2026-03-01)
+| Task | Files | Mô tả |
+|------|-------|-------|
+| Bug fix | BE `app.js` (root) | Socket.io 404 — nguyên nhân: `nodemon app.js` chạy root entry point nhưng socket.io chỉ được mount ở `src/app.js`. Fix: thêm `initSocket(httpServer)` vào root `app.js`, xóa `src/app.js` |
+| Feature | `src/lib/socket.ts` (new) | Singleton socket.io client, connectSocket/disconnectSocket, auth qua JWT |
+| Feature | `src/lib/actions/chat.ts` (new) | 7 chat actions: getMyConversation, closeMyConversation, getConversations, assignConversation, closeConversation, getMessages, markAsRead |
+| Feature | `src/pages/student/chat/index.tsx` (new) | Student chat page — real-time với socket.io |
+| Feature | `src/pages/manager/chat/index.tsx` (new) | Manager chat page — split view: conversation list + chat panel |
+| Fix | `src/contexts/AuthContext.tsx` | Gọi `disconnectSocket()` khi logout |
+| Fix | `src/lib/actions/index.ts` | Sửa `deleteUser` export conflict giữa `user.ts` và `admin.ts` |
+| Fix | `src/pages/student/chat/index.tsx` | Thêm `socket.on('error')` handler → toast error + reset sending state |
+| Fix | `src/pages/student/chat/index.tsx` | `handleSend`: check `socket.connected` trước emit; `sending` reset khi nhận `new_message` từ server (thay vì reset ngay lập tức) |
+| Fix | `src/pages/student/chat/index.tsx` | Thêm `socket.on('connect')` → rejoin room sau khi reconnect |
+| Fix | `src/pages/student/chat/index.tsx` | `handleClose`: emit `close_conversation` sau REST close → manager nhận `conversation_closed` real-time |
+| Fix | `src/pages/manager/chat/index.tsx` | Thêm `socket.on('error')` handler → toast error + reset sending state |
+| Fix | `src/pages/manager/chat/index.tsx` | `handleSend`: check `socket.connected` trước emit; `sending` reset khi nhận `new_message` |
+| Fix | `src/pages/manager/chat/index.tsx` | Thêm `activeConvIdRef` + `socket.on('connect')` → rejoin room sau reconnect |
+| Fix | `src/pages/manager/chat/index.tsx` | `handleClose`: emit `close_conversation` → student nhận real-time; thêm Popconfirm confirm trước khi close |
+| Feature | `src/layouts/StudentLayout.tsx` | Persistent top header (Student Board) với Search + Bell Popover + Location — hiện ở TẤT CẢ trang student; Bell fetch real notifications, click Popover hiển thị 6 notify gần nhất + "View all" → `/student/notifications`; Sidebar thêm "Notifications" menu item với Badge unread |
+| Fix | `src/layouts/manager/ManagerHeader.tsx` | Thay hardcoded `count={5}` bằng real unread count từ API; thêm Popover hiển thị notification list khi click chuông |
+| Refactor | `src/pages/student/dashboard/index.tsx` | Xóa duplicate `<header>` (đã chuyển vào StudentLayout) — dashboard chỉ còn phần content |
+| Fix | `src/lib/socket.ts` | `connectSocket()`: nếu socket exists nhưng disconnected → gọi `socket.connect()` (thay vì tạo mới) → tránh orphan listeners; nếu connected → return ngay |
+| Fix | `src/layouts/StudentLayout.tsx` | Connect socket on mount, listen `new_notification` event: prepend synthetic unread notification vào state (bell count tăng ngay) + show antd toast — fix real-time notify khi manager close chat |
+| Fix | `src/layouts/StudentLayout.tsx` | `getMyNotifications` useEffect: đổi dependency `[]` → `[location.pathname]` — bell count sync sau khi student mark-as-read trên notifications page |
+| Fix | `src/layouts/StudentLayout.tsx` | Tách fetch thành `refreshNotifications()` reusable; thêm `useEffect` listen `window` event `student:notifications:changed` → gọi `refreshNotifications()` ngay lập tức — fix bell count không update khi mark-read trên notifications page mà không navigate |
+| Fix | `src/pages/student/notifications/index.tsx` | Thêm `notifyLayoutRefresh()` dispatch `CustomEvent('student:notifications:changed')` sau mỗi mutation thành công (`handleMarkRead`, `handleMarkAllRead`, `handleDelete`) — trigger StudentLayout refresh bell ngay |
+| Feature | `src/pages/manager/chat/index.tsx` | Implement Sáng kiến 2 (Claim trước chat sau): import `useAuth`, tính `isMyConv = !staff \|\| staff.id === user.id`; input area thêm case "Handled by [tên] — view only" khi không phải manager được assign; Close button chỉ hiện khi `isMyConv` |
+| UI | `src/pages/student/chat/index.tsx` | Redesign layout từ narrow centered box → 2-column full-width: Left panel (InfoPanel 288px) chứa status, manager card, common topics, support hours; Right panel là chat full chiều rộng; Messages dùng Avatar + tên; Input đổi sang TextArea (Shift+Enter newline) + circular send button; background chat area bg-gray-50 |
+| Fix | `src/pages/manager/chat/index.tsx` | Tách `isAssigned = !!staff` và `isMyConv = isAssigned && staff.id === user.id` — cũ: `isMyConv = !staff \|\| ...` cho phép nhắn khi chưa pickup. Mới: unassigned conversation bị chặn input ở FE |
+| Feature | `src/pages/manager/chat/index.tsx` | Input area thêm case 3 (unassigned): hiển thị banner "Pick up this conversation to start chatting" + nút Pick up màu cam thay vì input box — enforce Claim before Chat ở FE |
+| Fix | `src/pages/manager/chat/index.tsx` | Thêm `statusFilterRef` (useRef) để tránh stale closure trong socket handler khi filter thay đổi — handler cũ đọc `statusFilter` từ closure bị stale |
+| Feature | `src/pages/manager/chat/index.tsx` | `conversation_updated` handler: nếu conversation chưa có trong list (new conversation từ student) → prepend vào đầu list (khi filter là open/all) — fix realtime: manager thấy conversation mới ngay khi student gửi tin đầu tiên |
+| Feature | `src/lib/actions/chat.ts` | Thêm `getMyConversations(params?)` action → GET `/chat/my-conversations` — lấy tất cả conversations của student |
+| Feature | `src/pages/student/chat/index.tsx` | Redesign hoàn toàn: Left sidebar hiển thị danh sách TẤT CẢ conversations (open + closed) với ConvItem — avatar, agent name, thời gian, status tag, unread badge; Right panel: messages + input (open) hoặc read-only banner + nút "Start new" (closed); "+" new conversation button trong sidebar khi chưa có open conv; Socket chỉ join room của open conv; Closed conversations có thể xem lại (read-only) |
+| Fix | `src/lib/actions/notification.ts` | 2026-03-02 | Thêm `"chat"` vào INotification.category union type — đồng bộ với BE model |
+| Feature | `src/layouts/manager/ManagerHeader.tsx` | 2026-03-02 | Thêm socket useEffect: `connectSocket()` + listen `new_notification` event → prepend notification vào state ngay lập tức (bell count tăng real-time); cleanup on unmount |
+| Bug fix | `src/pages/student/chat/index.tsx` | 2026-03-02 | Import `markAsRead`; `handleSelectConv`: với closed conv có `student_unread > 0` → gọi `markAsRead(convId)` REST API (fire-and-forget) — open conv dùng socket join_conversation; `init()`: khi auto-select closed conv đầu tiên → gọi markAsRead nếu có unread — fix bug unread badge tái hiện sau reload |
+| Feature | `src/layouts/StudentLayout.tsx` | 2026-03-02 | Bell popover: thêm `bellOpen` state + `handleBellOpenChange` — khi mở popover và có unread → gọi `markAllNotificationsRead()` + mark local state; notification items clickable → navigate `/student/notifications` + close popover |
+| Feature | `src/layouts/manager/ManagerHeader.tsx` | 2026-03-02 | Bell popover: thêm `bellOpen` state + `handleBellOpenChange` — khi mở → `markAllNotificationsRead()` + mark local; items clickable → `/manager/notifications`; orange unread dot; "View all notifications →" link at bottom |
+| Feature | `src/pages/manager/notifications/index.tsx` (new) | 2026-03-02 | Trang notifications đầy đủ cho manager: filter tabs (All/Chat/Payments/Booking/Maintenance/Visitor/System), Mark all as read, delete per notification, mark single as read, unread highlight (blue border + dot) |
+| Fix | `src/routers/index.tsx` | 2026-03-02 | `/manager/notifications`: thay `<ComingSoon>` bằng `<ManagerNotificationsPage>` |
+| Bug fix | `src/pages/manager/chat/index.tsx` | 2026-03-02 | `new_message` handler: dùng `activeConvIdRef.current` để check; nếu là active conv → badge `manager_unread: 0` + emit `mark_read`; `conversation_updated` handler: tương tự — override badge về 0 nếu đang xem conversation đó |
+| Bug fix | `src/pages/student/chat/index.tsx` | 2026-03-02 | `new_message` handler: nếu là active conv → badge `student_unread: 0` + emit `mark_read` — fix badge không mất khi đang xem hội thoại |
+
+---
+
 ### Chưa hoàn chỉnh (placeholder / hardcode)
 | Tính năng | Role | Mức độ ưu tiên |
 |----------|------|--------------|
@@ -696,3 +786,349 @@ const userData = JSON.parse(decodeURIComponent(userParam));
 | Admin Reports | Admin | 🟡 Thấp |
 | Chat / Email | Manager | 🟡 Thấp |
 | Invoice / Electricity | Manager | 🟠 Trung bình |
+
+---
+
+## 10. BED MANAGEMENT PAGES (2026-03-03)
+
+### Các trang đã tạo
+
+| Path | File | Mô tả |
+|------|------|-------|
+| `/manager/beds` | `src/pages/manager/beds/index.tsx` | Danh sách toàn bộ giường, filter theo Dorm→Block→Room→Status, cập nhật status inline |
+| `/manager/beds/status` | `src/pages/manager/beds/status/index.tsx` | Chọn phòng → grid card từng giường, đổi status bằng Select |
+| `/manager/beds/assignment` | `src/pages/manager/beds/assignment/index.tsx` | Di chuyển sinh viên từ giường occupied sang giường available |
+
+### API actions đã thêm (`src/lib/actions/admin.ts`)
+
+```ts
+// Types
+export type BedStatus = 'available' | 'occupied' | 'maintenance' | 'reserved';
+export interface Bed { id, room, bed_number, status, contract? }
+
+// Functions
+fetchBeds(params)                        // GET /beds (filter: room/block/dorm/status/page/limit)
+fetchBedsByRoom(roomId)                  // GET /beds/room/:roomId
+fetchBedById(id)                         // GET /beds/:id
+updateBedStatus(id, status)              // PATCH /beds/:id/status
+changeBedAssignment(sourceBedId, targetBedId) // PATCH /beds/assignment/change
+```
+
+### Luồng dữ liệu
+
+```
+Dorm → Block → Room → Bed → Contract → Student
+```
+
+- **Bed Management**: manager chọn Dorm → Block → Room → xem danh sách beds
+- **Status Update**: chỉ cho phép đổi `available ↔ maintenance ↔ reserved`; không đổi `occupied` (phải unassign trước)
+- **Assignment Change**: chọn giường occupied (có contract) → chọn giường available → confirm → API di chuyển contract
+
+### Fix liên quan: Bed Auto-Creation (2026-03-03)
+
+**Vấn đề:** FE hiển thị "No beds found in this room" vì BE không tạo Bed documents khi tạo phòng.
+
+**Fix (BE side):** Xem chi tiết trong `BEDOM_REVIEW.md` section 10.
+
+**Kết quả sau fix:**
+- Tạo phòng `total_beds=10, available_beds=5` → API tự tạo 10 Bed documents (5 available + 5 maintenance)
+- `GET /beds/room/:roomId` trả về đầy đủ beds → FE hiển thị đúng grid
+- Khi xóa phòng → tất cả Bed documents của phòng đó cũng bị xóa
+- Khi cập nhật `total_beds` → beds được thêm/bớt tương ứng
+
+---
+
+## 11. BLOCK MANAGEMENT UI IMPROVEMENTS (2026-03-04)
+
+### File thay đổi
+
+`src/pages/admin/blocks/index.tsx`
+
+### Thay đổi
+
+#### 11.1 Block Code — Chỉ cho nhập số
+- Input `block_code` thêm `onChange` filter: `e.target.value.replace(/\D/g, '')`
+- Thêm validation rule: `{ pattern: /^\d+$/, message: 'Block code must contain numbers only' }`
+- Logic hiện có: chữ số đầu của block_code tự suy ra floor (e.g. `101` → floor 1)
+
+#### 11.2 Cột "Set Status" (width: 150)
+
+| Trạng thái block | Button hiển thị | Màu |
+|-----------------|----------------|-----|
+| `is_active: true` | Set Maintenance | Orange (#f97316) |
+| `is_active: false` | Set Available | Green (#22c55e) |
+
+- Click button → mở Modal xác nhận (giống pattern bed management)
+- Confirm → `PATCH /blocks/:id { is_active: boolean }` — dùng `updateBlock` sẵn có
+- State: `confirmStatusTarget`, `updatingStatusId`
+
+#### 11.3 Cột "Change Gender" (width: 140)
+
+| Gender hiện tại | Button hiển thị | Màu |
+|-----------------|----------------|-----|
+| `male` | Set Female | Pink (#ec4899) |
+| `female` | Set Male | Blue (#3b82f6) |
+
+- Click button → mở Modal xác nhận
+- Confirm → `PATCH /blocks/:id { gender_type: string }` — dùng `updateBlock` sẵn có
+- State: `confirmGenderTarget`, `updatingGenderId`
+
+#### 11.4 Status column — đổi label
+
+| is_active | Label cũ | Label mới | Tag màu |
+|-----------|---------|---------|---------|
+| `true` | Active | Available | green |
+| `false` | Inactive | Maintenance | orange |
+
+Filter dropdown: "Active/Inactive" → "Available/Maintenance"
+
+#### 11.5 Column widths
+
+| Column | Trước | Sau |
+|--------|-------|-----|
+| Dorm | auto | 120 |
+| Block Name | auto | 110 |
+| Floor | 80 | 65 |
+| Total Rooms | 100 | 95 |
+| Gender | 100 | 85 |
+| Status | 110 | 110 |
+| Set Status | — | 150 (mới) |
+| Change Gender | — | 140 (mới) |
+| Actions | 160 | 130 |
+
+Thêm `scroll={{ x: 1100 }}` vào Table.
+
+#### 11.6 Refactor columns
+
+`blockColumns()` function (standalone, bên ngoài component) → `columns` array inline bên trong component.
+
+### Không cần thay đổi BE
+
+API `PATCH /blocks/:id` hiện tại đã xử lý đầy đủ `is_active` và `gender_type`. Không cần thêm route hay endpoint mới.
+
+---
+
+## 12. ROOM MANAGEMENT UI FIXES & IMPROVEMENTS (2026-03-04)
+
+### File thay đổi
+
+`src/pages/admin/rooms/index.tsx`
+
+### 12.1 Bug fix — Block Picker Modal hiện phía sau khi tạo phòng 2 lần liên tiếp
+
+**Root cause:**
+- Block picker modal (`open={blockPickerOpen}`) không có `destroyOnClose` → portal giữ nguyên trong DOM sau khi đóng
+- Khi main modal mở lần 2, Ant Design gán z-index mới cao hơn cho main modal → block picker (vẫn ở DOM với z-index cũ thấp hơn) bị khuất phía sau
+- `blockPickerOpen` không được reset khi main modal đóng → state bất đồng bộ
+
+**Fix:**
+1. Thêm `destroyOnClose` vào block picker modal → unmount hoàn toàn khi đóng, đảm bảo z-index fresh khi mở lại
+2. Thêm `zIndex={1010}` vào block picker modal → luôn cao hơn main modal (default 1000)
+3. Tạo hàm `closeMainModal()` tập trung: gọi cả `setModalOpen(false)` và `setBlockPickerOpen(false)` → đảm bảo state nhất quán
+4. Thay `onCancel={() => setModalOpen(false)}` → `onCancel={closeMainModal}`
+5. Trong `handleSubmitRoom` sau khi submit thành công → gọi `closeMainModal()` thay vì `setModalOpen(false)` trực tiếp
+
+### 12.2 Bỏ cột "Beds", thêm cột "Set Status"
+
+**Cột bị xóa:** `Beds` (hiển thị `available_beds/total_beds`, width 110)
+
+**Cột mới:** `Set Status` (width 155)
+
+| Room status | Button hiển thị | Màu |
+|-------------|----------------|-----|
+| `available` | Set Maintenance | Orange (#f97316) |
+| `maintenance` / `inactive` | Set Available | Green (#22c55e) |
+| `full` | "Auto-managed" (text, no button) | — |
+
+- Click → mở Modal xác nhận (giống pattern block/bed management)
+- Confirm → `PATCH /rooms/:id { status }` — dùng `updateRoom` sẵn có
+- State: `confirmStatusTarget`, `updatingStatusId`
+
+### 12.3 Bỏ Description và Private Bathroom khỏi form
+
+- Xóa `<Form.Item label="Description">` (textarea)
+- Xóa `<Form.Item label="Private Bathroom">` (switch `has_private_bathroom`)
+- Form `setFieldsValue` trong edit mode cũng bỏ 2 field này
+
+### 12.4 Column widths điều chỉnh
+
+| Column | Trước | Sau |
+|--------|-------|-----|
+| Block | auto | 90 |
+| Room Name | auto | 110 |
+| Student Type | 160 | 150 |
+| Room Type | 110 | 100 |
+| Beds | 110 | — (xóa) |
+| Price/Sem | 120 | 120 |
+| Status | 120 | 110 |
+| Set Status | — | 155 (mới) |
+| Actions | 160 | 130 |
+
+Thêm `scroll={{ x: 1000 }}` vào Table.
+
+### 12.5 Refactor columns
+
+`roomColumns()` function (standalone) → `columns` array inline bên trong component (để truy cập `updatingStatusId` và `setConfirmStatusTarget`).
+
+### Không cần thay đổi BE
+
+API `PATCH /rooms/:id` hiện tại đã xử lý `status` update. Không cần thêm route hay endpoint mới.
+
+---
+
+## 13. BLOCK FORM VALIDATION FIX + MANAGER PAGE SYNC (2026-03-04)
+
+### 13.1 Fix — Block field validation bug khi edit room
+
+**File:** `src/pages/admin/rooms/index.tsx`, `src/pages/manager/rooms/index.tsx`
+
+**Vấn đề:**
+Khi edit room và thay đổi Room Type, Ant Design kích hoạt validation và bắn lỗi "Please select a block" dù block đã được chọn sẵn.
+
+**Root cause:**
+`Form.Item name="block"` wrap một `<div>` thay vì form control thực sự. Ant Design truyền `value`/`onChange` qua `cloneElement` tới child trực tiếp — nhưng `<div>` không phải form control, không nhận/relay các props này → field value không được track đúng cách → validate fail.
+
+**Fix:**
+```tsx
+// TRƯỚC (lỗi):
+<Form.Item name="block" rules={[{ required: true, message: 'Please select a block' }]}>
+  <div className="flex gap-2">
+    <Input value={displayBlockName} readOnly disabled />
+    <Button onClick={() => setBlockPickerOpen(true)}>Select Block</Button>
+  </div>
+</Form.Item>
+
+// SAU (đúng):
+<Form.Item label="Block" required>
+  <div className="flex gap-2">
+    <Form.Item name="block" noStyle rules={[{ required: true, message: 'Please select a block' }]}>
+      <Select
+        style={{ flex: 1 }}
+        placeholder={selectedDormId ? 'Choose a block' : 'Select dorm first'}
+        disabled
+        options={blocks.map((b) => ({ label: b.block_name, value: b.id }))}
+        suffixIcon={null}
+      />
+    </Form.Item>
+    <Button onClick={() => setBlockPickerOpen(true)} disabled={!!editingRoom || !selectedDormId || loadingBlocks}>
+      Select Block
+    </Button>
+  </div>
+</Form.Item>
+```
+
+- `Form.Item noStyle` → tham gia validate mà không render wrapper label/error
+- `<Select disabled>` → form control thực, Ant Design track value qua `options` lookup → hiển thị block_name đúng
+- `suffixIcon={null}` → ẩn dropdown arrow (vì disabled + custom button)
+
+### 13.2 Sync — Manager Block Management
+
+**File:** `src/pages/manager/blocks/index.tsx`
+
+Đồng bộ hoàn toàn với `src/pages/admin/blocks/index.tsx` (Section 11). Các thay đổi áp dụng:
+
+| Tính năng | Trước (manager cũ) | Sau (sync với admin) |
+|-----------|-------------------|---------------------|
+| Block Code input | Nhập tự do | Chỉ nhập số (filter `/\D/g`) |
+| Status label | Active / Inactive | Available / Maintenance |
+| Status column color | green / red | green / orange |
+| Cột Set Status | Không có | Có (width 150) |
+| Cột Change Gender | Không có | Có (width 140) |
+| Filter status options | Active / Inactive | Available / Maintenance |
+| Column widths | Cũ | Cập nhật (xem Section 11.5) |
+| scroll | Không có | `scroll={{ x: 1100 }}` |
+| columns definition | Standalone `blockColumns()` | Inline trong component |
+
+Export name giữ nguyên: `ManagerBlocksPage`.
+
+### 13.3 Sync — Manager Room Management
+
+**File:** `src/pages/manager/rooms/index.tsx`
+
+Đồng bộ hoàn toàn với `src/pages/admin/rooms/index.tsx` (Section 12 + fix 13.1). Các thay đổi áp dụng:
+
+| Tính năng | Trước (manager cũ) | Sau (sync với admin) |
+|-----------|-------------------|---------------------|
+| Block Form.Item | `<div>` wrapper → validation bug | `Form.Item noStyle` + `<Select disabled>` |
+| Block picker z-index | Không có `destroyOnClose`/`zIndex` → bug | `destroyOnClose` + `zIndex={1010}` |
+| `closeMainModal()` | Không có | Có (reset cả modal + block picker state) |
+| Cột Beds | Có (`available_beds/total_beds`) | Xóa |
+| Cột Set Status | Không có | Có (width 155) |
+| Description field | Có trong form | Xóa |
+| Private Bathroom field | Có trong form (Switch) | Xóa |
+| columns definition | Standalone `roomColumns()` | Inline trong component |
+| scroll | Không có | `scroll={{ x: 1000 }}` |
+
+Export name giữ nguyên: `ManagerRoomsPage`.
+
+### Không cần thay đổi BE
+
+Tất cả thay đổi là FE-only. API hiện có đã đủ.
+
+---
+
+## 14. BOOKING ROOMS FEATURE (2026-03-05)
+
+### 14.1 Student Booking Page — `src/pages/student/booking/index.tsx`
+
+**Rewrite hoàn toàn** từ placeholder sang full booking flow:
+
+| Tính năng | Chi tiết |
+|-----------|---------|
+| Cascading Selection | Room Type → Dorm → Floor → Block → Room → Bed |
+| Auto Semester | Tự tính next semester (Spring/Summer/Fall) |
+| Gender + Type Filter | Backend tự filter theo student gender + student_type |
+| Room Cards | Hiển thị grid cards khi chọn block, có bed count + price |
+| Bed Selection | Radio buttons cho available beds |
+| Confirm Modal | Hiển thị summary: dorm, floor, room, bed, room type, semester, price |
+| Payment Page | VietQR display, 10-minute countdown timer, check payment status button |
+| My Requests Tab | List booking history với status tags, resume payment, cancel |
+| State: `view` | `form` (cascading selection) / `payment` (payment page) |
+
+**Components sử dụng:** Tabs, Card, Select, Radio.Group, Modal, Descriptions, Alert, Countdown timer (custom), Pagination, Popconfirm
+
+### 14.2 Manager Bookings Page — `src/pages/manager/bookings/index.tsx`
+
+**Mới tạo** — read-only table:
+
+| Tính năng | Chi tiết |
+|-----------|---------|
+| Table columns | Student, Room, Dorm/Block, Bed, Room Type, Semester, Invoice, Status, Requested At |
+| Filters | Status (Select) + Semester (Input) |
+| Pagination | Server-side, showSizeChanger, showTotal |
+| Không có actions | Read-only, không approve/reject |
+
+### 14.3 API Actions — `src/lib/actions/booking.ts`
+
+**Mới tạo** — 12 API functions + types:
+
+| Function | Method | Endpoint |
+|----------|--------|----------|
+| `getNextSemester` | GET | `bookings/next-semester` |
+| `getAvailableRoomTypes` | GET | `bookings/options/room-types` |
+| `getDormsForBooking` | GET | `bookings/options/dorms` |
+| `getFloorsForBooking` | GET | `bookings/options/floors` |
+| `getBlocksForBooking` | GET | `bookings/options/blocks` |
+| `getRoomsForBooking` | GET | `bookings/options/rooms` |
+| `getBedsForBooking` | GET | `bookings/options/beds` |
+| `submitBooking` | POST | `bookings` |
+| `checkPaymentStatus` | GET | `bookings/:id/payment-status` |
+| `getMyBookings` | GET | `bookings/my` |
+| `cancelBookingRequest` | PATCH | `bookings/:id/cancel` |
+| `getAllBookings` | GET | `bookings` |
+
+### 14.4 Router — `src/routers/index.tsx`
+
+- Import `ManagerBookingsPage` from `@/pages/manager/bookings`
+- Replace `ComingSoon` tại `path: 'bookings'` trong Manager routes
+
+### Files thay đổi
+
+| File | Action |
+|------|--------|
+| `src/lib/actions/booking.ts` | CREATE — types + 12 API functions |
+| `src/lib/actions/index.ts` | MODIFY — export booking |
+| `src/pages/student/booking/index.tsx` | REWRITE — full booking flow |
+| `src/pages/student/booking/index.tsx` | UI redesign 2026-03-05 — layout khớp mockup: title h1, 4 dropdowns hàng ngang + slot count, bed cards emoji+badge+room, confirm modal 2-col form |
+| `src/pages/manager/bookings/index.tsx` | CREATE — read-only table |
+| `src/routers/index.tsx` | MODIFY — wire ManagerBookingsPage |
