@@ -70,6 +70,13 @@ export interface BookingRequestItem {
   room: BookingRoom;
   bed?: { id: string; bed_number: string };
   invoice?: BookingInvoice;
+  payos?: {
+    orderCode?: number | null;
+    paymentLinkId?: string | null;
+    checkoutUrl?: string | null;
+    qrCode?: string | null;
+    status?: string | null;
+  } | null;
   semester: string;
   start_date: string;
   end_date: string;
@@ -92,13 +99,27 @@ export interface BookingListResponse {
 export interface SubmitBookingResponse {
   booking: BookingRequestItem;
   invoice: BookingInvoice;
+  payos?: {
+    orderCode: number;
+    paymentLinkId?: string | null;
+    checkoutUrl?: string | null;
+    qrCode?: string | null;
+  };
 }
 
 export interface PaymentStatusResponse {
+  status: string;
+  paid?: boolean;
+  message?: string;
   booking: BookingRequestItem;
   invoice: BookingInvoice;
-  payment: Record<string, unknown>;
-  contract: Record<string, unknown>;
+  payment?: Record<string, unknown>;
+  contract?: Record<string, unknown>;
+  payos?: {
+    orderCode?: number;
+    checkoutUrl?: string | null;
+    qrCode?: string | null;
+  };
 }
 
 // ─── API Functions ───
