@@ -28,6 +28,7 @@ export type {
 } from './admin';
 export * from './visitor';
 export * from './notification';
-export * from './chat';
 export * from './news';
+export * from './ai';
+export * from './chat';
 export * from './booking';

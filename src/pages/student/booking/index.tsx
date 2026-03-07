@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Button,
   Typography,
@@ -15,6 +16,7 @@ import {
   Tag,
   Space,
   Card,
+  Checkbox,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -107,13 +109,18 @@ const Booking: React.FC = () => {
   });
 
   const [confirmModal, setConfirmModal] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // ─── Payment state ───
   const [paymentBooking, setPaymentBooking] = useState<BookingRequestItem | null>(null);
   const [paymentInvoice, setPaymentInvoice] = useState<BookingInvoice | null>(null);
+  const [payos, setPayos] = useState<SubmitBookingResponse['payos'] | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
+  const [paymentStarted, setPaymentStarted] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const location = useLocation();
 
   // ─── My Requests state ───
   const [myBookings, setMyBookings] = useState<BookingRequestItem[]>([]);
@@ -130,8 +137,9 @@ const Booking: React.FC = () => {
     if (activeTab === 'my') loadMyBookings();
   }, [activeTab, myBookingsPage]);
 
+  // Countdown chỉ bắt đầu khi người dùng click "Click to pay"
   useEffect(() => {
-    if (view === 'payment' && paymentBooking?.expires_at) {
+    if (paymentStarted && paymentBooking?.expires_at) {
       const expiresAt = new Date(paymentBooking.expires_at).getTime();
       const tick = () => {
         const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
@@ -142,7 +150,81 @@ const Booking: React.FC = () => {
       countdownRef.current = setInterval(tick, 1000);
       return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
     }
-  }, [view, paymentBooking]);
+  }, [paymentStarted, paymentBooking]);
+
+  // Tự động quay về form khi hết giờ (3s sau khi hiện thông báo expired)
+  useEffect(() => {
+    if (!paymentStarted || !paymentBooking?.expires_at || countdown !== 0) return;
+    const expiresAt = new Date(paymentBooking.expires_at).getTime();
+    if (Date.now() < expiresAt) return; // countdown=0 ban đầu trước tick đầu tiên, chưa thực sự hết
+    const t = setTimeout(() => {
+      message.warning('Booking expired. The bed has been released.');
+      resetForm();
+      setView('form');
+      loadRoomTypes();
+    }, 3000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countdown, paymentStarted]);
+
+  // Khi user quay lại tab sau khi thao tác trên PayOS (click Hủy hoặc hoàn tất) → tự check status
+  useEffect(() => {
+    if (!paymentStarted || !paymentBooking) return;
+    const bookingId = paymentBooking.id;
+    const handleFocus = async () => {
+      try {
+        const result = await checkPaymentStatus(bookingId);
+        if (result.status === 'cancelled' || result.status === 'expired') {
+          message.info('Booking was cancelled. The bed has been released.');
+          resetForm();
+          setView('form');
+          loadRoomTypes();
+        } else if (result.paid || result.status === 'approved') {
+          message.success('Payment confirmed! Your booking is approved.');
+          resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+        }
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentStarted, paymentBooking]);
+
+  // Polling mỗi 5 giây khi đã mở PayOS để detect hủy/thanh toán ngay lập tức
+  useEffect(() => {
+    if (!paymentStarted || !paymentBooking) return;
+    const bookingId = paymentBooking.id;
+    pollRef.current = setInterval(async () => {
+      try {
+        const result = await checkPaymentStatus(bookingId);
+        if (result.status === 'cancelled' || result.status === 'expired') {
+          message.info('Booking was cancelled. The bed has been released.');
+          resetForm(); setView('form'); loadRoomTypes();
+        } else if (result.paid || result.status === 'approved') {
+          message.success('Payment confirmed! Your booking is approved.');
+          resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+        }
+      } catch { /* ignore */ }
+    }, 1000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentStarted, paymentBooking]);
+
+  // Resume payment nếu được navigate từ payment page
+  useEffect(() => {
+    const state = location.state as { resumeBookingId?: string } | null;
+    if (state?.resumeBookingId) {
+      getMyBookings({ page: 1, limit: 50 }).then(data => {
+        const booking = data.items.find(b => b.id === state.resumeBookingId);
+        if (booking && booking.status === 'awaiting_payment') {
+          handleResumePayment(booking);
+        }
+      }).catch(() => { });
+      // Xóa state khỏi history để không resume lại khi F5
+      window.history.replaceState({}, '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── API calls ───
 
@@ -265,11 +347,18 @@ const Booking: React.FC = () => {
     setLoading(p => ({ ...p, submit: true }));
     try {
       const result: SubmitBookingResponse = await submitBooking({ bed_id: selectedBed.id, note: note || undefined });
-      message.success('Booking submitted! Please complete payment.');
       setConfirmModal(false);
+      setAgreedToTerms(false);
       setPaymentBooking(result.booking);
       setPaymentInvoice(result.invoice);
+      setPayos(result.payos || null);
       setView('payment');
+      // Bắt đầu tính giờ ngay khi confirm
+      setPaymentStarted(true);
+      if (result.payos?.checkoutUrl) {
+        window.open(result.payos.checkoutUrl, '_blank', 'noopener,noreferrer');
+      }
+      message.success('Booking submitted! Please complete payment.');
     } catch (err: unknown) {
       const errMsg = err instanceof Error
         ? err.message
@@ -307,10 +396,22 @@ const Booking: React.FC = () => {
     setCheckingPayment(true);
     try {
       const result = await checkPaymentStatus(paymentBooking.id);
-      message.success('Payment confirmed! Your booking is approved.');
-      setPaymentBooking(result.booking);
-      setPaymentInvoice(result.invoice);
-      resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+      if (result.paid || result.status === 'paid' || result.status === 'approved') {
+        message.success('Payment confirmed! Your booking is approved.');
+        setPaymentBooking(result.booking);
+        setPaymentInvoice(result.invoice);
+        resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+      } else {
+        // Requirement: if not paid, show "chưa thanh toán"
+        message.error(result.message || 'Chưa thanh toán');
+        if (result.payos) {
+          setPayos({
+            orderCode: result.payos.orderCode || 0,
+            checkoutUrl: result.payos.checkoutUrl || null,
+            qrCode: result.payos.qrCode || null,
+          });
+        }
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error
         ? err.message
@@ -318,6 +419,26 @@ const Booking: React.FC = () => {
       message.error(msg);
       if (msg.toLowerCase().includes('expired')) { resetForm(); setView('form'); loadRoomTypes(); }
     } finally { setCheckingPayment(false); }
+  };
+
+  const handleClickToPay = () => {
+    if (!payos?.checkoutUrl) return;
+    window.open(payos.checkoutUrl, '_blank', 'noopener,noreferrer');
+    setPaymentStarted(true);
+  };
+
+  const handleCancelFromPayment = async () => {
+    if (!paymentBooking) return;
+    try {
+      await cancelBookingRequest(paymentBooking.id);
+      message.success('Booking cancelled');
+      resetForm();
+      setView('form');
+      loadRoomTypes();
+    } catch (err: unknown) {
+      const cancelMsg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Failed to cancel';
+      message.error(cancelMsg);
+    }
   };
 
   const handleCancel = async (bookingId: string) => {
@@ -334,6 +455,18 @@ const Booking: React.FC = () => {
   const handleResumePayment = (booking: BookingRequestItem) => {
     setPaymentBooking(booking);
     setPaymentInvoice(booking.invoice || null);
+    setPayos(
+      booking.payos
+        ? {
+          orderCode: booking.payos.orderCode ? Number(booking.payos.orderCode) : 0,
+          paymentLinkId: booking.payos.paymentLinkId || null,
+          checkoutUrl: booking.payos.checkoutUrl || null,
+          qrCode: booking.payos.qrCode || null,
+        }
+        : null
+    );
+    // Khi resume từ payment page, coi như đã bắt đầu thanh toán → hiện countdown
+    setPaymentStarted(true);
     setView('payment'); setActiveTab('new');
   };
 
@@ -342,6 +475,10 @@ const Booking: React.FC = () => {
     setSelectedBlock(null); setSelectedBed(null); setNote('');
     setDorms([]); setFloors([]); setBlocks([]); setAllBeds([]);
     setPaymentBooking(null); setPaymentInvoice(null);
+    setPayos(null);
+    setPaymentStarted(false);
+    setCountdown(0);
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
   };
 
   const formatCountdown = (s: number) =>
@@ -357,7 +494,7 @@ const Booking: React.FC = () => {
   // ─── Render: Payment ───
   const renderPaymentPage = () => {
     if (!paymentBooking || !paymentInvoice) return null;
-    const isExpired = countdown <= 0;
+    const isExpired = paymentStarted && countdown <= 0;
     return (
       <div>
         <Button
@@ -371,53 +508,137 @@ const Booking: React.FC = () => {
           <Title level={2} style={{ color: '#ff4d4f', margin: '8px 0' }}>
             {formatCurrency(paymentInvoice.total_amount)}
           </Title>
-          {!isExpired ? (
+          {paymentStarted && !isExpired && (
             <Alert type="warning" showIcon icon={<ClockCircleOutlined />}
               message={<span>Slots are only held for 10 minutes, please pay before this time.{' '}
                 <Text strong style={{ color: '#ff4d4f', fontSize: 18 }}>{formatCountdown(countdown)}</Text>
               </span>}
               style={{ marginTop: 16 }}
             />
-          ) : (
+          )}
+          {isExpired && (
             <Alert type="error" showIcon message="Booking expired. The bed has been released."
               description="Please go back and create a new booking." style={{ marginTop: 16 }} />
           )}
         </Card>
 
         <Card title="Payment Information" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
-            <div style={{ textAlign: 'center' }}>
-              <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>Scan QR code to pay</Text>
-              <div style={{ width: 200, height: 200, background: '#f5f5f5', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #d9d9d9', margin: '0 auto 16px' }}>
-                <Text type="secondary">VietQR Code</Text>
+          <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
+            {/* Left: Booking summary + buttons */}
+            <div style={{ minWidth: 260, maxWidth: 320 }}>
+              <Title level={5} style={{ marginBottom: 12 }}>Booking Summary</Title>
+              <div
+                style={{
+                  background: '#f9fafb',
+                  borderRadius: 8,
+                  padding: 12,
+                  border: '1px solid #e5e7eb',
+                  marginBottom: 16,
+                  fontSize: 13,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text type="secondary">Room</Text>
+                  <Text strong>{paymentBooking.room?.room_number || '—'}</Text>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text type="secondary">Bed</Text>
+                  <Text strong>{paymentBooking.bed?.bed_number || '—'}</Text>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text type="secondary">Dorm / Block</Text>
+                  <Text strong>
+                    {paymentBooking.room?.block?.dorm?.dorm_name || '—'}
+                    {paymentBooking.room?.block?.block_code ? ` · ${paymentBooking.room.block.block_code}` : ''}
+                  </Text>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text type="secondary">Semester</Text>
+                  <Text strong>{paymentBooking.semester?.replace('-', ' - ')}</Text>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Text type="secondary">Invoice code</Text>
+                  <Text strong>{paymentInvoice.invoice_code}</Text>
+                </div>
               </div>
-              <Text strong style={{ display: 'block' }}>BIDV</Text>
-              <Text copyable style={{ fontSize: 16 }}>4271000xxxxxx</Text>
-              <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>Truong Dai Hoc FPT</Text>
+
+              {payos?.checkoutUrl && !isExpired && (
+                <Button
+                  type="primary"
+                  block
+                  onClick={handleClickToPay}
+                  style={{ borderRadius: 6, marginBottom: 8 }}
+                >
+                  Click to pay
+                </Button>
+              )}
+              <Popconfirm
+                title="Cancel this booking?"
+                description="The bed will be released immediately."
+                onConfirm={handleCancelFromPayment}
+                okText="Yes, cancel"
+                cancelText="No"
+              >
+                <Button danger block style={{ borderRadius: 6 }}>
+                  Cancel Booking
+                </Button>
+              </Popconfirm>
             </div>
-            <div style={{ flex: 1, minWidth: 240 }}>
-              <Title level={5}>Payment Guide</Title>
-              <Space direction="vertical" size="middle">
-                {[
-                  ['Step 1:', 'Open your banking app (BIDV, Vietcombank, Momo, etc.)'],
-                  ['Step 2:', 'Scan the QR code or transfer manually'],
-                  ['Step 3:', `Enter the exact amount: ${formatCurrency(paymentInvoice.total_amount)}`],
-                  ['Step 4:', `Use transfer note: ${paymentInvoice.invoice_code}`],
-                  ['Step 5:', 'Confirm and enter OTP to complete payment'],
-                ].map(([label, desc]) => (
-                  <div key={label}><Text strong>{label}</Text> <Text>{desc}</Text></div>
-                ))}
-              </Space>
+
+            {/* Right: QR + countdown hoặc Payment guide */}
+            <div style={{ flex: 1, minWidth: 260 }}>
+              {payos?.qrCode ? (
+                <div style={{ textAlign: 'center' }}>
+                  {/* Countdown nổi bật */}
+                  <div style={{
+                    display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+                    background: isExpired ? '#fff1f0' : '#fff9e6',
+                    border: `2px solid ${isExpired ? '#ff4d4f' : countdown <= 60 ? '#ff4d4f' : '#fa8c16'}`,
+                    borderRadius: 12, padding: '12px 32px', marginBottom: 20,
+                  }}>
+                    <Text style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
+                      <ClockCircleOutlined style={{ marginRight: 4 }} />
+                      Time remaining to pay
+                    </Text>
+                    <span style={{
+                      fontSize: 44, fontWeight: 700, fontFamily: 'monospace', letterSpacing: 2,
+                      color: isExpired ? '#ff4d4f' : countdown <= 60 ? '#ff4d4f' : '#fa8c16',
+                    }}>
+                      {isExpired ? '00:00' : formatCountdown(countdown)}
+                    </span>
+                  </div>
+
+
+                </div>
+              ) : (
+                <>
+                  <Title level={5}>Payment Guide</Title>
+                  <Space direction="vertical" size="middle">
+                    {[
+                      ['Step 1', 'Open your banking app (BIDV, Vietcombank, Momo, etc.)'],
+                      ['Step 2', 'Scan the QR code or transfer manually'],
+                      ['Step 3', `Enter the exact amount: ${formatCurrency(paymentInvoice.total_amount)}`],
+                      ['Step 4', `Use transfer note: ${paymentInvoice.invoice_code}`],
+                      ['Step 5', 'Confirm and enter OTP to complete payment'],
+                    ].map(([label, desc]) => (
+                      <div key={label}>
+                        <Text strong style={{ marginRight: 4 }}>{label}:</Text>
+                        <Text>{desc}</Text>
+                      </div>
+                    ))}
+                  </Space>
+                </>
+              )}
             </div>
           </div>
         </Card>
-
+        {/* 
         <div style={{ textAlign: 'center' }}>
           <Button type="primary" size="large" icon={<CreditCardOutlined />}
-            loading={checkingPayment} disabled={isExpired} onClick={handleCheckPayment}>
+            loading={checkingPayment} disabled={isExpired || !paymentStarted} onClick={handleCheckPayment}>
             Check Payment Status
           </Button>
-        </div>
+        </div> */}
       </div>
     );
   };
@@ -593,11 +814,11 @@ const Booking: React.FC = () => {
       {/* Confirm Modal */}
       <Modal
         open={confirmModal}
-        onCancel={() => { setConfirmModal(false); setNote(''); }}
+        onCancel={() => { setConfirmModal(false); setNote(''); setAgreedToTerms(false); }}
         title={<Text strong style={{ fontSize: 16 }}>Confirm Booking</Text>}
         footer={[
-          <Button key="cancel" onClick={() => { setConfirmModal(false); setNote(''); }}>Cancel</Button>,
-          <Button key="confirm" type="primary" loading={loading.submit} onClick={handleSubmitBooking}>Confirm</Button>,
+          <Button key="cancel" onClick={() => { setConfirmModal(false); setNote(''); setAgreedToTerms(false); }}>Cancel</Button>,
+          <Button key="confirm" type="primary" loading={loading.submit} disabled={!agreedToTerms} onClick={handleSubmitBooking}>Confirm</Button>,
         ]}
         width={560}
         destroyOnClose
@@ -638,13 +859,26 @@ const Booking: React.FC = () => {
             </div>
 
             {/* Price */}
-            <div>
+            <div style={{ marginBottom: 20 }}>
               <Text style={{ color: '#555', fontSize: 13 }}>Room Price in VND:</Text>
               <div>
                 <Text strong style={{ color: '#1a6ef5', fontSize: 22 }}>
                   {formatCurrency(selectedBed.price_per_semester)}
                 </Text>
               </div>
+            </div>
+
+            {/* Agreement */}
+            <div style={{ borderTop: '1px solid #e8e8e8', paddingTop: 16 }}>
+              <Checkbox
+                checked={agreedToTerms}
+                onChange={e => setAgreedToTerms(e.target.checked)}
+              >
+                <Text style={{ fontSize: 13 }}>
+                  Agree to Dormitory Regulations.{' '}
+                  <Text style={{ fontSize: 13, color: '#fa8c16' }}>(Đồng ý với quy định ký túc xá).</Text>
+                </Text>
+              </Checkbox>
             </div>
           </div>
         )}
