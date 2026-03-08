@@ -52,7 +52,7 @@ export namespace IViolation {
   export interface ViolationReport {
     id: string;
     report_code: string;
-    reported_student: Student;
+    reported_student?: Student | null;
     reporter: Reporter;
     reporter_type: ReporterType;
     reporter_code?: string;

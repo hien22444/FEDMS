@@ -165,8 +165,14 @@ export default function ViolationListPage() {
       width: 200,
       render: (_, record) => (
         <div>
-          <div className="font-medium">{record.reported_student.full_name}</div>
-          <div className="text-xs text-gray-500">{record.reported_student.student_code}</div>
+          {record.reported_student ? (
+            <>
+              <div className="font-medium">{record.reported_student.full_name}</div>
+              <div className="text-xs text-gray-500">{record.reported_student.student_code}</div>
+            </>
+          ) : (
+            <span className="text-gray-400">Pending manager review</span>
+          )}
         </div>
       ),
     },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
+  App,
   Modal,
   Descriptions,
   Tag,
@@ -12,9 +13,14 @@ import {
   Divider,
   Image,
   Space,
+  Spin,
 } from 'antd';
 import dayjs from 'dayjs';
-import { reviewViolationReport, getStudentPenalties } from '@/lib/actions/violation';
+import {
+  reviewViolationReport,
+  getStudentPenalties,
+  searchStudentByCode,
+} from '@/lib/actions/violation';
 import type { IViolation } from '@/interfaces';
 import { ViolationStatus, ViolationType, PenaltyType, ReporterType } from '@/interfaces';
 
@@ -52,12 +58,18 @@ const penaltyTypeConfig: Record<PenaltyType, { label: string; maxPoints: number 
 };
 
 export default function ViolationDetailModal({ open, report, onClose }: Props) {
+  const { modal } = App.useApp();
   const [form] = Form.useForm();
+  const penaltyCodeInput = Form.useWatch('penalty_student_code', form);
   const [loading, setLoading] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<ViolationStatus | null>(null);
   const [penaltyInfo, setPenaltyInfo] = useState<{ points: number; reason: string } | null>(null);
   const [penaltyLoading, setPenaltyLoading] = useState(false);
+  const [penalizeStudent, setPenalizeStudent] = useState<IViolation.SearchStudentResult | null>(
+    null,
+  );
+  const [penalizeStudentLoading, setPenalizeStudentLoading] = useState(false);
 
   const canReview =
     report?.status === ViolationStatus.NEW || report?.status === ViolationStatus.UNDER_REVIEW;
@@ -75,9 +87,11 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
     }
 
     const fetchPenalty = async () => {
+      const code = report.reported_student?.student_code;
+      if (!code) return;
       try {
         setPenaltyLoading(true);
-        const data = await getStudentPenalties(report.reported_student.student_code);
+        const data = await getStudentPenalties(code);
         const penalty = data.penalties.find(
           (p) => p.report?.report_code === report.report_code,
         );
@@ -103,9 +117,9 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
 
   const handleStartReview = () => {
     setIsReviewing(true);
+    setPenalizeStudent(null);
     form.setFieldsValue({
       status: ViolationStatus.UNDER_REVIEW,
-      review_notes: '',
       penalty_student_code: '',
       penalty_type: PenaltyType.MINOR,
       points_deducted: 1,
@@ -118,16 +132,33 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
     setIsReviewing(false);
     form.resetFields();
     setSelectedStatus(null);
+    setPenalizeStudent(null);
   };
 
-  const handleSubmitReview = async () => {
+  const handlePenaltyCodeBlur = async () => {
+    const code = form.getFieldValue('penalty_student_code')?.trim();
+    if (!code) {
+      setPenalizeStudent(null);
+      return;
+    }
+    setPenalizeStudentLoading(true);
+    setPenalizeStudent(null);
     try {
-      const values = await form.validateFields();
+      const student = await searchStudentByCode(code.toUpperCase());
+      setPenalizeStudent(student ?? null);
+    } catch {
+      setPenalizeStudent(null);
+    } finally {
+      setPenalizeStudentLoading(false);
+    }
+  };
+
+  const submitReview = async (values: any) => {
+    try {
       setLoading(true);
 
       const reviewData: IViolation.ReviewViolationDto = {
         status: values.status,
-        review_notes: values.review_notes,
       };
 
       if (values.status === ViolationStatus.RESOLVED_PENALIZED) {
@@ -156,6 +187,56 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    try {
+      const values = await form.validateFields();
+
+      if (values.status === ViolationStatus.RESOLVED_PENALIZED) {
+        const penaltyStudentCode = String(values.penalty_student_code ?? '')
+          .trim()
+          .toUpperCase();
+        const targetCode =
+          penaltyStudentCode || report?.reported_student?.student_code || 'UNKNOWN';
+        const targetName =
+          penalizeStudent?.full_name ??
+          report?.reported_student?.full_name ??
+          'Unknown student';
+
+        modal.confirm({
+          title: 'Confirm CFD penalty',
+          content: (
+            <div>
+              <p>You are about to deduct CFD points from this student:</p>
+              <p>
+                <strong>Student code:</strong> {targetCode}
+              </p>
+              <p>
+                <strong>Student name:</strong> {targetName}
+              </p>
+              <p>
+                <strong>Points to deduct:</strong> -{values.points_deducted}
+              </p>
+              <p className="mt-2">
+                Please double‑check that the student code belongs to the correct student
+                before saving this penalty.
+              </p>
+            </div>
+          ),
+          okText: 'Confirm & Save',
+          cancelText: 'Cancel',
+          onOk: () => submitReview({ ...values, penalty_student_code: penaltyStudentCode }),
+        });
+      } else {
+        await submitReview(values);
+      }
+    } catch (error: any) {
+      // Validation errors from form should not show a generic message
+      if (error?.message && !error.errorFields) {
+        message.error(error.message);
+      }
     }
   };
 
@@ -220,37 +301,44 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
           {report.location || 'Not specified'}
         </Descriptions.Item>
 
-        {/* Reporter (left) vs Reported Student (right) */}
+        {/* Reporter (left) vs Reported Student (right). For student reports, reported student is only set after manager penalizes. */}
         <Descriptions.Item label="Reporter" span={1}>
           {report.reporter.fullname}
         </Descriptions.Item>
         <Descriptions.Item label="Reported Student" span={1}>
           {report.reported_student
-            ? `${report.reported_student.full_name}`
-            : '-'}
+            ? report.reported_student.full_name
+            : report.reporter_type === ReporterType.STUDENT
+              ? 'Pending manager review (assign in Penalize)'
+              : '-'}
         </Descriptions.Item>
 
         <Descriptions.Item label="Reporter Type" span={1}>
           {reporterTypeConfig[report.reporter_type]?.label || report.reporter_type}
         </Descriptions.Item>
         <Descriptions.Item label="Student Code" span={1}>
-          {report.reported_student?.student_code || '-'}
+          {report.reported_student?.student_code ??
+            (report.reporter_type === ReporterType.STUDENT ? '—' : '-')}
         </Descriptions.Item>
 
         <Descriptions.Item label="Reporter Code" span={1}>
           {report.reporter_code || '-'}
         </Descriptions.Item>
         <Descriptions.Item label="CFD Score" span={1}>
-          {report.reported_student?.behavioral_score != null ? (
-            <span
-              className={`font-medium ${
-                report.reported_student.behavioral_score < 5 ? 'text-red-500' : 'text-green-500'
-              }`}
-            >
-              {report.reported_student.behavioral_score}/10
-            </span>
+          {report.reported_student ? (
+            report.reported_student.behavioral_score != null ? (
+              <span
+                className={`font-medium ${
+                  report.reported_student.behavioral_score < 5 ? 'text-red-500' : 'text-green-500'
+                }`}
+              >
+                {report.reported_student.behavioral_score}/10
+              </span>
+            ) : (
+              '-'
+            )
           ) : (
-            '-'
+            report.reporter_type === ReporterType.STUDENT ? '—' : '-'
           )}
         </Descriptions.Item>
 
@@ -258,7 +346,7 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
           {' '}
         </Descriptions.Item>
         <Descriptions.Item label="Student Phone" span={1}>
-          {report.reported_student?.phone || 'N/A'}
+          {report.reported_student ? (report.reported_student.phone || 'N/A') : (report.reporter_type === ReporterType.STUDENT ? '—' : 'N/A')}
         </Descriptions.Item>
 
         <Descriptions.Item label="Description" span={2}>
@@ -351,8 +439,49 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
                   <Input
                     placeholder="E.g: DE180775"
                     style={{ textTransform: 'uppercase' }}
+                    onBlur={handlePenaltyCodeBlur}
+                    onChange={() => setPenalizeStudent(null)}
                   />
                 </Form.Item>
+
+                {penalizeStudentLoading && (
+                  <div className="mb-4 flex items-center gap-2 text-gray-500">
+                    <Spin size="small" />
+                    <span>Looking up student...</span>
+                  </div>
+                )}
+                {!penalizeStudentLoading && penalizeStudent && (
+                  <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3">
+                    <div className="text-sm font-medium text-green-800">Student found</div>
+                    <Descriptions column={1} size="small" className="mt-1">
+                      <Descriptions.Item label="Full name">
+                        {penalizeStudent.full_name}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Student code">
+                        <span className="font-mono">{penalizeStudent.student_code}</span>
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Phone">
+                        {penalizeStudent.phone || 'N/A'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Behavioral score">
+                        <Tag
+                          color={
+                            penalizeStudent.behavioral_score < 5 ? 'red' : 'green'
+                          }
+                        >
+                          {penalizeStudent.behavioral_score}/10
+                        </Tag>
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </div>
+                )}
+                {!penalizeStudentLoading &&
+                  penaltyCodeInput?.trim() &&
+                  !penalizeStudent && (
+                    <div className="mb-4 text-sm text-amber-600">
+                      No student found with this code. Enter the full code (e.g. DE170779).
+                    </div>
+                  )}
 
                 <Form.Item
                   name="penalty_type"
@@ -385,15 +514,16 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
                   />
                 </Form.Item>
 
-                <Form.Item name="penalty_reason" label="Penalty Reason">
-                  <Input.TextArea rows={2} placeholder="Enter penalty reason (optional)" />
+                <Form.Item
+                  name="penalty_reason"
+                  label="Penalty Reason"
+                  rules={[{ required: true, message: 'Please enter penalty reason' }]}
+                >
+                  <Input.TextArea rows={2} placeholder="Enter penalty reason" />
                 </Form.Item>
               </>
             )}
 
-            <Form.Item name="review_notes" label="Review Notes">
-              <Input.TextArea rows={3} placeholder="Enter review notes" />
-            </Form.Item>
           </Form>
         </>
       )}

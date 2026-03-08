@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  App,
   Card,
   Button,
   Typography,
@@ -683,36 +684,73 @@ const violationTypeOptions = [
 ];
 
 const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
+  const { modal } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      setSubmitting(true);
+      const violationLabel =
+        violationTypeOptions.find((opt) => opt.value === values.violation_type)?.label ||
+        values.violation_type;
 
-      const dto: IViolation.CreateViolationDto = {
-        reporter_type: ReporterType.STUDENT,
-        violation_type: values.violation_type,
-        violation_other_detail: values.violation_other_detail,
-        description: values.description,
-        violation_date: values.violation_date
-          ? values.violation_date.format('YYYY-MM-DD')
-          : dayjs().format('YYYY-MM-DD'),
-        location: values.location,
-        evidence_urls: values.evidence_urls || [],
-      };
+      modal.confirm({
+        title: 'Confirm violation report',
+        content: (
+          <div>
+            <p>Are you sure you want to submit this violation report?</p>
+            <p>
+              <strong>Violation type:</strong> {violationLabel}
+            </p>
+            {values.location && (
+              <p>
+                <strong>Location:</strong> {values.location}
+              </p>
+            )}
+            <p>
+              <strong>Description:</strong> {values.description}
+            </p>
+            <p className="mt-2">
+              Please make sure the details are correct before submitting. You cannot edit this
+              report after it is sent.
+            </p>
+          </div>
+        ),
+        okText: 'Confirm & Submit',
+        cancelText: 'Cancel',
+        onOk: async () => {
+          setSubmitting(true);
+          try {
+            const dto: IViolation.CreateViolationDto = {
+              reporter_type: ReporterType.STUDENT,
+              violation_type: values.violation_type,
+              violation_other_detail: values.violation_other_detail,
+              description: values.description,
+              violation_date: values.violation_date
+                ? values.violation_date.format('YYYY-MM-DD')
+                : dayjs().format('YYYY-MM-DD'),
+              location: values.location,
+              evidence_urls: values.evidence_urls || [],
+            };
 
-      await createViolationReport(dto);
-      message.success('Violation report submitted successfully');
-      form.resetFields();
-      onSuccess?.();
+            await createViolationReport(dto);
+            message.success('Violation report submitted successfully');
+            form.resetFields();
+            onSuccess?.();
+          } catch (err: any) {
+            if (err?.message) {
+              message.error(Array.isArray(err.message) ? err.message[0] : err.message);
+            }
+          } finally {
+            setSubmitting(false);
+          }
+        },
+      });
     } catch (err: any) {
-      if (err?.message) {
+      if (err?.message && !err.errorFields) {
         message.error(Array.isArray(err.message) ? err.message[0] : err.message);
       }
-    } finally {
-      setSubmitting(false);
     }
   };
 

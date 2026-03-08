@@ -13,15 +13,12 @@ import {
   Descriptions,
   Tag,
   Space,
-  Divider,
-  InputNumber,
 } from 'antd';
-import { Search, ArrowLeft, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, User, AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
 import { createViolationReport, searchStudentByCode } from '@/lib/actions/violation';
 import type { IViolation } from '@/interfaces';
-import { ViolationType, ReporterType, PenaltyType } from '@/interfaces';
+import { ViolationType, ReporterType } from '@/interfaces';
 
 const violationTypeOptions = [
   { value: ViolationType.NOISE, label: 'Noise Disturbance' },
@@ -31,26 +28,14 @@ const violationTypeOptions = [
   { value: ViolationType.OTHER, label: 'Other' },
 ];
 
-const penaltyTypeOptions = [
-  { value: PenaltyType.MINOR, label: 'Minor (max -2 points)' },
-  { value: PenaltyType.SEVERE, label: 'Severe (max -5 points)' },
-];
-
-type CreateFormValues = IViolation.CreateViolationDto & {
-  initial_penalty_type?: PenaltyType;
-  initial_points_deducted?: number;
-  initial_penalty_reason?: string;
-};
-
-export default function CreateViolationPage() {
+export default function SecurityReportViolationPage() {
   const { modal } = App.useApp();
-  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [studentCode, setStudentCode] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<IViolation.SearchStudentResult | null>(
-    null
+    null,
   );
   const [searchError, setSearchError] = useState<string | null>(null);
 
@@ -80,7 +65,7 @@ export default function CreateViolationPage() {
     }
   };
 
-  const handleSubmit = async (values: CreateFormValues) => {
+  const handleSubmit = async (values: IViolation.CreateViolationDto) => {
     if (!selectedStudent) {
       message.error('Please search and select a student');
       return;
@@ -90,39 +75,16 @@ export default function CreateViolationPage() {
       violationTypeOptions.find((opt) => opt.value === values.violation_type)?.label ||
       values.violation_type;
 
-    const autoDescription =
-      values.violation_other_detail ||
-      `Manager created violation: ${violationLabel}`;
-
-    const data: IViolation.CreateViolationDto = {
-      student_code: selectedStudent.student_code,
-      reporter_type: ReporterType.MANAGER,
-      violation_type: values.violation_type,
-      violation_other_detail: values.violation_other_detail,
-      description: autoDescription,
-      violation_date: dayjs(values.violation_date).format('YYYY-MM-DD'),
-      location: values.location,
-      evidence_urls: values.evidence_urls || [],
-    };
-
-    if (values.initial_penalty_type && values.initial_points_deducted) {
-      data.initial_penalty = {
-        penalty_type: values.initial_penalty_type,
-        points_deducted: values.initial_points_deducted,
-        reason: values.initial_penalty_reason || undefined,
-      };
-    }
-
     modal.confirm({
-      title: 'Confirm violation and CFD deduction',
+      title: 'Confirm violation report',
       content: (
         <div>
-          <p>Are you sure you want to create this violation for the student below?</p>
+          <p>Are you sure you want to submit this violation report to the manager?</p>
           <p>
-            <strong>Student code:</strong> {selectedStudent.student_code}
+            <strong>Reported student code:</strong> {selectedStudent.student_code}
           </p>
           <p>
-            <strong>Student name:</strong> {selectedStudent.full_name}
+            <strong>Reported student name:</strong> {selectedStudent.full_name}
           </p>
           <p>
             <strong>Violation type:</strong> {violationLabel}
@@ -132,33 +94,40 @@ export default function CreateViolationPage() {
               <strong>Location:</strong> {values.location}
             </p>
           )}
-          {data.initial_penalty && (
-            <p>
-              <strong>CFD points to deduct:</strong> -{data.initial_penalty.points_deducted}
-            </p>
-          )}
-          {values.initial_penalty_reason && (
-            <p>
-              <strong>Penalty reason:</strong> {values.initial_penalty_reason}
-            </p>
-          )}
+          <p>
+            <strong>Description:</strong> {values.description}
+          </p>
           <p className="mt-2">
             Please double‑check that the student code belongs to the correct student before
-            creating this violation.
+            submitting.
           </p>
         </div>
       ),
-      okText: 'Confirm & Create',
+      okText: 'Confirm & Submit',
       cancelText: 'Cancel',
       onOk: async () => {
         setLoading(true);
         try {
+          const data: IViolation.CreateViolationDto = {
+            student_code: selectedStudent.student_code,
+            reporter_type: ReporterType.SECURITY,
+            violation_type: values.violation_type,
+            violation_other_detail: values.violation_other_detail,
+            description: values.description,
+            violation_date: dayjs(values.violation_date).format('YYYY-MM-DD'),
+            location: values.location,
+            evidence_urls: values.evidence_urls || [],
+          };
+
           await createViolationReport(data);
-          message.success('Violation report created successfully');
-          navigate('/manager/violations');
+          message.success('Violation report submitted. Manager will review and process it.');
+          form.resetFields();
+          setSelectedStudent(null);
+          setStudentCode('');
+          setSearchError(null);
         } catch (error) {
-          console.error('Error creating violation:', error);
-          message.error('Failed to create violation report');
+          console.error('Error creating violation report:', error);
+          message.error('Failed to submit violation report');
         } finally {
           setLoading(false);
         }
@@ -175,15 +144,15 @@ export default function CreateViolationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={20} />}
-          onClick={() => navigate('/manager/violations')}
-        />
+      <div className="flex items-center gap-3">
+        <div className="rounded-lg bg-amber-100 p-2">
+          <AlertTriangle className="w-6 h-6 text-amber-600" />
+        </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create New Violation</h1>
-          <p className="text-sm text-gray-500">Create a policy violation report for a student</p>
+          <h1 className="text-2xl font-bold text-gray-900">Report Violation</h1>
+          <p className="text-sm text-gray-500">
+            Submit a violation report for manager to review. Manager will decide on penalty.
+          </p>
         </div>
       </div>
 
@@ -244,15 +213,6 @@ export default function CreateViolationPage() {
                       {selectedStudent.behavioral_score}/10
                     </Tag>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Violations This Semester">
-                    <Tag
-                      color={
-                        selectedStudent.violations_current_semester > 0 ? 'orange' : 'blue'
-                      }
-                    >
-                      {selectedStudent.violations_current_semester} times
-                    </Tag>
-                  </Descriptions.Item>
                 </Descriptions>
               </div>
             )}
@@ -265,7 +225,6 @@ export default function CreateViolationPage() {
             layout="vertical"
             onFinish={handleSubmit}
             initialValues={{
-              reporter_type: ReporterType.MANAGER,
               violation_type: ViolationType.NOISE,
               violation_date: dayjs(),
             }}
@@ -315,6 +274,22 @@ export default function CreateViolationPage() {
               </Form.Item>
             </div>
 
+            <Form.Item
+              name="description"
+              label="Description"
+              rules={[
+                { required: true, message: 'Please describe the violation' },
+                { min: 10, message: 'Description must be at least 10 characters' },
+              ]}
+            >
+              <Input.TextArea
+                rows={4}
+                placeholder="Describe what you observed (required for manager review)..."
+                showCount
+                maxLength={1000}
+              />
+            </Form.Item>
+
             <Form.Item name="evidence_urls" label="Evidence Links (images)">
               <Select
                 mode="tags"
@@ -323,63 +298,15 @@ export default function CreateViolationPage() {
               />
             </Form.Item>
 
-            <Divider>Penalty (CFD deduction)</Divider>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Form.Item
-                name="initial_penalty_type"
-                label="Severity Level"
-                rules={[{ required: true, message: 'Please select severity level' }]}
-              >
-                <Select
-                  options={penaltyTypeOptions}
-                  placeholder="Select severity"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="initial_points_deducted"
-                label="Points to Deduct"
-                rules={[
-                  { required: true, message: 'Please enter points to deduct' },
-                  {
-                    type: 'number',
-                    min: 0.5,
-                    max: 5,
-                    message: 'Points must be between 0.5 and 5',
-                  },
-                ]}
-              >
-                <InputNumber
-                  min={0.5}
-                  max={5}
-                  step={0.5}
-                  style={{ width: '100%' }}
-                  placeholder="e.g. 1.0"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="initial_penalty_reason"
-                label="Penalty Reason"
-                rules={[{ required: true, message: 'Please enter penalty reason' }]}
-              >
-                <Input.TextArea
-                  rows={2}
-                  placeholder="Enter penalty reason (optional)"
-                />
-              </Form.Item>
-            </div>
-
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button onClick={() => navigate('/manager/violations')}>Cancel</Button>
+              <Button onClick={() => form.resetFields()}>Reset</Button>
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={loading}
                 disabled={!selectedStudent}
               >
-                Create Violation
+                Submit Report
               </Button>
             </div>
           </Form>
