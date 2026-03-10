@@ -22,6 +22,7 @@ import DashboardPage from '@/pages/security/dashboard';
 import CameraCheckinPage from '@/pages/security/camera-checkin';
 import CheckoutRequestsPage from '@/pages/security/checkout-requests';
 import VisitorsPage from '@/pages/security/visitors';
+import SecurityReportViolationPage from '@/pages/security/report-violation';
 
 // Manager pages
 import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/dashboard';
@@ -195,6 +196,10 @@ const router = createBrowserRouter([
               {
                 path: 'visitors',
                 element: <VisitorsPage />,
+              },
+              {
+                path: 'report-violation',
+                element: <SecurityReportViolationPage />,
               },
             ],
           },

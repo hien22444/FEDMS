@@ -10,6 +10,7 @@ export const ROUTES = {
   CAMERA_CHECKIN: '/security/camera-checkin',
   CHECKOUT_REQUESTS: '/security/checkout-requests',
   VISITORS: '/security/visitors',
+  SECURITY_REPORT_VIOLATION: '/security/report-violation',
   PROJECTS: '/projects',
   RENDER: '/render',
 
