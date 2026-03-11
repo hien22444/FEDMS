@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  App,
   Alert,
   Button,
   Table,
@@ -73,6 +74,7 @@ const parseRoomTypeOptions = (prices: Record<string, number>): RoomTypeOption[] 
 // ==================== CATEGORIES TAB ====================
 
 function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
+  const { modal: appModal } = App.useApp();
   const [categories, setCategories] = useState<EquipmentCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -130,7 +132,11 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
       const errMsg = Array.isArray(error?.message)
         ? error.message.join(', ')
         : error?.message || 'Failed to save category';
-      message.error(errMsg);
+      appModal.error({
+        title: editing ? 'Cannot Update Category' : 'Cannot Create Category',
+        content: errMsg,
+        okText: 'Close',
+      });
     }
   };
 
@@ -255,6 +261,7 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
 // ==================== TEMPLATES TAB ====================
 
 function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; refreshKey: number }) {
+  const { modal: appModal } = App.useApp();
   const [templates, setTemplates] = useState<EquipmentTemplate[]>([]);
   const [categories, setCategories] = useState<EquipmentCategory[]>([]);
   const [loading, setLoading] = useState(false);
@@ -316,6 +323,27 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+
+      // Client-side duplicate check: same name + same category (excluding self when editing)
+      if (!editing) {
+        const duplicate = templates.find((t) => {
+          const tCatId = typeof t.category === 'object' ? t.category.id : t.category;
+          return (
+            t.equipment_name.trim().toLowerCase() === values.equipment_name.trim().toLowerCase() &&
+            String(tCatId) === String(values.category)
+          );
+        });
+        if (duplicate) {
+          const catName = categories.find((c) => String(c.id) === String(values.category))?.category_name || 'this category';
+          appModal.error({
+            title: 'Cannot Create Template',
+            content: `A template named "${values.equipment_name}" already exists in category "${catName}". Please use a different name.`,
+            okText: 'Close',
+          });
+          return;
+        }
+      }
+
       if (editing) {
         await updateEquipmentTemplate(editing.id, values);
         message.success('Template updated successfully');
@@ -329,7 +357,11 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
     } catch (error: any) {
       if (error?.errorFields) return;
       const errMsg = Array.isArray(error?.message) ? error.message.join(', ') : error?.message || 'Failed to save template';
-      message.error(errMsg);
+      appModal.error({
+        title: editing ? 'Cannot Update Template' : 'Cannot Create Template',
+        content: errMsg,
+        okText: 'Close',
+      });
     }
   };
 
@@ -895,13 +927,24 @@ function RoomEquipmentTab() {
     setDeleteModalOpen(true);
   };
 
+  const roomCode = (() => {
+    if (!selectedRoom) return '';
+    const blockName = typeof selectedRoom.block === 'object' && selectedRoom.block !== null
+      ? (selectedRoom.block as any).block_name
+      : '';
+    return blockName ? `${blockName}-${selectedRoom.room_number}` : selectedRoom.room_number;
+  })();
+
   const columns: ColumnsType<RoomEquipment> = [
     {
       title: 'Equipment Code',
-      dataIndex: 'equipment_code',
       key: 'equipment_code',
-      width: 180,
-      render: (code: string) => <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{code}</span>,
+      width: 220,
+      render: (_: any, record: RoomEquipment) => {
+        const equipName = typeof record.template === 'object' ? record.template.equipment_name : '';
+        const code = roomCode && equipName ? `${roomCode}-${equipName}` : (equipName || '-');
+        return <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{code}</span>;
+      },
     },
     {
       title: 'Equipment',
@@ -930,12 +973,6 @@ function RoomEquipmentTab() {
         }
         return '-';
       },
-    },
-    {
-      title: 'Type',
-      key: 'type',
-      width: 100,
-      render: () => <Tag color="default">Mandatory</Tag>,
     },
     {
       title: 'Qty',

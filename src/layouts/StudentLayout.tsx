@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout, Menu, Avatar, Space, Button, Badge, Input, Popover, Typography, notification, theme } from 'antd';
+import { Layout, Menu, Avatar, Space, Button, Badge, Input, Popover, Typography, notification, theme, ConfigProvider } from 'antd';
 import {
   HomeOutlined,
   FileTextOutlined,
@@ -43,7 +43,7 @@ const StudentLayout = () => {
   const refreshNotifications = () => {
     getMyNotifications()
       .then((data) => { if (Array.isArray(data)) setNotifications(data); })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   // Refetch on every page navigation so the bell count stays in sync after
@@ -100,7 +100,7 @@ const StudentLayout = () => {
     if (open && unreadCount > 0) {
       markAllNotificationsRead()
         .then(() => setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true }))))
-        .catch(() => {});
+        .catch(() => { });
     }
   };
 
@@ -238,15 +238,18 @@ const StudentLayout = () => {
         trigger={null}
         width={240}
         style={{
-          backgroundColor: token.colorPrimary,
+          backgroundColor: '#ea580c',
           position: 'fixed',
           left: 0,
           top: 0,
           bottom: 0,
-          overflowY: 'auto',
+          overflowY: 'hidden',
           overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Logo / brand */}
         <div
           style={{
@@ -254,7 +257,7 @@ const StudentLayout = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: '1px solid #c2410c',
           }}
         >
           {!collapsed ? (
@@ -294,7 +297,7 @@ const StudentLayout = () => {
         </div>
 
         {/* Student profile */}
-        <div style={{ padding: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <div style={{ padding: '16px', borderBottom: '1px solid #c2410c' }}>
           <Space size="middle">
             <Avatar
               size={collapsed ? 32 : 40}
@@ -317,23 +320,39 @@ const StudentLayout = () => {
         </div>
 
         {/* Menu */}
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          onClick={handleMenuClick}
-          style={{ backgroundColor: 'transparent', border: 'none', marginTop: '16px' }}
-          theme="dark"
-          items={menuItems}
-        />
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+          <ConfigProvider
+            theme={{
+              components: {
+                Menu: {
+                  darkItemBg: 'transparent',
+                  darkSubMenuItemBg: 'transparent',
+                  darkItemSelectedBg: '#ffffff',
+                  darkItemSelectedColor: '#ea580c',
+                  darkItemColor: 'rgba(255, 255, 255, 0.95)',
+                  darkItemHoverBg: 'rgba(255, 255, 255, 0.1)',
+                  darkItemHoverColor: '#ffffff',
+                },
+              },
+            }}
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              onClick={handleMenuClick}
+              style={{ backgroundColor: 'transparent', border: 'none', marginTop: '16px' }}
+              theme="dark"
+              items={menuItems}
+            />
+          </ConfigProvider>
+        </div>
 
         {/* Logout */}
         <div
           style={{
-            position: 'absolute',
-            bottom: 0,
-            width: '100%',
+            flexShrink: 0,
             padding: '16px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            borderTop: '1px solid #c2410c',
           }}
         >
           <Button
@@ -345,6 +364,7 @@ const StudentLayout = () => {
           >
             {!collapsed && 'Logout'}
           </Button>
+        </div>
         </div>
       </Sider>
 
