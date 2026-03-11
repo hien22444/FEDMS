@@ -6,7 +6,7 @@ export interface INotification {
   title: string;
   message: string;
   notification_type: 'info' | 'warning' | 'error' | 'success';
-  category: 'payment' | 'booking' | 'maintenance' | 'violation' | 'visitor' | 'equipment' | 'general';
+  category: 'payment' | 'booking' | 'maintenance' | 'violation' | 'visitor' | 'equipment' | 'general' | 'chat';
   is_read: boolean;
   related_id?: string;
   created_at: string;

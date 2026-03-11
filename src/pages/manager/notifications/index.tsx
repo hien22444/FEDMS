@@ -7,15 +7,16 @@ import {
   markAllNotificationsRead,
   deleteNotification,
   type INotification,
-} from '@/lib/actions';
+} from '@/lib/actions/notification';
 
 const { Title, Text } = Typography;
 
-const CATEGORY_TABS = ['All', 'Payments', 'Booking', 'Maintenance', 'Visitor', 'System'] as const;
+const CATEGORY_TABS = ['All', 'Chat', 'Payments', 'Booking', 'Maintenance', 'Visitor', 'System'] as const;
 type CategoryTab = (typeof CATEGORY_TABS)[number];
 
 const categoryMap: Record<CategoryTab, string | null> = {
   All: null,
+  Chat: 'chat',
   Payments: 'payment',
   Booking: 'booking',
   Maintenance: 'maintenance',
@@ -31,6 +32,7 @@ const typeIcon: Record<INotification['notification_type'], string> = {
 };
 
 const categoryIcon: Record<string, string> = {
+  chat: '💬',
   payment: '💳',
   booking: '🏠',
   maintenance: '🔧',
@@ -52,7 +54,7 @@ const formatRelativeTime = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('en-GB');
 };
 
-const Notifications: React.FC = () => {
+const ManagerNotificationsPage: React.FC = () => {
   const { token } = theme.useToken();
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,7 +66,7 @@ const Notifications: React.FC = () => {
       const data = await getMyNotifications();
       setNotifications(data || []);
     } catch {
-      // silent — user may not have notifications yet
+      // silent
     } finally {
       setLoading(false);
     }
@@ -74,16 +76,12 @@ const Notifications: React.FC = () => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const notifyLayoutRefresh = () =>
-    window.dispatchEvent(new CustomEvent('student:notifications:changed'));
-
   const handleMarkRead = async (id: string) => {
     try {
       await markNotificationAsRead(id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
-      notifyLayoutRefresh();
     } catch {
       // silent
     }
@@ -93,7 +91,6 @@ const Notifications: React.FC = () => {
     try {
       await markAllNotificationsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      notifyLayoutRefresh();
     } catch {
       // silent
     }
@@ -103,7 +100,6 @@ const Notifications: React.FC = () => {
     try {
       await deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-      notifyLayoutRefresh();
     } catch {
       // silent
     }
@@ -123,7 +119,7 @@ const Notifications: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
           <div>
             <Title level={2} style={{ marginBottom: '8px' }}>Notifications</Title>
-            <Text type="secondary">Stay updated with your housing activities</Text>
+            <Text type="secondary">Student support requests and system alerts</Text>
           </div>
           {unreadCount > 0 && (
             <Button onClick={handleMarkAllRead} icon={<CheckOutlined />}>
@@ -228,4 +224,4 @@ const Notifications: React.FC = () => {
   );
 };
 
-export default Notifications;
+export default ManagerNotificationsPage;

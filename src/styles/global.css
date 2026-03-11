@@ -1,7 +1,6 @@
 @import './animation.css';
 @import './scroll.css';
 @import './ant-design.css';
-@import './react-quill.css';
 
 @tailwind base;
 @tailwind components;

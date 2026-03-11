@@ -10,6 +10,7 @@ export const ROUTES = {
   CAMERA_CHECKIN: '/security/camera-checkin',
   CHECKOUT_REQUESTS: '/security/checkout-requests',
   VISITORS: '/security/visitors',
+  SECURITY_REPORT_VIOLATION: '/security/report-violation',
   PROJECTS: '/projects',
   RENDER: '/render',
 
@@ -28,6 +29,7 @@ export const ROUTES = {
   STUDENT_FAQ: '/student/faq',
   STUDENT_DORM_RULES: '/student/dorm-rules',
   STUDENT_NOTIFICATIONS: '/student/notifications',
+  STUDENT_CHAT: '/student/chat',
   
   // Admin routes
   ADMIN_LOGIN: '/admin/login',

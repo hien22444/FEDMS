@@ -39,7 +39,10 @@ const statusConfig: Record<ViolationStatus, { color: string; label: string }> = 
 };
 
 const violationTypeConfig: Record<ViolationType, { label: string }> = {
-  [ViolationType.POLICY_VIOLATION]: { label: 'Policy Violation' },
+  [ViolationType.NOISE]: { label: 'Noise Disturbance' },
+  [ViolationType.CLEANLINESS]: { label: 'Cleanliness Issue' },
+  [ViolationType.UNAUTHORIZED_GUEST]: { label: 'Unauthorized Guest' },
+  [ViolationType.ALCOHOL]: { label: 'Alcohol / Smoking' },
   [ViolationType.OTHER]: { label: 'Other' },
 };
 
@@ -162,8 +165,14 @@ export default function ViolationListPage() {
       width: 200,
       render: (_, record) => (
         <div>
-          <div className="font-medium">{record.reported_student.full_name}</div>
-          <div className="text-xs text-gray-500">{record.reported_student.student_code}</div>
+          {record.reported_student ? (
+            <>
+              <div className="font-medium">{record.reported_student.full_name}</div>
+              <div className="text-xs text-gray-500">{record.reported_student.student_code}</div>
+            </>
+          ) : (
+            <span className="text-gray-400">Pending manager review</span>
+          )}
         </div>
       ),
     },

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants';
 import type { IUser } from '@/interfaces';
 import { getProfile, logout as logoutAction, refreshAccessToken } from '@/lib/actions';
+import { disconnectSocket } from '@/lib/socket';
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const ACTIVITY_THROTTLE_MS = 60 * 1000; // Only update lastActivity every 60 seconds
@@ -134,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     logoutAction();
     localStorage.removeItem('lastActivity');
+    disconnectSocket();
     setState({
       isAuthenticated: false,
       isLoading: false,

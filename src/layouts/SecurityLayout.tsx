@@ -7,6 +7,7 @@ import {
   Bell,
   LogOut,
   Shield,
+  AlertTriangle,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { cn } from '@/utils';
@@ -22,6 +23,7 @@ const SecurityLayout = () => {
     { path: ROUTES.CAMERA_CHECKIN, label: 'Camera Checkin', icon: Camera },
     { path: ROUTES.CHECKOUT_REQUESTS, label: 'Checkout Requests', icon: FileText },
     { path: ROUTES.VISITORS, label: 'Visitors', icon: Users },
+    { path: ROUTES.SECURITY_REPORT_VIOLATION, label: 'Report Violation', icon: AlertTriangle },
   ];
 
   const isActive = (path: string) => location.pathname === path;
