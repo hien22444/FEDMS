@@ -447,7 +447,7 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
             </Form.Item>
             <Form.Item label="Active" name="is_active" valuePropName="checked"><Switch /></Form.Item>
           </div>
-          <Form.Item label="Specifications" name="specifications"><Input.TextArea rows={2} placeholder="Technical specifications or notes" /></Form.Item>
+
         </Form>
       </Modal>
 
@@ -1140,7 +1140,7 @@ function RoomEquipmentTab() {
             {deleting && (
               <div className="text-sm text-gray-600 mt-2">
                 <p><strong>Equipment:</strong> {typeof deleting.template === 'object' ? deleting.template.equipment_name : 'Unknown'}</p>
-                <p><strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{deleting.equipment_code}</span></p>
+                <p><strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{(() => { const n = typeof deleting.template === 'object' ? deleting.template.equipment_name : ''; return roomCode && n ? `${roomCode}-${n}` : (n || '-'); })()}</span></p>
               </div>
             )}
             <p className="text-xs text-gray-500 mt-2">This action cannot be undone.</p>
@@ -1169,7 +1169,7 @@ function RoomEquipmentTab() {
                 <strong>Equipment:</strong> {typeof editing.template === 'object' ? editing.template.equipment_name : 'Unknown'}
               </p>
               <p className="text-sm text-gray-600">
-                <strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{editing.equipment_code}</span>
+                <strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{(() => { const n = typeof editing.template === 'object' ? editing.template.equipment_name : ''; return roomCode && n ? `${roomCode}-${n}` : (n || '-'); })()}</span>
               </p>
             </div>
             <Form form={editForm} layout="vertical">
