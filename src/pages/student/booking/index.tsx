@@ -17,6 +17,7 @@ import {
   Space,
   Card,
   Checkbox,
+  Table,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -40,7 +41,10 @@ import {
   checkPaymentStatus,
   getMyBookings,
   cancelBookingRequest,
+  getBookingWindowStatus,
+  keepBed,
 } from '@/lib/actions';
+import type { BookingWindowStatusResponse } from '@/lib/actions';
 import type {
   NextSemesterInfo,
   BookingRoomType,
@@ -78,6 +82,10 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 
 const Booking: React.FC = () => {
   const [modalApi, modalContextHolder] = Modal.useModal();
+
+  // ─── Booking window state ───
+  const [windowStatus, setWindowStatus] = useState<BookingWindowStatusResponse | null>(null);
+  const [windowLoading, setWindowLoading] = useState(true);
 
   // ─── Tab state ───
   const [activeTab, setActiveTab] = useState('new');
@@ -128,10 +136,24 @@ const Booking: React.FC = () => {
   const [myBookingsTotal, setMyBookingsTotal] = useState(0);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
+  // ─── Hold bed state ───
+  const [activeBooking, setActiveBooking] = useState<BookingRequestItem | null>(null);
+  const [loadingKeep, setLoadingKeep] = useState(false);
+
   useEffect(() => {
-    loadSemester();
-    loadRoomTypes();
+    checkWindow();
   }, []);
+
+  useEffect(() => {
+    if (windowStatus?.allowed) {
+      loadSemester();
+      if (windowStatus.window_type === 'hold') {
+        loadActiveBooking();
+      } else {
+        loadRoomTypes();
+      }
+    }
+  }, [windowStatus]);
 
   useEffect(() => {
     if (activeTab === 'my') loadMyBookings();
@@ -227,6 +249,48 @@ const Booking: React.FC = () => {
   }, []);
 
   // ─── API calls ───
+
+  const loadActiveBooking = async () => {
+    try {
+      const data = await getMyBookings({ page: 1, limit: 50 });
+      const active = data.items.find(
+        (b) => b.status === 'approved' && new Date(b.end_date) > new Date()
+      ) ?? null;
+      setActiveBooking(active);
+    } catch { /* ignore */ }
+  };
+
+  const handleKeepBed = async () => {
+    setLoadingKeep(true);
+    try {
+      const result = await keepBed();
+      setPaymentBooking(result.booking);
+      setPaymentInvoice(result.invoice);
+      setPayos(result.payos ?? null);
+      setView('payment');
+      setPaymentStarted(true);
+      if (result.payos?.checkoutUrl) {
+        window.open(result.payos.checkoutUrl, '_blank', 'noopener,noreferrer');
+      }
+      message.success('Bed reserved! Please complete payment.');
+    } catch (err: unknown) {
+      message.error((err as { message?: string })?.message || 'Failed to keep bed');
+    } finally {
+      setLoadingKeep(false);
+    }
+  };
+
+  const checkWindow = async () => {
+    setWindowLoading(true);
+    try {
+      const status = await getBookingWindowStatus();
+      setWindowStatus(status);
+    } catch {
+      setWindowStatus({ allowed: false, window_type: null });
+    } finally {
+      setWindowLoading(false);
+    }
+  };
 
   const loadSemester = async () => {
     setLoading(p => ({ ...p, semester: true }));
@@ -960,21 +1024,145 @@ const Booking: React.FC = () => {
     </div>
   );
 
+  // ─── Render: Hold Bed ───
+  const renderHoldBed = () => {
+    const { semester: semNum, year } = activeBooking
+      ? (() => {
+        const [name, y] = (semester?.semester ?? '').split('-');
+        const map: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
+        return { semester: map[name] ?? 0, year: parseInt(y, 10) };
+      })()
+      : { semester: 0, year: 0 };
+
+    const columns = [
+      {
+        title: 'Dorm',
+        key: 'dorm',
+        render: () => <Text>{activeBooking?.room?.block?.dorm?.dorm_name ?? '—'}</Text>,
+      },
+      {
+        title: 'Floor',
+        key: 'floor',
+        render: () => <Text>{activeBooking?.room?.floor ?? '—'}</Text>,
+      },
+      {
+        title: 'Bed',
+        key: 'bed',
+        render: () => {
+          const blockCode = activeBooking?.room?.block?.block_code ?? '';
+          const roomNum = activeBooking?.room?.room_number ?? '';
+          const bedNum = activeBooking?.bed?.bed_number;
+          return (
+            <Text>
+              <Text strong>{blockCode}-{roomNum}</Text>
+              {bedNum != null && (
+                <Text style={{ marginLeft: 8 }}>Bed {bedNum}</Text>
+              )}
+            </Text>
+          );
+        },
+      },
+      {
+        title: 'Semester',
+        key: 'semester',
+        render: () => <Tag color="blue">{semNum || '—'}</Tag>,
+      },
+      {
+        title: 'Year',
+        key: 'year',
+        render: () => <Text>{year || '—'}</Text>,
+      },
+      {
+        title: 'Room Type',
+        key: 'room_type',
+        render: () => <Tag>{activeBooking?.room?.room_type ?? '—'}</Tag>,
+      },
+      {
+        title: 'Action',
+        key: 'action',
+        render: () => (
+          <Button
+            type="primary"
+            loading={loadingKeep}
+            onClick={handleKeepBed}
+            style={{ background: '#ea580c', borderColor: '#ea580c', borderRadius: 6 }}
+          >
+            Keep Bed
+          </Button>
+        ),
+      },
+    ];
+
+    return (
+      <div>
+        <Title level={2} style={{ color: '#1a3c6e', fontWeight: 700, marginBottom: 8 }}>
+          Bed Hold Period
+        </Title>
+        <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
+          You can keep your current bed for the next semester.
+        </Text>
+        <Table
+          dataSource={activeBooking ? [activeBooking] : []}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          bordered
+          locale={{ emptyText: 'No active bed found' }}
+        />
+      </div>
+    );
+  };
+
+  // ─── Render: Booking Not Started ───
+  const renderNotStarted = () => (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '60vh',
+      textAlign: 'center',
+      padding: '40px 20px',
+    }}>
+      <img
+        src="/images/booking-not-started.png"
+        alt="Booking not started"
+        style={{ width: 220, marginBottom: 32, opacity: 0.92 }}
+      />
+      <Title level={3} style={{ color: '#1a3c6e', marginBottom: 8 }}>
+        Dormitory booking has not started yet.
+      </Title>
+      <Text type="secondary" style={{ fontSize: 15 }}>
+        Please wait for the booking period to be opened by the manager.
+      </Text>
+    </div>
+  );
+
   // ─── Main ───
+  if (windowLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '32px 40px', background: '#fff', minHeight: '100vh' }}>
       {modalContextHolder}
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        {view === 'payment' ? renderPaymentPage() : (
-          <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={[
-              { key: 'new', label: 'New Booking', children: renderBookingForm() },
-              { key: 'my', label: 'My Requests', children: renderMyRequests() },
-            ]}
-            tabBarStyle={{ display: activeTab === 'new' && view === 'form' ? undefined : undefined }}
-          />
+        {!windowStatus?.allowed ? renderNotStarted() : (
+          view === 'payment' ? renderPaymentPage() :
+            windowStatus.window_type === 'hold' ? renderHoldBed() : (
+              <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                items={[
+                  { key: 'new', label: 'New Booking', children: renderBookingForm() },
+                  { key: 'my', label: 'My Requests', children: renderMyRequests() },
+                ]}
+              />
+            )
         )}
       </div>
     </div>

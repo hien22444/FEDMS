@@ -40,6 +40,7 @@ import ManagerBedsPage from '@/pages/manager/beds';
 import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
+import ManagerDateConfigPage from '@/pages/manager/config';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -364,7 +365,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'config',
-                element: <ComingSoon label="Data Configuration" />,
+                element: <ManagerDateConfigPage />,
               },
               {
                 path: 'settings',
