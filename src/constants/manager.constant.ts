@@ -119,7 +119,7 @@ export const MANAGER_MENU = [
   {
     group: 'SYSTEM SETTINGS',
     items: [
-      { key: 'config', label: 'Data Configuration', icon: 'settings', path: '/manager/config' },
+      { key: 'config', label: 'Date Config', icon: 'settings', path: '/manager/config' },
       { key: 'settings', label: 'Settings', icon: 'gear', path: '/manager/settings' },
     ],
   },

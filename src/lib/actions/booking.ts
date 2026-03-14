@@ -175,6 +175,10 @@ export const cancelBookingRequest = async (id: string) => {
   return api.patch<BookingRequestItem>(`bookings/${id}/cancel`, {});
 };
 
+export const keepBed = async (): Promise<SubmitBookingResponse> => {
+  return api.post<SubmitBookingResponse>('bookings/keep-bed', {});
+};
+
 export const getAllBookings = async (params?: { status?: string; semester?: string; page?: number; limit?: number }) => {
   const query = new URLSearchParams();
   if (params?.status) query.set('status', params.status);

@@ -201,7 +201,7 @@ const StudentLayout = () => {
   const menuItems = [
     { key: ROUTES.STUDENT_DASHBOARD, icon: <HomeOutlined />, label: 'Home' },
     { key: ROUTES.STUDENT_NEWS, icon: <FileTextOutlined />, label: 'News' },
-    { key: ROUTES.STUDENT_SCHEDULE, icon: <CalendarOutlined />, label: 'Room Schedule' },
+    { key: ROUTES.STUDENT_SCHEDULE, icon: <CalendarOutlined />, label: 'Room History' },
     { key: ROUTES.STUDENT_BOOKING, icon: <KeyOutlined />, label: 'Booking' },
     { key: ROUTES.STUDENT_UTILITIES, icon: <ThunderboltOutlined />, label: 'Utilities' },
     { key: ROUTES.STUDENT_PAYMENT, icon: <CreditCardOutlined />, label: 'Payment' },
@@ -250,121 +250,121 @@ const StudentLayout = () => {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Logo / brand */}
-        <div
-          style={{
-            padding: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid #c2410c',
-          }}
-        >
-          {!collapsed ? (
-            <Space>
-              <div
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
-              </div>
-              <div>
-                <div style={{ color: 'white', fontWeight: 'bold' }}>DOM</div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>FPT Dormitory</div>
-              </div>
-            </Space>
-          ) : (
-            <div style={{ width: '100%', textAlign: 'center' }}>
-              <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
-            </div>
-          )}
-          <Button
-            type="text"
-            icon={
-              collapsed
-                ? <MenuUnfoldOutlined style={{ color: 'white' }} />
-                : <MenuFoldOutlined style={{ color: 'white' }} />
-            }
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ color: 'white' }}
-          />
-        </div>
-
-        {/* Student profile */}
-        <div style={{ padding: '16px', borderBottom: '1px solid #c2410c' }}>
-          <Space size="middle">
-            <Avatar
-              size={collapsed ? 32 : 40}
-              src={profile?.avatar_url}
-              icon={!profile?.avatar_url && <UserOutlined />}
-              style={{
-                border: '2px solid rgba(255, 255, 255, 0.2)',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              }}
-            />
-            {!collapsed && (
-              <div>
-                <div style={{ color: 'white', fontWeight: 600, fontSize: '12px' }}>{displayName}</div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '11px' }}>
-                  {studentCode && `${studentCode} • `}CFD: {behavioralScore}
-                </div>
-              </div>
-            )}
-          </Space>
-        </div>
-
-        {/* Menu */}
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-          <ConfigProvider
-            theme={{
-              components: {
-                Menu: {
-                  darkItemBg: 'transparent',
-                  darkSubMenuItemBg: 'transparent',
-                  darkItemSelectedBg: '#ffffff',
-                  darkItemSelectedColor: '#ea580c',
-                  darkItemColor: 'rgba(255, 255, 255, 0.95)',
-                  darkItemHoverBg: 'rgba(255, 255, 255, 0.1)',
-                  darkItemHoverColor: '#ffffff',
-                },
-              },
+          {/* Logo / brand */}
+          <div
+            style={{
+              padding: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid #c2410c',
             }}
           >
-            <Menu
-              mode="inline"
-              selectedKeys={[location.pathname]}
-              onClick={handleMenuClick}
-              style={{ backgroundColor: 'transparent', border: 'none', marginTop: '16px' }}
-              theme="dark"
-              items={menuItems}
+            {!collapsed ? (
+              <Space>
+                <div
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
+                </div>
+                <div>
+                  <div style={{ color: 'white', fontWeight: 'bold' }}>DOM</div>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>FPT Dormitory</div>
+                </div>
+              </Space>
+            ) : (
+              <div style={{ width: '100%', textAlign: 'center' }}>
+                <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
+              </div>
+            )}
+            <Button
+              type="text"
+              icon={
+                collapsed
+                  ? <MenuUnfoldOutlined style={{ color: 'white' }} />
+                  : <MenuFoldOutlined style={{ color: 'white' }} />
+              }
+              onClick={() => setCollapsed(!collapsed)}
+              style={{ color: 'white' }}
             />
-          </ConfigProvider>
-        </div>
+          </div>
 
-        {/* Logout */}
-        <div
-          style={{
-            flexShrink: 0,
-            padding: '16px',
-            borderTop: '1px solid #c2410c',
-          }}
-        >
-          <Button
-            type="text"
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-            block
-            style={{ color: 'rgba(255, 255, 255, 0.8)', textAlign: collapsed ? 'center' : 'left' }}
+          {/* Student profile */}
+          <div style={{ padding: '16px', borderBottom: '1px solid #c2410c' }}>
+            <Space size="middle">
+              <Avatar
+                size={collapsed ? 32 : 40}
+                src={profile?.avatar_url}
+                icon={!profile?.avatar_url && <UserOutlined />}
+                style={{
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                }}
+              />
+              {!collapsed && (
+                <div>
+                  <div style={{ color: 'white', fontWeight: 600, fontSize: '12px' }}>{displayName}</div>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '11px' }}>
+                    {studentCode && `${studentCode} • `}CFD: {behavioralScore}
+                  </div>
+                </div>
+              )}
+            </Space>
+          </div>
+
+          {/* Menu */}
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <ConfigProvider
+              theme={{
+                components: {
+                  Menu: {
+                    darkItemBg: 'transparent',
+                    darkSubMenuItemBg: 'transparent',
+                    darkItemSelectedBg: '#ffffff',
+                    darkItemSelectedColor: '#ea580c',
+                    darkItemColor: 'rgba(255, 255, 255, 0.95)',
+                    darkItemHoverBg: 'rgba(255, 255, 255, 0.1)',
+                    darkItemHoverColor: '#ffffff',
+                  },
+                },
+              }}
+            >
+              <Menu
+                mode="inline"
+                selectedKeys={[location.pathname]}
+                onClick={handleMenuClick}
+                style={{ backgroundColor: 'transparent', border: 'none', marginTop: '16px' }}
+                theme="dark"
+                items={menuItems}
+              />
+            </ConfigProvider>
+          </div>
+
+          {/* Logout */}
+          <div
+            style={{
+              flexShrink: 0,
+              padding: '16px',
+              borderTop: '1px solid #c2410c',
+            }}
           >
-            {!collapsed && 'Logout'}
-          </Button>
-        </div>
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              block
+              style={{ color: 'rgba(255, 255, 255, 0.8)', textAlign: collapsed ? 'center' : 'left' }}
+            >
+              {!collapsed && 'Logout'}
+            </Button>
+          </div>
         </div>
       </Sider>
 
