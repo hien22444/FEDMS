@@ -23,6 +23,7 @@ import CameraCheckinPage from '@/pages/security/camera-checkin';
 import CheckoutRequestsPage from '@/pages/security/checkout-requests';
 import VisitorsPage from '@/pages/security/visitors';
 import SecurityReportViolationPage from '@/pages/security/report-violation';
+import SecurityReportsPage from '@/pages/security/reports';
 
 // Manager pages
 import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/dashboard';
@@ -40,6 +41,7 @@ import ManagerBedsPage from '@/pages/manager/beds';
 import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
+import FaceRegistrationPage from '@/pages/manager/face-registration';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -201,6 +203,10 @@ const router = createBrowserRouter([
                 path: 'report-violation',
                 element: <SecurityReportViolationPage />,
               },
+              {
+                path: 'reports',
+                element: <SecurityReportsPage />,
+              },
             ],
           },
         ],
@@ -301,6 +307,10 @@ const router = createBrowserRouter([
               {
                 path: 'bookings',
                 element: <ManagerBookingsPage />,
+              },
+              {
+                path: 'face-registration',
+                element: <FaceRegistrationPage />,
               },
               {
                 path: 'checkout',
