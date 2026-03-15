@@ -86,6 +86,13 @@ const Schedule: React.FC = () => {
       title: 'Check-out Date',
       key: 'checkout',
       render: (_: unknown, record: BookingRequestItem) => {
+        if (record.checkout_date) {
+          return (
+            <Text style={{ color: '#cf1322' }}>
+              {new Date(record.checkout_date).toLocaleDateString('en-GB')}
+            </Text>
+          );
+        }
         const dateStr = record.end_date ? formatCheckout(record.end_date) : '';
         return dateStr ? <Text>{dateStr}</Text> : <Text type="secondary"></Text>;
       },

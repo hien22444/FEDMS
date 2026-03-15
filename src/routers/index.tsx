@@ -40,6 +40,7 @@ import ManagerBedsPage from '@/pages/manager/beds';
 import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
+import ManagerCheckoutPage from '@/pages/manager/checkout';
 import ManagerDateConfigPage from '@/pages/manager/config';
 
 // Student pages
@@ -305,7 +306,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'checkout',
-                element: <ComingSoon label="Checkout Management" />,
+                element: <ManagerCheckoutPage />,
               },
               {
                 path: 'login-student',
