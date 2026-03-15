@@ -643,9 +643,9 @@ const Booking: React.FC = () => {
                 okText="Yes, cancel"
                 cancelText="No"
               >
-                <Button danger block style={{ borderRadius: 6 }}>
+                {/* <Button danger block style={{ borderRadius: 6 }}>
                   Cancel Booking
-                </Button>
+                </Button> */}
               </Popconfirm>
             </div>
 
@@ -994,7 +994,7 @@ const Booking: React.FC = () => {
                       </Text>
                     )}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 16 }}>
+                  {/* <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 16 }}>
                     {booking.status === 'awaiting_payment' && (
                       <>
                         <Button type="primary" size="small" icon={<CreditCardOutlined />} onClick={() => handleResumePayment(booking)}>
@@ -1005,7 +1005,7 @@ const Booking: React.FC = () => {
                         </Popconfirm>
                       </>
                     )}
-                  </div>
+                  </div> */}
                 </div>
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
                   Requested: {new Date(booking.requested_at).toLocaleString('vi-VN')}
