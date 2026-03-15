@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
   Card,
   DatePicker,
   Button,
   Typography,
-  message,
   Spin,
   Tag,
-  Divider,
+  Select,
+  InputNumber,
+  Alert,
 } from 'antd';
 import {
   CalendarOutlined,
   SaveOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  BookOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { getDateConfig, updateDateConfig } from '@/lib/actions';
@@ -34,6 +38,18 @@ const getWindowStatus = (start: string | null, end: string | null) => {
   return { label: 'Open', color: 'success' as const };
 };
 
+const SEMESTER_OPTIONS = [
+  { value: 'Spring', label: '1 - Spring' },
+  { value: 'Summer', label: '2 - Summer' },
+  { value: 'Fall',   label: '3 - Fall' },
+];
+
+const SectionLabel: React.FC<{ text: string }> = ({ text }) => (
+  <Text style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13, color: '#374151' }}>
+    {text}
+  </Text>
+);
+
 const DateConfigPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,10 +57,10 @@ const DateConfigPage: React.FC = () => {
 
   const [holdRange, setHoldRange] = useState<RangeValue>(null);
   const [newRange, setNewRange] = useState<RangeValue>(null);
+  const [targetSemester, setTargetSemester] = useState<'Spring' | 'Summer' | 'Fall' | null>(null);
+  const [targetYear, setTargetYear] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
+  useEffect(() => { loadConfig(); }, []);
 
   const loadConfig = async () => {
     setLoading(true);
@@ -61,8 +77,10 @@ const DateConfigPage: React.FC = () => {
           ? [dayjs(data.new_booking_window.start), dayjs(data.new_booking_window.end)]
           : null
       );
+      setTargetSemester((data.target_semester?.semester as 'Spring' | 'Summer' | 'Fall') ?? null);
+      setTargetYear(data.target_semester?.year ?? null);
     } catch {
-      message.error('Failed to load date configuration');
+      toast.error('Failed to load date configuration');
     } finally {
       setLoading(false);
     }
@@ -80,12 +98,16 @@ const DateConfigPage: React.FC = () => {
           start: newRange?.[0]?.startOf('day').toISOString() ?? null,
           end: newRange?.[1]?.endOf('day').toISOString() ?? null,
         },
+        target_semester: {
+          semester: targetSemester,
+          year: targetYear,
+        },
       };
       const updated = await updateDateConfig(payload);
       setConfig(updated);
-      message.success('Date configuration saved successfully');
-    } catch {
-      message.error('Failed to save date configuration');
+      toast.success('Configuration saved successfully!');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to save configuration');
     } finally {
       setSaving(false);
     }
@@ -100,119 +122,178 @@ const DateConfigPage: React.FC = () => {
   }
 
   const holdStatus = getWindowStatus(config?.hold_window.start ?? null, config?.hold_window.end ?? null);
-  const newStatus = getWindowStatus(config?.new_booking_window.start ?? null, config?.new_booking_window.end ?? null);
+  const newStatus  = getWindowStatus(config?.new_booking_window.start ?? null, config?.new_booking_window.end ?? null);
+  const targetLabel = targetSemester && targetYear ? `${targetSemester}-${targetYear}` : null;
 
   return (
-    <div style={{ padding: '32px 40px', background: '#fff', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ marginBottom: 32 }}>
-          <Title level={2} style={{ color: '#1a3c6e', marginBottom: 4 }}>
-            <CalendarOutlined style={{ marginRight: 10 }} />
-            Date Configuration
-          </Title>
-          <Text type="secondary">
-            Configure the booking windows that control when students can book or hold their beds.
-          </Text>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold">Date Configuration</h1>
+        <p className="text-sm text-gray-500">
+          Control when students can book or hold their beds, and set the target semester.
+        </p>
+      </div>
+
+      {/* ── 1. Target Semester ── */}
+      <Card
+        style={{ borderRadius: 10, border: '1.5px solid #d1fae5' }}
+        bodyStyle={{ padding: 28 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, color: '#1a3c6e' }}>
+              <BookOutlined style={{ marginRight: 8, color: '#52c41a' }} />
+              Target Semester for Booking
+            </Title>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              The semester students will book rooms for. If not set, the system will auto-calculate the next semester.
+            </Text>
+          </div>
+          {targetLabel ? (
+            <Tag color="green" style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6 }}>
+              {targetLabel}
+            </Tag>
+          ) : (
+            <Tag color="default" style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6 }}>
+              Auto
+            </Tag>
+          )}
         </div>
 
-        {/* Hold Window */}
-        <Card
-          style={{ marginBottom: 24, borderRadius: 10, border: '1px solid #e8e8e8' }}
-          bodyStyle={{ padding: 28 }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div>
-              <Title level={4} style={{ margin: 0, color: '#1a3c6e' }}>
-                <ClockCircleOutlined style={{ marginRight: 8, color: '#fa8c16' }} />
-                Bed Hold Period
-              </Title>
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                For students who already have an active bed contract (giữ giường)
-              </Text>
-            </div>
-            <Tag color={holdStatus.color} icon={<CheckCircleOutlined />}>
-              {holdStatus.label}
-            </Tag>
-          </div>
-
-          <div>
-            <Text style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
-              Start Date → End Date
-            </Text>
-            <RangePicker
-              value={holdRange}
-              onChange={(val) => setHoldRange(val as RangeValue)}
-              style={{ width: '100%' }}
-              format="DD/MM/YYYY"
+        <div style={{ display: 'flex', gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <SectionLabel text="Semester" />
+            <Select
+              value={targetSemester}
+              onChange={(val) => setTargetSemester(val)}
               allowClear
+              onClear={() => setTargetSemester(null)}
               size="large"
-              placeholder={['Start date', 'End date']}
-            />
-            {config?.hold_window.start && config?.hold_window.end && (
-              <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: 'block' }}>
-                Current: {dayjs(config.hold_window.start).format('DD/MM/YYYY')} →{' '}
-                {dayjs(config.hold_window.end).format('DD/MM/YYYY')}
-              </Text>
-            )}
-          </div>
-        </Card>
-
-        {/* New Booking Window */}
-        <Card
-          style={{ marginBottom: 32, borderRadius: 10, border: '1px solid #e8e8e8' }}
-          bodyStyle={{ padding: 28 }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div>
-              <Title level={4} style={{ margin: 0, color: '#1a3c6e' }}>
-                <CalendarOutlined style={{ marginRight: 8, color: '#1a6ef5' }} />
-                New Booking Period
-              </Title>
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                For students who do not have a bed yet (book giường mới)
-              </Text>
-            </div>
-            <Tag color={newStatus.color} icon={<CheckCircleOutlined />}>
-              {newStatus.label}
-            </Tag>
-          </div>
-
-          <div>
-            <Text style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
-              Start Date → End Date
-            </Text>
-            <RangePicker
-              value={newRange}
-              onChange={(val) => setNewRange(val as RangeValue)}
               style={{ width: '100%' }}
-              format="DD/MM/YYYY"
-              allowClear
-              size="large"
-              placeholder={['Start date', 'End date']}
+              placeholder="Select semester"
+              options={SEMESTER_OPTIONS}
             />
-            {config?.new_booking_window.start && config?.new_booking_window.end && (
-              <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: 'block' }}>
-                Current: {dayjs(config.new_booking_window.start).format('DD/MM/YYYY')} →{' '}
-                {dayjs(config.new_booking_window.end).format('DD/MM/YYYY')}
-              </Text>
-            )}
           </div>
-        </Card>
+          <div style={{ flex: 1 }}>
+            <SectionLabel text="Year" />
+            <InputNumber
+              value={targetYear}
+              onChange={(val) => setTargetYear(val)}
+              min={2020}
+              max={2100}
+              size="large"
+              style={{ width: '100%' }}
+              placeholder="e.g. 2026"
+            />
+          </div>
+        </div>
 
-        <Divider />
+        {(!targetSemester || !targetYear) && (
+          <Alert
+            type="info"
+            showIcon
+            icon={<InfoCircleOutlined />}
+            message="No target semester set — the system will automatically calculate the next upcoming semester."
+            style={{ marginTop: 16, borderRadius: 8 }}
+          />
+        )}
+      </Card>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button
-            type="primary"
-            size="large"
-            icon={<SaveOutlined />}
-            loading={saving}
-            onClick={handleSave}
-            style={{ borderRadius: 8, minWidth: 140 }}
+      {/* ── 2. Bed Hold Period ── */}
+      <Card
+        style={{ borderRadius: 10, border: '1px solid #e8e8e8' }}
+        bodyStyle={{ padding: 28 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, color: '#1a3c6e' }}>
+              <ClockCircleOutlined style={{ marginRight: 8, color: '#fa8c16' }} />
+              Bed Hold Period
+            </Title>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Period when students with an active contract can re-book their current bed for the next semester.
+            </Text>
+          </div>
+          <Tag
+            color={holdStatus.color}
+            icon={<CheckCircleOutlined />}
+            style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6 }}
           >
-            Save Configuration
-          </Button>
+            {holdStatus.label}
+          </Tag>
         </div>
+
+        <SectionLabel text="Date Range" />
+        <RangePicker
+          value={holdRange}
+          onChange={(val) => setHoldRange(val as RangeValue)}
+          style={{ width: '100%' }}
+          format="DD/MM/YYYY"
+          allowClear
+          size="large"
+          placeholder={['Start date', 'End date']}
+        />
+        {config?.hold_window.start && config?.hold_window.end && (
+          <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: 'block' }}>
+            Current: {dayjs(config.hold_window.start).format('DD/MM/YYYY')} – {dayjs(config.hold_window.end).format('DD/MM/YYYY')}
+          </Text>
+        )}
+      </Card>
+
+      {/* ── 3. New Booking Period ── */}
+      <Card
+        style={{ borderRadius: 10, border: '1px solid #e8e8e8' }}
+        bodyStyle={{ padding: 28 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <Title level={4} style={{ margin: 0, color: '#1a3c6e' }}>
+              <CalendarOutlined style={{ marginRight: 8, color: '#1a6ef5' }} />
+              New Booking Period
+            </Title>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Period when students without an active bed can book a new room.
+            </Text>
+          </div>
+          <Tag
+            color={newStatus.color}
+            icon={<CheckCircleOutlined />}
+            style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6 }}
+          >
+            {newStatus.label}
+          </Tag>
+        </div>
+
+        <SectionLabel text="Date Range" />
+        <RangePicker
+          value={newRange}
+          onChange={(val) => setNewRange(val as RangeValue)}
+          style={{ width: '100%' }}
+          format="DD/MM/YYYY"
+          allowClear
+          size="large"
+          placeholder={['Start date', 'End date']}
+        />
+        {config?.new_booking_window.start && config?.new_booking_window.end && (
+          <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: 'block' }}>
+            Current: {dayjs(config.new_booking_window.start).format('DD/MM/YYYY')} – {dayjs(config.new_booking_window.end).format('DD/MM/YYYY')}
+          </Text>
+        )}
+      </Card>
+
+      {/* ── Save ── */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 32 }}>
+        <Button
+          type="primary"
+          size="large"
+          icon={<SaveOutlined />}
+          loading={saving}
+          onClick={handleSave}
+          style={{ borderRadius: 8, minWidth: 160 }}
+        >
+          Save Configuration
+        </Button>
       </div>
     </div>
   );

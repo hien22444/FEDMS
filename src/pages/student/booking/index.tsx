@@ -988,7 +988,7 @@ const Booking: React.FC = () => {
                         </Tag>
                       </Text>
                     )}
-                    {booking.status === 'approved' && booking.bed && (
+                    {booking.status === 'approved' && booking.bed && !booking.checkout_date && (
                       <Text type="success" style={{ display: 'block', marginTop: 8 }}>
                         <CheckCircleOutlined /> Bed {booking.bed.bed_number} · Contract active
                       </Text>
@@ -1010,6 +1010,11 @@ const Booking: React.FC = () => {
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
                   Requested: {new Date(booking.requested_at).toLocaleString('vi-VN')}
                 </Text>
+                {booking.checkout_date && (
+                  <Text style={{ fontSize: 12, display: 'block', marginTop: 4, color: '#cf1322' }}>
+                    Check-out Date: {new Date(booking.checkout_date).toLocaleString('vi-VN')}
+                  </Text>
+                )}
               </Card>
             );
           })}
