@@ -84,6 +84,7 @@ export interface BookingRequestItem {
   note?: string;
   expires_at?: string;
   requested_at: string;
+  checkout_date?: string | null;
 }
 
 export interface BookingListResponse {
@@ -173,6 +174,51 @@ export const getMyBookings = async (params?: { page?: number; limit?: number }) 
 
 export const cancelBookingRequest = async (id: string) => {
   return api.patch<BookingRequestItem>(`bookings/${id}/cancel`, {});
+};
+
+export const keepBed = async (): Promise<SubmitBookingResponse> => {
+  return api.post<SubmitBookingResponse>('bookings/keep-bed', {});
+};
+
+export interface CheckoutStudentInfo {
+  student: {
+    id: string;
+    full_name: string;
+    student_code: string;
+    gender: string;
+    student_type: string;
+    email?: string;
+  };
+  active_contract: {
+    id: string;
+    semester: string;
+    start_date: string;
+    end_date: string;
+    room_price: number;
+    status: string;
+    room: {
+      room_number: string;
+      room_type: string;
+      floor: number;
+      block?: { block_name: string; block_code: string; dorm?: { dorm_name: string; dorm_code: string } };
+    };
+    bed: { bed_number: string };
+  } | null;
+}
+
+export interface CheckoutResult {
+  message: string;
+  student_code: string;
+  full_name: string;
+  checkout_date: string;
+}
+
+export const searchStudentForCheckout = async (studentCode: string) => {
+  return api.get<CheckoutStudentInfo>(`bookings/checkout/search?student_code=${encodeURIComponent(studentCode)}`);
+};
+
+export const checkoutStudent = async (studentCode: string) => {
+  return api.post<CheckoutResult>('bookings/checkout', { student_code: studentCode });
 };
 
 export const getAllBookings = async (params?: { status?: string; semester?: string; page?: number; limit?: number }) => {

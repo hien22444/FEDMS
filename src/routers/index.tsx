@@ -42,6 +42,8 @@ import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
 import FaceRegistrationPage from '@/pages/manager/face-registration';
+import ManagerCheckoutPage from '@/pages/manager/checkout';
+import ManagerDateConfigPage from '@/pages/manager/config';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -314,7 +316,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'checkout',
-                element: <ComingSoon label="Checkout Management" />,
+                element: <ManagerCheckoutPage />,
               },
               {
                 path: 'login-student',
@@ -374,7 +376,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'config',
-                element: <ComingSoon label="Data Configuration" />,
+                element: <ManagerDateConfigPage />,
               },
               {
                 path: 'settings',

@@ -259,7 +259,7 @@ const SignInPage = () => {
                   fontSize: '14px',
                 }}
               >
-                Forgot password?
+
               </Link>
             </div>
 
