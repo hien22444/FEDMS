@@ -72,6 +72,7 @@ export const MANAGER_MENU = [
     group: 'STUDENT MANAGEMENT',
     items: [
       { key: 'booking-history', label: 'Booking History', icon: 'history', path: '/manager/bookings' },
+      { key: 'face-registration', label: 'Face Registration', icon: 'user', path: '/manager/face-registration' },
       { key: 'checkout', label: 'Checkout', icon: 'checkout', path: '/manager/checkout' },
       { key: 'login-student', label: 'Login as Student', icon: 'user', path: '/manager/login-student' },
     ],

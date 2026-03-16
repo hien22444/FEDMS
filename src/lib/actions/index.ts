@@ -32,4 +32,7 @@ export * from './news';
 export * from './ai';
 export * from './chat';
 export * from './booking';
+export * from './faceRecognition';
+export * from './accessLog';
+export * from './camera';
 export * from './dateConfig';
