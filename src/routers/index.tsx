@@ -42,6 +42,7 @@ import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
 import FaceRegistrationPage from '@/pages/manager/face-registration';
+import LoginAsStudentPage from '@/pages/manager/login-student';
 import ManagerCheckoutPage from '@/pages/manager/checkout';
 import ManagerDateConfigPage from '@/pages/manager/config';
 
@@ -320,7 +321,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'login-student',
-                element: <ComingSoon label="Login as Student" />,
+                element: <LoginAsStudentPage />,
               },
               {
                 path: 'violations',
