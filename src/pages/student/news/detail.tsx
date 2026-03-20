@@ -82,7 +82,15 @@ export default function StudentNewsDetailPage() {
                   <Tag color={token.colorPrimary} style={{ marginBottom: 16 }}>
                     {mapCategoryToDisplay(news.category as string)}
                   </Tag>
-                  <Title level={2}>{news.title}</Title>
+                  <Title
+                    level={2}
+                    style={{
+                      fontFamily:
+                        '"InterTight-Bold","InterTight-SemiBold","InterTight-Medium","InterTight-Regular","Segoe UI",system-ui,-apple-system,sans-serif',
+                    }}
+                  >
+                    {news.title}
+                  </Title>
                   <Space size="large" style={{ marginTop: 8 }}>
                     <Space size="small">
                       <CalendarOutlined />
