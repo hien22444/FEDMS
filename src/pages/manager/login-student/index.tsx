@@ -1,14 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { loginAsStudent } from '@/lib/actions/auth';
 
 export default function LoginAsStudentPage() {
   const [studentCode, setStudentCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,10 +28,9 @@ export default function LoginAsStudentPage() {
       // Switch to student token
       localStorage.setItem('token', res.token);
 
-      // Update auth context with student identity
-      login(res.token, res.user, res.profile);
-
-      navigate('/student/dashboard');
+      // Hard redirect so AuthContext re-initializes with student role
+      // (avoids PrivateRoute race condition with stale manager role in context)
+      window.location.href = '/student/dashboard';
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Student not found.';
       setError(msg);

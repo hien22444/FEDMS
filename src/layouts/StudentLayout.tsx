@@ -224,13 +224,13 @@ const StudentLayout = () => {
   const handleMenuClick = ({ key }: { key: string }) => { navigate(key); };
   const handleLogout = () => { logout(); };
 
-  const managerToken = localStorage.getItem('managerToken');
+  const [managerToken] = useState(() => localStorage.getItem('managerToken'));
   const handleBackToManager = () => {
     if (managerToken) {
       localStorage.setItem('token', managerToken);
       localStorage.removeItem('managerToken');
     }
-    navigate('/manager');
+    window.location.href = '/manager';
   };
 
   const displayName = profile?.full_name || profile?.student_code || user?.email?.split('@')[0] || 'Student';
