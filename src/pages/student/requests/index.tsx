@@ -18,6 +18,7 @@ import {
   Form,
   Spin,
   Alert,
+  Tabs,
 } from 'antd';
 import {
   FileSearchOutlined,
@@ -35,6 +36,8 @@ import {
   createVisitorRequest,
   getMyVisitorRequests,
   cancelVisitorRequest as cancelVisitorRequestAction,
+  createOtherRequest,
+  getMyOtherRequests,
 } from '@/lib/actions';
 import type { IVisitor } from '@/interfaces';
 import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
@@ -45,50 +48,42 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-type RequestType = 'visitor' | 'maintenance' | 'report' | null;
+type RequestType = 'visitor' | 'maintenance' | 'report' | 'other' | null;
+type RequestTabKey = 'visitor' | 'maintenance' | 'report' | 'other';
 
-const REQUEST_TYPES = [
-  {
-    key: 'visitor' as const,
-    icon: <TeamOutlined style={{ fontSize: '32px' }} />,
-    title: 'Visitor Request',
-    description: 'Request permission for visitors to enter the dormitory',
-    color: '#1890ff',
-  },
-  {
-    key: 'maintenance' as const,
-    icon: <ToolOutlined style={{ fontSize: '32px' }} />,
-    title: 'Maintenance Request',
-    description: 'Report facility issues and request repairs',
-    color: '#52c41a',
-  },
-  {
-    key: 'report' as const,
-    icon: <FlagOutlined style={{ fontSize: '32px' }} />,
-    title: 'Violation Report',
-    description: 'Report violations or safety concerns in the dormitory',
-    color: '#fa541c',
-  },
-];
 
 const Requests: React.FC = () => {
   const { token } = theme.useToken();
   const [selectedType, setSelectedType] = useState<RequestType>(null);
-  const [filterType, setFilterType] = useState<RequestType | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<RequestTabKey>('visitor');
   const [showForm, setShowForm] = useState(false);
   const [visitorRequests, setVisitorRequests] = useState<IVisitor.VisitorRequest[]>([]);
   const [violationReports, setViolationReports] = useState<IViolation.ViolationReport[]>([]);
+  const [otherRequests, setOtherRequests] = useState<
+    {
+      id: string;
+      request_code: string;
+      title: string;
+      description: string;
+      status: string;
+      createdAt: string;
+      rejection_reason?: string | null;
+      manager_response?: string | null;
+    }[]
+  >([]);
   const [loading, setLoading] = useState(false);
 
   const fetchMyRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const [visitorData, reportData] = await Promise.all([
+      const [visitorData, reportData, otherData] = await Promise.all([
         getMyVisitorRequests(),
         getMyViolationReports().catch(() => []),
+        getMyOtherRequests().catch(() => []),
       ]);
       setVisitorRequests(visitorData);
       setViolationReports(Array.isArray(reportData) ? reportData : []);
+      setOtherRequests(Array.isArray(otherData) ? otherData : []);
     } catch {
       // silent — API may not be ready
     } finally {
@@ -141,19 +136,6 @@ const Requests: React.FC = () => {
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'visitor':
-        return 'Visitor';
-      case 'maintenance':
-        return 'Maintenance';
-      case 'report':
-        return 'Report';
-      default:
-        return type;
-    }
-  };
-
   const relationshipLabel: Record<string, string> = {
     parent: 'Parent',
     sibling: 'Sibling',
@@ -179,6 +161,7 @@ const Requests: React.FC = () => {
       date: dayjs(r.visit_date).format('DD/MM/YYYY'),
       detail: `${r.visit_time_from ?? '07:00'} - ${r.visit_time_to ?? '17:00'}`,
       rejection_reason: r.rejection_reason,
+      manager_response: undefined,
       visitors: r.visitors,
       raw: r,
     })),
@@ -191,15 +174,28 @@ const Requests: React.FC = () => {
       date: dayjs(r.violation_date).format('DD/MM/YYYY'),
       detail: r.location || '—',
       rejection_reason: undefined,
+      manager_response: undefined,
+      visitors: undefined,
+      raw: r,
+    })),
+    ...otherRequests.map((r) => ({
+      id: r.id,
+      type: 'other' as const,
+      title: r.title,
+      subtitle: r.request_code,
+      status: r.status,
+      date: dayjs(r.createdAt).format('DD/MM/YYYY'),
+      detail: 'Other request',
+      rejection_reason: r.rejection_reason,
+      manager_response: r.manager_response,
       visitors: undefined,
       raw: r,
     })),
   ];
 
-  const filteredRequests =
-    filterType === 'all'
-      ? allRequests
-      : allRequests.filter((r) => r.type === filterType);
+  const filteredRequestsByTab = (tab: RequestTabKey) => {
+    return allRequests.filter((r) => r.type === tab);
+  };
 
   const handleNewRequest = (type: RequestType) => {
     setSelectedType(type);
@@ -221,6 +217,11 @@ const Requests: React.FC = () => {
     fetchMyRequests();
   };
 
+  const handleOtherCreated = () => {
+    handleCloseForm();
+    fetchMyRequests();
+  };
+
   const handleCancel = async (id: string) => {
     try {
       await cancelVisitorRequestAction(id);
@@ -231,206 +232,234 @@ const Requests: React.FC = () => {
     }
   };
 
-  return (
-    <div style={{ padding: '32px', background: token.colorBgLayout }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <Title level={2} style={{ marginBottom: '8px' }}>
-            Requests
-          </Title>
-          <Text type="secondary">
-            Submit and track all your requests in one place
-          </Text>
+  const renderRequestList = (requests: typeof allRequests) => {
+    if (loading) {
+      return (
+        <div style={{ textAlign: 'center', padding: '48px' }}>
+          <Spin size="large" />
         </div>
+      );
+    }
 
-        {/* Request Type Selection Cards */}
-        <Title level={4} style={{ marginBottom: '16px' }}>
-          New Request
-        </Title>
-        <Row gutter={[16, 16]} style={{ marginBottom: '32px' }}>
-          {REQUEST_TYPES.map((type) => (
-            <Col xs={24} md={8} key={type.key}>
-              <Card
-                hoverable
-                onClick={() => handleNewRequest(type.key)}
-                style={{ textAlign: 'center', cursor: 'pointer' }}
+    if (requests.length === 0) {
+      return (
+        <Card>
+          <div style={{ textAlign: 'center', padding: '32px' }}>
+            <Text type="secondary">No requests found</Text>
+          </div>
+        </Card>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {requests.map((req) => (
+          <Card key={`${req.type}-${req.id}`} size="small">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  background: token.colorBgTextHover,
+                  borderRadius: token.borderRadius,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  marginTop: '2px',
+                }}
               >
+                {getTypeIcon(req.type)}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    width: '64px',
-                    height: '64px',
-                    background: `${type.color}15`,
-                    borderRadius: '16px',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 16px',
-                    color: type.color,
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    marginBottom: '4px',
                   }}
                 >
-                  {type.icon}
+                  <Text strong style={{ fontSize: '14px', lineHeight: '22px' }}>
+                    {req.title}
+                  </Text>
+                  {getStatusTag(req.status)}
                 </div>
-                <Title level={5} style={{ marginBottom: '4px' }}>
-                  {type.title}
-                </Title>
-                <Text type="secondary" style={{ fontSize: '13px' }}>
-                  {type.description}
+
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Code: {req.subtitle}
                 </Text>
-              </Card>
-            </Col>
-          ))}
-        </Row>
 
-        {/* Request History */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px',
-          }}
-        >
-          <Title level={4} style={{ margin: 0 }}>
-            My Requests
-          </Title>
-          <Space>
-            {(['all', 'visitor', 'maintenance', 'report'] as const).map((f) => (
-              <Button
-                key={f}
-                type={filterType === f ? 'primary' : 'default'}
-                size="small"
-                onClick={() => setFilterType(f)}
-              >
-                {f === 'all' ? 'All' : getTypeLabel(f)}
-              </Button>
-            ))}
-          </Space>
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px' }}>
-            <Spin size="large" />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filteredRequests.map((req) => (
-              <Card key={`${req.type}-${req.id}`} size="small">
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                  {/* Icon */}
-                  <div
-                    style={{
-                      width: '44px',
-                      height: '44px',
-                      background: token.colorBgTextHover,
-                      borderRadius: token.borderRadius,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      marginTop: '2px',
-                    }}
-                  >
-                    {getTypeIcon(req.type)}
-                  </div>
-
-                  {/* Content */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Row 1: purpose + status */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: '8px',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      <Text strong style={{ fontSize: '14px', lineHeight: '22px' }}>
-                        {req.title}
-                      </Text>
-                      {getStatusTag(req.status)}
-                    </div>
-
-                    {/* Row 2: request code */}
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                      Code: {req.subtitle}
-                    </Text>
-
-                    {/* Row 3: date + time */}
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        <ClockCircleOutlined style={{ marginRight: 4 }} />
-                        {req.date}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {req.detail}
-                      </Text>
-                      {req.visitors && req.visitors.length > 0 && (
-                        <Tag color="blue" style={{ fontSize: '11px', lineHeight: '18px' }}>
-                          {req.visitors.length} visitor{req.visitors.length > 1 ? 's' : ''}
-                        </Tag>
-                      )}
-                    </div>
-
-                    {/* Row 4: visitor names + relationships */}
-                    {req.visitors && req.visitors.length > 0 && (
-                      <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {req.visitors.map((v, i) => (
-                          <span
-                            key={i}
-                            style={{
-                              fontSize: '12px',
-                              color: token.colorTextSecondary,
-                              background: token.colorBgTextHover,
-                              borderRadius: '4px',
-                              padding: '1px 8px',
-                            }}
-                          >
-                            {v.full_name}
-                            <span style={{ color: token.colorTextQuaternary, marginLeft: 4 }}>
-                              ({relationshipLabel[v.relationship] ?? v.relationship})
-                            </span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Row 5: rejection reason */}
-                    {req.status === 'rejected' && req.rejection_reason && (
-                      <Text
-                        type="danger"
-                        style={{ fontSize: '12px', display: 'block', marginTop: '6px' }}
-                      >
-                        Rejection reason: {req.rejection_reason}
-                      </Text>
-                    )}
-                  </div>
-
-                  {/* Cancel button */}
-                  {req.status === 'pending' && (
-                    <Button
-                      danger
-                      size="small"
-                      icon={<CloseOutlined />}
-                      onClick={() => handleCancel(req.id)}
-                      style={{ flexShrink: 0 }}
-                    >
-                      Cancel
-                    </Button>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    <ClockCircleOutlined style={{ marginRight: 4 }} />
+                    {req.date}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    {req.detail}
+                  </Text>
+                  {req.visitors && req.visitors.length > 0 && (
+                    <Tag color="blue" style={{ fontSize: '11px', lineHeight: '18px' }}>
+                      {req.visitors.length} visitor{req.visitors.length > 1 ? 's' : ''}
+                    </Tag>
                   )}
                 </div>
-              </Card>
-            ))}
 
-            {filteredRequests.length === 0 && (
-              <Card>
-                <div style={{ textAlign: 'center', padding: '32px' }}>
-                  <Text type="secondary">No requests found</Text>
-                </div>
-              </Card>
-            )}
+                {req.visitors && req.visitors.length > 0 && (
+                  <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {req.visitors.map((v, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: '12px',
+                          color: token.colorTextSecondary,
+                          background: token.colorBgTextHover,
+                          borderRadius: '4px',
+                          padding: '1px 8px',
+                        }}
+                      >
+                        {v.full_name}
+                        <span style={{ color: token.colorTextQuaternary, marginLeft: 4 }}>
+                          ({relationshipLabel[v.relationship] ?? v.relationship})
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {req.status === 'rejected' && req.rejection_reason && (
+                  <Text
+                    type="danger"
+                    style={{ fontSize: '12px', display: 'block', marginTop: '6px' }}
+                  >
+                    Rejection reason: {req.rejection_reason}
+                  </Text>
+                )}
+                {req.type === 'other' && req.manager_response && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    style={{ marginTop: 8, padding: '6px 10px' }}
+                    message={
+                      <span style={{ fontSize: 12 }}>
+                        <strong>Manager response:</strong> {req.manager_response}
+                      </span>
+                    }
+                  />
+                )}
+              </div>
+
+              {req.type === 'visitor' && req.status === 'pending' && (
+                <Button
+                  danger
+                  size="small"
+                  icon={<CloseOutlined />}
+                  onClick={() => handleCancel(req.id)}
+                  style={{ flexShrink: 0 }}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  const tabItems = [
+    {
+      key: 'visitor',
+      label: (
+        <span className="flex items-center gap-2">
+          <TeamOutlined /> Visitor Request
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="primary" onClick={() => handleNewRequest('visitor')}>
+              New Visitor Request
+            </Button>
           </div>
-        )}
+          {renderRequestList(filteredRequestsByTab('visitor'))}
+        </div>
+      ),
+    },
+    {
+      key: 'maintenance',
+      label: (
+        <span className="flex items-center gap-2">
+          <ToolOutlined /> Maintenance Request
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="primary" onClick={() => handleNewRequest('maintenance')}>
+              New Maintenance Request
+            </Button>
+          </div>
+          {renderRequestList(filteredRequestsByTab('maintenance'))}
+        </div>
+      ),
+    },
+    {
+      key: 'report',
+      label: (
+        <span className="flex items-center gap-2">
+          <FlagOutlined /> Violation Report
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="primary" onClick={() => handleNewRequest('report')}>
+              New Violation Report
+            </Button>
+          </div>
+          {renderRequestList(filteredRequestsByTab('report'))}
+        </div>
+      ),
+    },
+    {
+      key: 'other',
+      label: (
+        <span className="flex items-center gap-2">
+          <FileSearchOutlined /> Other
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="primary" onClick={() => handleNewRequest('other')}>
+              New Other Request
+            </Button>
+          </div>
+          {renderRequestList(filteredRequestsByTab('other'))}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: '32px', background: token.colorBgLayout }}>
+      <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <div className="mb-4">
+            <Title level={4} style={{ margin: 0 }}>
+              My Requests
+            </Title>
+          </div>
+          <Tabs
+            activeKey={activeTab}
+            onChange={(k) => setActiveTab(k as RequestTabKey)}
+            items={tabItems}
+            className="facility-tabs"
+          />
+        </div>
 
         {/* New Request Form Modal */}
         <Modal
@@ -445,12 +474,14 @@ const Requests: React.FC = () => {
               {selectedType === 'visitor' && 'New Visitor Request'}
               {selectedType === 'maintenance' && 'New Maintenance Request'}
               {selectedType === 'report' && 'New Violation Report'}
+              {selectedType === 'other' && 'New Other Request'}
             </Space>
           }
         >
           {selectedType === 'visitor' && <VisitorForm onSuccess={handleVisitorCreated} />}
           {selectedType === 'maintenance' && <MaintenanceForm />}
           {selectedType === 'report' && <ReportForm onSuccess={handleReportCreated} />}
+          {selectedType === 'other' && <OtherRequestForm onSuccess={handleOtherCreated} />}
         </Modal>
       </div>
     </div>
@@ -838,6 +869,86 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
 
       <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>
         Submit Report
+      </Button>
+    </Form>
+  );
+};
+
+const OtherRequestForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
+  const { modal } = App.useApp();
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      modal.confirm({
+        title: 'Confirm other request',
+        content: (
+          <div>
+            <p>Are you sure you want to submit this request to manager?</p>
+            <p>
+              <strong>Title:</strong> {values.title}
+            </p>
+            <p>
+              <strong>Description:</strong> {values.description}
+            </p>
+          </div>
+        ),
+        okText: 'Confirm & Submit',
+        cancelText: 'Cancel',
+        onOk: async () => {
+          setSubmitting(true);
+          try {
+            await createOtherRequest({
+              title: values.title,
+              description: values.description,
+            });
+            message.success('Other request submitted successfully');
+            form.resetFields();
+            onSuccess?.();
+          } catch (err: any) {
+            if (err?.message) {
+              message.error(Array.isArray(err.message) ? err.message[0] : err.message);
+            }
+          } finally {
+            setSubmitting(false);
+          }
+        },
+      });
+    } catch (err: any) {
+      if (err?.message && !err.errorFields) {
+        message.error(Array.isArray(err.message) ? err.message[0] : err.message);
+      }
+    }
+  };
+
+  return (
+    <Form form={form} layout="vertical">
+      <Form.Item
+        name="title"
+        label="Title"
+        rules={[
+          { required: true, message: 'Please enter title' },
+          { min: 3, message: 'Title must be at least 3 characters' },
+        ]}
+      >
+        <Input placeholder="Enter request title" maxLength={150} />
+      </Form.Item>
+
+      <Form.Item
+        name="description"
+        label="Description"
+        rules={[
+          { required: true, message: 'Please enter description' },
+          { min: 10, message: 'Description must be at least 10 characters' },
+        ]}
+      >
+        <TextArea rows={5} placeholder="Describe your request in detail..." maxLength={3000} />
+      </Form.Item>
+
+      <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>
+        Submit Request
       </Button>
     </Form>
   );

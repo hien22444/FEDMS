@@ -40,6 +40,7 @@ import ManagerBedsPage from '@/pages/manager/beds';
 import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
+import ManagerRequestsPage from '@/pages/manager/requests';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -324,7 +325,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'requests',
-                element: <ComingSoon label="Request List" />,
+                element: <ManagerRequestsPage />,
               },
               {
                 path: 'electricity',
