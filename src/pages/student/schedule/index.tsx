@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Typography, Spin, Tag, Modal } from 'antd';
 import { TeamOutlined } from '@ant-design/icons';
-import { getMyBookings } from '@/lib/actions';
-import type { BookingRequestItem } from '@/lib/actions';
+import { getMyBookings, getRoommates } from '@/lib/actions';
+import type { BookingRequestItem, RoommateItem } from '@/lib/actions';
 import { useAuth } from '@/contexts';
 
 const { Title, Text } = Typography;
@@ -26,18 +26,56 @@ const formatCurrency = (amount: number) =>
 
 const RoommatesModal: React.FC<{ booking: BookingRequestItem; open: boolean; onClose: () => void }> = ({
   booking, open, onClose,
-}) => (
-  <Modal
-    open={open}
-    onCancel={onClose}
-    footer={<Button onClick={onClose}>Close</Button>}
-    title={<span><TeamOutlined style={{ marginRight: 8 }} />Roommates — Room {booking.room?.room_number}</span>}
-  >
-    <Text type="secondary">
-      Roommate details are not available yet. This feature will be added in a future update.
-    </Text>
-  </Modal>
-);
+}) => {
+  const [roommates, setRoommates] = useState<RoommateItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    getRoommates(booking.id)
+      .then(setRoommates)
+      .catch(() => setRoommates([]))
+      .finally(() => setLoading(false));
+  }, [open, booking.id]);
+
+  const columns = [
+    { title: 'Student ID', dataIndex: 'student_code', key: 'student_code' },
+    { title: 'Full Name', dataIndex: 'full_name', key: 'full_name' },
+    {
+      title: 'Bed',
+      dataIndex: 'bed_number',
+      key: 'bed_number',
+      render: (val: string) => `Bed ${val}`,
+    },
+    { title: 'Phone Number', dataIndex: 'phone', key: 'phone' },
+  ];
+
+  return (
+    <Modal
+      open={open}
+      onCancel={onClose}
+      footer={<Button onClick={onClose}>Close</Button>}
+      title={<span><TeamOutlined style={{ marginRight: 8 }} />Roommates — Room {booking.room?.room_number}</span>}
+      width={700}
+    >
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40 }}>
+          <Spin />
+        </div>
+      ) : (
+        <Table
+          dataSource={roommates}
+          columns={columns}
+          rowKey="student_code"
+          pagination={false}
+          size="small"
+          bordered
+        />
+      )}
+    </Modal>
+  );
+};
 
 const Schedule: React.FC = () => {
   const { profile } = useAuth();

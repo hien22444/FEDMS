@@ -221,6 +221,17 @@ export const checkoutStudent = async (studentCode: string) => {
   return api.post<CheckoutResult>('bookings/checkout', { student_code: studentCode });
 };
 
+export interface RoommateItem {
+  student_code: string;
+  full_name: string;
+  bed_number: string;
+  phone: string;
+}
+
+export const getRoommates = async (bookingId: string) => {
+  return api.get<RoommateItem[]>(`bookings/${bookingId}/roommates`);
+};
+
 export const getAllBookings = async (params?: { status?: string; semester?: string; page?: number; limit?: number }) => {
   const query = new URLSearchParams();
   if (params?.status) query.set('status', params.status);

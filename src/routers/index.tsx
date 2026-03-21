@@ -41,6 +41,7 @@ import ManagerBedsPage from '@/pages/manager/beds';
 import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
+import ManagerRequestsPage from '@/pages/manager/requests';
 import FaceRegistrationPage from '@/pages/manager/face-registration';
 import LoginAsStudentPage from '@/pages/manager/login-student';
 import ManagerCheckoutPage from '@/pages/manager/checkout';
@@ -337,7 +338,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'requests',
-                element: <ComingSoon label="Request List" />,
+                element: <ManagerRequestsPage />,
               },
               {
                 path: 'electricity',

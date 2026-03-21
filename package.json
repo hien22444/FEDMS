@@ -27,6 +27,7 @@
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "eslint-plugin-tailwindcss": "^3.18.0",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.18.1",
     "lucide-react": "^0.563.0",
     "mobx": "^6.15.0",

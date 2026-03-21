@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   App,
   Card,
@@ -18,6 +18,7 @@ import {
   Form,
   Spin,
   Alert,
+  Tabs,
 } from 'antd';
 import {
   FileSearchOutlined,
@@ -30,11 +31,14 @@ import {
   CloseOutlined,
   PlusOutlined,
   MinusCircleOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import {
   createVisitorRequest,
   getMyVisitorRequests,
   cancelVisitorRequest as cancelVisitorRequestAction,
+  createOtherRequest,
+  getMyOtherRequests,
 } from '@/lib/actions';
 import type { IVisitor } from '@/interfaces';
 import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
@@ -45,50 +49,76 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-type RequestType = 'visitor' | 'maintenance' | 'report' | null;
+type RequestType = 'visitor' | 'maintenance' | 'report' | 'other' | null;
+type RequestTabKey = 'all' | 'visitor' | 'maintenance' | 'report' | 'other';
 
-const REQUEST_TYPES = [
-  {
-    key: 'visitor' as const,
-    icon: <TeamOutlined style={{ fontSize: '32px' }} />,
-    title: 'Visitor Request',
-    description: 'Request permission for visitors to enter the dormitory',
-    color: '#1890ff',
-  },
-  {
-    key: 'maintenance' as const,
-    icon: <ToolOutlined style={{ fontSize: '32px' }} />,
-    title: 'Maintenance Request',
-    description: 'Report facility issues and request repairs',
-    color: '#52c41a',
-  },
-  {
-    key: 'report' as const,
-    icon: <FlagOutlined style={{ fontSize: '32px' }} />,
-    title: 'Violation Report',
-    description: 'Report violations or safety concerns in the dormitory',
-    color: '#fa541c',
-  },
-];
+type StudentOtherRequest = {
+  id: string;
+  request_code: string;
+  title: string;
+  description: string;
+  status: string;
+  createdAt: string;
+  rejection_reason?: string | null;
+  manager_response?: string | null;
+};
+
+const VIOLATION_TYPE_LABEL: Record<string, string> = {
+  noise: 'Noise Disturbance',
+  cleanliness: 'Cleanliness Issue',
+  guest: 'Unauthorized Guest',
+  alcohol: 'Alcohol / Smoking',
+  other: 'Other',
+};
+
+type OtherSubTabKey = 'list' | 'detail';
+type InnerListTabKey = 'list' | 'detail';
+
+type UnifiedListItem = {
+  id: string;
+  type: 'visitor' | 'report' | 'other';
+  title: string;
+  subtitle: string;
+  status: string;
+  date: string;
+  detail: string;
+  rejection_reason?: string | null | undefined;
+  manager_response?: string | null | undefined;
+  visitors: IVisitor.Visitor[] | undefined;
+  raw: IVisitor.VisitorRequest | IViolation.ViolationReport | StudentOtherRequest;
+  sortTime: number;
+};
 
 const Requests: React.FC = () => {
   const { token } = theme.useToken();
   const [selectedType, setSelectedType] = useState<RequestType>(null);
-  const [filterType, setFilterType] = useState<RequestType | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<RequestTabKey>('all');
   const [showForm, setShowForm] = useState(false);
   const [visitorRequests, setVisitorRequests] = useState<IVisitor.VisitorRequest[]>([]);
   const [violationReports, setViolationReports] = useState<IViolation.ViolationReport[]>([]);
+  const [otherRequests, setOtherRequests] = useState<StudentOtherRequest[]>([]);
+  const [otherSubTab, setOtherSubTab] = useState<OtherSubTabKey>('list');
+  const [selectedOther, setSelectedOther] = useState<StudentOtherRequest | null>(null);
+  const [allInnerTab, setAllInnerTab] = useState<InnerListTabKey>('list');
+  const [selectedAll, setSelectedAll] = useState<UnifiedListItem | null>(null);
+  const [visitorInnerTab, setVisitorInnerTab] = useState<InnerListTabKey>('list');
+  const [selectedVisitor, setSelectedVisitor] = useState<UnifiedListItem | null>(null);
+  const [reportInnerTab, setReportInnerTab] = useState<InnerListTabKey>('list');
+  const [selectedReport, setSelectedReport] = useState<UnifiedListItem | null>(null);
+  const [maintenanceInnerTab, setMaintenanceInnerTab] = useState<InnerListTabKey>('list');
   const [loading, setLoading] = useState(false);
 
   const fetchMyRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const [visitorData, reportData] = await Promise.all([
+      const [visitorData, reportData, otherData] = await Promise.all([
         getMyVisitorRequests(),
         getMyViolationReports().catch(() => []),
+        getMyOtherRequests().catch(() => []),
       ]);
       setVisitorRequests(visitorData);
       setViolationReports(Array.isArray(reportData) ? reportData : []);
+      setOtherRequests(Array.isArray(otherData) ? otherData : []);
     } catch {
       // silent — API may not be ready
     } finally {
@@ -99,6 +129,83 @@ const Requests: React.FC = () => {
   useEffect(() => {
     fetchMyRequests();
   }, [fetchMyRequests]);
+
+  /** Keep detail view in sync after Refresh / background updates */
+  useEffect(() => {
+    if (!selectedOther?.id) return;
+    const next = otherRequests.find((o) => o.id === selectedOther.id);
+    if (next) setSelectedOther(next);
+  }, [otherRequests, selectedOther?.id]);
+
+  const allRequests: UnifiedListItem[] = useMemo(
+    () => [
+      ...visitorRequests.map((r) => ({
+        id: r.id,
+        type: 'visitor' as const,
+        title: r.purpose || 'Visitor Request',
+        subtitle: r.request_code,
+        status: r.status,
+        date: dayjs(r.visit_date).format('DD/MM/YYYY'),
+        detail: `${r.visit_time_from ?? '07:00'} - ${r.visit_time_to ?? '17:00'}`,
+        rejection_reason: r.rejection_reason,
+        manager_response: undefined as string | undefined,
+        visitors: r.visitors,
+        raw: r,
+        sortTime: dayjs(r.visit_date).valueOf(),
+      })),
+      ...violationReports.map((r) => ({
+        id: r.id,
+        type: 'report' as const,
+        title:
+          r.violation_other_detail ||
+          VIOLATION_TYPE_LABEL[r.violation_type] ||
+          r.violation_type ||
+          'Violation Report',
+        subtitle: r.report_code,
+        status: r.status,
+        date: dayjs(r.violation_date).format('DD/MM/YYYY'),
+        detail: r.location || '—',
+        rejection_reason: undefined as string | undefined,
+        manager_response: undefined as string | undefined,
+        visitors: undefined,
+        raw: r,
+        sortTime: dayjs(r.violation_date).valueOf(),
+      })),
+      ...otherRequests.map((r) => ({
+        id: r.id,
+        type: 'other' as const,
+        title: r.title,
+        subtitle: r.request_code,
+        status: r.status,
+        date: dayjs(r.createdAt).format('DD/MM/YYYY'),
+        detail: 'Other request',
+        rejection_reason: r.rejection_reason,
+        manager_response: r.manager_response,
+        visitors: undefined,
+        raw: r,
+        sortTime: dayjs(r.createdAt).valueOf(),
+      })),
+    ],
+    [visitorRequests, violationReports, otherRequests]
+  );
+
+  useEffect(() => {
+    if (!selectedAll?.id) return;
+    const next = allRequests.find((i) => i.id === selectedAll.id && i.type === selectedAll.type);
+    if (next) setSelectedAll(next);
+  }, [allRequests, selectedAll?.id, selectedAll?.type]);
+
+  useEffect(() => {
+    if (!selectedVisitor?.id) return;
+    const next = allRequests.find((i) => i.id === selectedVisitor.id && i.type === 'visitor');
+    if (next) setSelectedVisitor(next);
+  }, [allRequests, selectedVisitor?.id]);
+
+  useEffect(() => {
+    if (!selectedReport?.id) return;
+    const next = allRequests.find((i) => i.id === selectedReport.id && i.type === 'report');
+    if (next) setSelectedReport(next);
+  }, [allRequests, selectedReport?.id]);
 
   const getStatusTag = (status: string) => {
     switch (status) {
@@ -123,6 +230,10 @@ const Requests: React.FC = () => {
         return <Tag color="error">Penalized</Tag>;
       case 'resolved_no_action':
         return <Tag color="success">Resolved</Tag>;
+      case 'in_review':
+        return <Tag color="warning">In Review</Tag>;
+      case 'resolved':
+        return <Tag color="success">Resolved</Tag>;
       default:
         return <Tag>{status}</Tag>;
     }
@@ -141,19 +252,6 @@ const Requests: React.FC = () => {
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'visitor':
-        return 'Visitor';
-      case 'maintenance':
-        return 'Maintenance';
-      case 'report':
-        return 'Report';
-      default:
-        return type;
-    }
-  };
-
   const relationshipLabel: Record<string, string> = {
     parent: 'Parent',
     sibling: 'Sibling',
@@ -161,45 +259,18 @@ const Requests: React.FC = () => {
     other: 'Other',
   };
 
-  // Map visitor requests and violation reports to a common display format
-  const violationTypeLabel: Record<string, string> = {
-    noise: 'Noise Disturbance',
-    cleanliness: 'Cleanliness Issue',
-    guest: 'Unauthorized Guest',
-    alcohol: 'Alcohol / Smoking',
+  const requestTypeLabel: Record<RequestTabKey, string> = {
+    all: 'All',
+    visitor: 'Visitor',
+    maintenance: 'Maintenance',
+    report: 'Violation',
     other: 'Other',
   };
-  const allRequests = [
-    ...visitorRequests.map((r) => ({
-      id: r.id,
-      type: 'visitor' as const,
-      title: r.purpose || 'Visitor Request',
-      subtitle: r.request_code,
-      status: r.status,
-      date: dayjs(r.visit_date).format('DD/MM/YYYY'),
-      detail: `${r.visit_time_from ?? '07:00'} - ${r.visit_time_to ?? '17:00'}`,
-      rejection_reason: r.rejection_reason,
-      visitors: r.visitors,
-      raw: r,
-    })),
-    ...violationReports.map((r) => ({
-      id: r.id,
-      type: 'report' as const,
-      title: r.violation_other_detail || violationTypeLabel[r.violation_type] || r.violation_type || 'Violation Report',
-      subtitle: r.report_code,
-      status: r.status,
-      date: dayjs(r.violation_date).format('DD/MM/YYYY'),
-      detail: r.location || '—',
-      rejection_reason: undefined,
-      visitors: undefined,
-      raw: r,
-    })),
-  ];
 
-  const filteredRequests =
-    filterType === 'all'
-      ? allRequests
-      : allRequests.filter((r) => r.type === filterType);
+  const filteredRequestsByTab = (tab: RequestTabKey) => {
+    const list = tab === 'all' ? [...allRequests] : allRequests.filter((r) => r.type === tab);
+    return list.sort((a, b) => b.sortTime - a.sortTime);
+  };
 
   const handleNewRequest = (type: RequestType) => {
     setSelectedType(type);
@@ -221,6 +292,11 @@ const Requests: React.FC = () => {
     fetchMyRequests();
   };
 
+  const handleOtherCreated = () => {
+    handleCloseForm();
+    fetchMyRequests();
+  };
+
   const handleCancel = async (id: string) => {
     try {
       await cancelVisitorRequestAction(id);
@@ -231,206 +307,743 @@ const Requests: React.FC = () => {
     }
   };
 
-  return (
-    <div style={{ padding: '32px', background: token.colorBgLayout }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <Title level={2} style={{ marginBottom: '8px' }}>
-            Requests
-          </Title>
-          <Text type="secondary">
-            Submit and track all your requests in one place
-          </Text>
-        </div>
+  const renderStudentRequestDetail = (
+    item: UnifiedListItem | null,
+    onBack: () => void,
+    opts?: { showTypeBadge?: boolean }
+  ) => {
+    if (!item) {
+      return <Alert type="info" message="Choose a request from the list and click View detail." />;
+    }
+    const showTypeBadge = opts?.showTypeBadge ?? false;
 
-        {/* Request Type Selection Cards */}
-        <Title level={4} style={{ marginBottom: '16px' }}>
-          New Request
-        </Title>
-        <Row gutter={[16, 16]} style={{ marginBottom: '32px' }}>
-          {REQUEST_TYPES.map((type) => (
-            <Col xs={24} md={8} key={type.key}>
-              <Card
-                hoverable
-                onClick={() => handleNewRequest(type.key)}
-                style={{ textAlign: 'center', cursor: 'pointer' }}
+    if (item.type === 'visitor') {
+      const v = item.raw as IVisitor.VisitorRequest;
+      return (
+        <div className="space-y-5">
+          <Button onClick={onBack}>← Back to list</Button>
+          {showTypeBadge && <Tag color="blue">Visitor request</Tag>}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+            <div>
+              <Text type="secondary">Request Code:</Text> <Text strong>{v.request_code}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Status:</Text> {getStatusTag(v.status)}
+            </div>
+            <div>
+              <Text type="secondary">Visit date:</Text> <Text>{dayjs(v.visit_date).format('DD/MM/YYYY')}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Time window:</Text>{' '}
+              <Text>
+                {v.visit_time_from ?? '07:00'} – {v.visit_time_to ?? '17:00'}
+              </Text>
+            </div>
+            <div>
+              <Text type="secondary">Purpose:</Text>
+              <div className="mt-1 rounded border border-gray-200 bg-white p-3 text-sm whitespace-pre-wrap">
+                {v.purpose || '-'}
+              </div>
+            </div>
+            <div>
+              <Text type="secondary">Submitted:</Text>{' '}
+              <Text>{v.createdAt ? dayjs(v.createdAt).format('DD/MM/YYYY HH:mm') : '-'}</Text>
+            </div>
+            {v.rejection_reason && (
+              <div>
+                <Text type="secondary">Rejection reason:</Text>
+                <div className="mt-1 rounded border border-red-100 bg-red-50 p-3 text-sm text-red-800">
+                  {v.rejection_reason}
+                </div>
+              </div>
+            )}
+            <div>
+              <Text type="secondary" className="block mb-2">
+                Visitors
+              </Text>
+              <div className="space-y-2">
+                {v.visitors?.map((vis, idx) => (
+                  <div
+                    key={vis.id || idx}
+                    className="rounded border border-gray-200 bg-white p-3 text-sm space-y-1"
+                  >
+                    <div>
+                      <Text strong>{vis.full_name}</Text>
+                    </div>
+                    <div>
+                      <Text type="secondary">CCCD:</Text> {vis.citizen_id}
+                    </div>
+                    <div>
+                      <Text type="secondary">Phone:</Text> {vis.phone}
+                    </div>
+                    <div>
+                      <Text type="secondary">Relationship:</Text>{' '}
+                      {relationshipLabel[vis.relationship] ?? vis.relationship}
+                      {vis.relationship === 'other' && vis.relationship_other
+                        ? ` (${vis.relationship_other})`
+                        : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (item.type === 'report') {
+      const r = item.raw as IViolation.ViolationReport;
+      const typeLabel =
+        r.violation_other_detail ||
+        VIOLATION_TYPE_LABEL[r.violation_type] ||
+        r.violation_type;
+      return (
+        <div className="space-y-5">
+          <Button onClick={onBack}>← Back to list</Button>
+          {showTypeBadge && <Tag color="orange">Violation report</Tag>}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+            <div>
+              <Text type="secondary">Report Code:</Text> <Text strong>{r.report_code}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Status:</Text> {getStatusTag(r.status)}
+            </div>
+            <div>
+              <Text type="secondary">Violation type:</Text> <Text>{typeLabel}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Violation date:</Text>{' '}
+              <Text>{dayjs(r.violation_date).format('DD/MM/YYYY')}</Text>
+            </div>
+            {r.location && (
+              <div>
+                <Text type="secondary">Location:</Text> <Text>{r.location}</Text>
+              </div>
+            )}
+            <div>
+              <Text type="secondary">Description:</Text>
+              <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[100px]">
+                {r.description || '-'}
+              </div>
+            </div>
+            {r.evidence_urls && r.evidence_urls.length > 0 && (
+              <div>
+                <Text type="secondary" className="block mb-1">
+                  Evidence links
+                </Text>
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  {r.evidence_urls.map((url, i) => (
+                    <li key={i}>
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        {url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div>
+              <Text type="secondary">Submitted:</Text>{' '}
+              <Text>{r.createdAt ? dayjs(r.createdAt).format('DD/MM/YYYY HH:mm') : '-'}</Text>
+            </div>
+            {r.review_notes && (
+              <div>
+                <Text type="secondary">Review notes (manager):</Text>
+                <div className="mt-1 rounded border border-gray-200 bg-white p-3 text-sm whitespace-pre-wrap">
+                  {r.review_notes}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const o = item.raw as StudentOtherRequest;
+    return (
+      <div className="space-y-5">
+        <Button onClick={onBack}>← Back to list</Button>
+        {showTypeBadge && <Tag color="purple">Other request</Tag>}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+          <div>
+            <Text type="secondary">Request Code:</Text> <Text strong>{o.request_code}</Text>
+          </div>
+          <div>
+            <Text type="secondary">Request:</Text> <Text strong>{o.title}</Text>
+          </div>
+          <div>
+            <Text type="secondary">Your description:</Text>
+            <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[120px]">
+              {o.description || '-'}
+            </div>
+          </div>
+          <div>
+            <Text type="secondary">Status:</Text> {getStatusTag(o.status)}
+          </div>
+          <div>
+            <Text type="secondary">Submitted:</Text>{' '}
+            <Text>{o.createdAt ? dayjs(o.createdAt).format('DD/MM/YYYY HH:mm') : '-'}</Text>
+          </div>
+          {o.status === 'rejected' && o.rejection_reason && (
+            <div>
+              <Text type="secondary">Rejection reason:</Text>
+              <div className="mt-1 rounded border border-red-100 bg-red-50 p-3 text-sm text-red-800">
+                {o.rejection_reason}
+              </div>
+            </div>
+          )}
+          <div>
+            <Text type="secondary">Manager response:</Text>
+            {o.manager_response ? (
+              <div className="mt-1 whitespace-pre-wrap rounded border border-blue-100 bg-blue-50 p-3 text-sm">
+                {o.manager_response}
+              </div>
+            ) : (
+              <Alert
+                className="mt-2"
+                type="info"
+                showIcon
+                message="No response from the manager yet. You will be notified when it is updated."
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRequestList = (
+    requests: UnifiedListItem[],
+    options?: { showTypeTag?: boolean; onViewDetail?: (item: UnifiedListItem) => void }
+  ) => {
+    const showTypeTag = options?.showTypeTag ?? false;
+    const onViewDetail = options?.onViewDetail;
+    if (loading) {
+      return (
+        <div style={{ textAlign: 'center', padding: '48px' }}>
+          <Spin size="large" />
+        </div>
+      );
+    }
+
+    if (requests.length === 0) {
+      return (
+        <Card>
+          <div style={{ textAlign: 'center', padding: '32px' }}>
+            <Text type="secondary">No requests found</Text>
+          </div>
+        </Card>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {requests.map((req) => (
+          <Card key={`${req.type}-${req.id}`} size="small">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  background: token.colorBgTextHover,
+                  borderRadius: token.borderRadius,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  marginTop: '2px',
+                }}
               >
+                {getTypeIcon(req.type)}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    width: '64px',
-                    height: '64px',
-                    background: `${type.color}15`,
-                    borderRadius: '16px',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 16px',
-                    color: type.color,
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    marginBottom: '4px',
                   }}
                 >
-                  {type.icon}
-                </div>
-                <Title level={5} style={{ marginBottom: '4px' }}>
-                  {type.title}
-                </Title>
-                <Text type="secondary" style={{ fontSize: '13px' }}>
-                  {type.description}
-                </Text>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-
-        {/* Request History */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px',
-          }}
-        >
-          <Title level={4} style={{ margin: 0 }}>
-            My Requests
-          </Title>
-          <Space>
-            {(['all', 'visitor', 'maintenance', 'report'] as const).map((f) => (
-              <Button
-                key={f}
-                type={filterType === f ? 'primary' : 'default'}
-                size="small"
-                onClick={() => setFilterType(f)}
-              >
-                {f === 'all' ? 'All' : getTypeLabel(f)}
-              </Button>
-            ))}
-          </Space>
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px' }}>
-            <Spin size="large" />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filteredRequests.map((req) => (
-              <Card key={`${req.type}-${req.id}`} size="small">
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                  {/* Icon */}
-                  <div
-                    style={{
-                      width: '44px',
-                      height: '44px',
-                      background: token.colorBgTextHover,
-                      borderRadius: token.borderRadius,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      marginTop: '2px',
-                    }}
-                  >
-                    {getTypeIcon(req.type)}
-                  </div>
-
-                  {/* Content */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Row 1: purpose + status */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: '8px',
-                        marginBottom: '4px',
-                      }}
-                    >
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                      {showTypeTag && (
+                        <Tag color="default" style={{ margin: 0 }}>
+                          {requestTypeLabel[req.type]}
+                        </Tag>
+                      )}
                       <Text strong style={{ fontSize: '14px', lineHeight: '22px' }}>
                         {req.title}
                       </Text>
-                      {getStatusTag(req.status)}
                     </div>
-
-                    {/* Row 2: request code */}
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                      Code: {req.subtitle}
-                    </Text>
-
-                    {/* Row 3: date + time */}
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        <ClockCircleOutlined style={{ marginRight: 4 }} />
-                        {req.date}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {req.detail}
-                      </Text>
-                      {req.visitors && req.visitors.length > 0 && (
-                        <Tag color="blue" style={{ fontSize: '11px', lineHeight: '18px' }}>
-                          {req.visitors.length} visitor{req.visitors.length > 1 ? 's' : ''}
-                        </Tag>
-                      )}
-                    </div>
-
-                    {/* Row 4: visitor names + relationships */}
-                    {req.visitors && req.visitors.length > 0 && (
-                      <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {req.visitors.map((v, i) => (
-                          <span
-                            key={i}
-                            style={{
-                              fontSize: '12px',
-                              color: token.colorTextSecondary,
-                              background: token.colorBgTextHover,
-                              borderRadius: '4px',
-                              padding: '1px 8px',
-                            }}
-                          >
-                            {v.full_name}
-                            <span style={{ color: token.colorTextQuaternary, marginLeft: 4 }}>
-                              ({relationshipLabel[v.relationship] ?? v.relationship})
-                            </span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Row 5: rejection reason */}
-                    {req.status === 'rejected' && req.rejection_reason && (
-                      <Text
-                        type="danger"
-                        style={{ fontSize: '12px', display: 'block', marginTop: '6px' }}
-                      >
-                        Rejection reason: {req.rejection_reason}
-                      </Text>
-                    )}
                   </div>
+                  {getStatusTag(req.status)}
+                </div>
 
-                  {/* Cancel button */}
-                  {req.status === 'pending' && (
-                    <Button
-                      danger
-                      size="small"
-                      icon={<CloseOutlined />}
-                      onClick={() => handleCancel(req.id)}
-                      style={{ flexShrink: 0 }}
-                    >
-                      Cancel
-                    </Button>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Code: {req.subtitle}
+                </Text>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    <ClockCircleOutlined style={{ marginRight: 4 }} />
+                    {req.date}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    {req.detail}
+                  </Text>
+                  {req.visitors && req.visitors.length > 0 && (
+                    <Tag color="blue" style={{ fontSize: '11px', lineHeight: '18px' }}>
+                      {req.visitors.length} visitor{req.visitors.length > 1 ? 's' : ''}
+                    </Tag>
                   )}
                 </div>
-              </Card>
-            ))}
 
-            {filteredRequests.length === 0 && (
-              <Card>
-                <div style={{ textAlign: 'center', padding: '32px' }}>
-                  <Text type="secondary">No requests found</Text>
-                </div>
-              </Card>
-            )}
+                {req.visitors && req.visitors.length > 0 && (
+                  <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {req.visitors.map((v, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: '12px',
+                          color: token.colorTextSecondary,
+                          background: token.colorBgTextHover,
+                          borderRadius: '4px',
+                          padding: '1px 8px',
+                        }}
+                      >
+                        {v.full_name}
+                        <span style={{ color: token.colorTextQuaternary, marginLeft: 4 }}>
+                          ({relationshipLabel[v.relationship] ?? v.relationship})
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {req.status === 'rejected' && req.rejection_reason && (
+                  <Text
+                    type="danger"
+                    style={{ fontSize: '12px', display: 'block', marginTop: '6px' }}
+                  >
+                    Rejection reason: {req.rejection_reason}
+                  </Text>
+                )}
+              </div>
+
+              <Space direction="vertical" size="small" style={{ flexShrink: 0 }}>
+                {onViewDetail && (
+                  <Button type="primary" size="small" onClick={() => onViewDetail(req)}>
+                    View detail
+                  </Button>
+                )}
+                {req.type === 'visitor' && req.status === 'pending' && (
+                  <Button
+                    danger
+                    size="small"
+                    icon={<CloseOutlined />}
+                    onClick={() => handleCancel(req.id)}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </Space>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  const tabItems = [
+    {
+      key: 'all',
+      label: (
+        <span className="flex items-center gap-2">
+          <AppstoreOutlined /> All
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <Card className="rounded-xl border border-gray-200 shadow-sm">
+            <Tabs
+              activeKey={allInnerTab}
+              onChange={(k) => {
+                const key = k as InnerListTabKey;
+                if (key === 'detail' && !selectedAll) return;
+                setAllInnerTab(key);
+              }}
+              destroyInactiveTabPane={false}
+              items={[
+                {
+                  key: 'list',
+                  label: 'My requests',
+                  children: (
+                    <div className="space-y-4">
+                      {renderRequestList(filteredRequestsByTab('all'), {
+                        showTypeTag: true,
+                        onViewDetail: (it) => {
+                          setSelectedAll(it);
+                          setAllInnerTab('detail');
+                        },
+                      })}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'detail',
+                  label: selectedAll ? `Detail · ${selectedAll.subtitle}` : 'Detail',
+                  disabled: !selectedAll,
+                  children: renderStudentRequestDetail(selectedAll, () => {
+                    setAllInnerTab('list');
+                    setSelectedAll(null);
+                  }, { showTypeBadge: true }),
+                },
+              ]}
+            />
+          </Card>
+        </div>
+      ),
+    },
+    {
+      key: 'visitor',
+      label: (
+        <span className="flex items-center gap-2">
+          <TeamOutlined /> Visitor Request
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="primary" onClick={() => handleNewRequest('visitor')}>
+              New Visitor Request
+            </Button>
           </div>
-        )}
+          <Card className="rounded-xl border border-gray-200 shadow-sm">
+            <Tabs
+              activeKey={visitorInnerTab}
+              onChange={(k) => {
+                const key = k as InnerListTabKey;
+                if (key === 'detail' && !selectedVisitor) return;
+                setVisitorInnerTab(key);
+              }}
+              destroyInactiveTabPane={false}
+              items={[
+                {
+                  key: 'list',
+                  label: 'My requests',
+                  children: renderRequestList(filteredRequestsByTab('visitor'), {
+                    onViewDetail: (it) => {
+                      setSelectedVisitor(it);
+                      setVisitorInnerTab('detail');
+                    },
+                  }),
+                },
+                {
+                  key: 'detail',
+                  label: selectedVisitor ? `Detail · ${selectedVisitor.subtitle}` : 'Detail',
+                  disabled: !selectedVisitor,
+                  children: renderStudentRequestDetail(selectedVisitor, () => {
+                    setVisitorInnerTab('list');
+                    setSelectedVisitor(null);
+                  }),
+                },
+              ]}
+            />
+          </Card>
+        </div>
+      ),
+    },
+    {
+      key: 'maintenance',
+      label: (
+        <span className="flex items-center gap-2">
+          <ToolOutlined /> Maintenance Request
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="primary" onClick={() => handleNewRequest('maintenance')}>
+              New Maintenance Request
+            </Button>
+          </div>
+          <Card className="rounded-xl border border-gray-200 shadow-sm">
+            <Tabs
+              activeKey={maintenanceInnerTab}
+              onChange={(k) => {
+                const key = k as InnerListTabKey;
+                if (key === 'detail') return;
+                setMaintenanceInnerTab(key);
+              }}
+              destroyInactiveTabPane={false}
+              items={[
+                {
+                  key: 'list',
+                  label: 'My requests',
+                  children: (
+                    <div className="space-y-4">
+                      <Alert
+                        type="info"
+                        showIcon
+                        message="Maintenance requests are not available yet. Your tickets will appear here with View detail when this feature is enabled."
+                      />
+                      {renderRequestList(filteredRequestsByTab('maintenance'))}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'detail',
+                  label: 'Detail',
+                  disabled: true,
+                  children: (
+                    <Alert type="info" message="No maintenance requests to display yet." />
+                  ),
+                },
+              ]}
+            />
+          </Card>
+        </div>
+      ),
+    },
+    {
+      key: 'report',
+      label: (
+        <span className="flex items-center gap-2">
+          <FlagOutlined /> Violation Report
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="primary" onClick={() => handleNewRequest('report')}>
+              New Violation Report
+            </Button>
+          </div>
+          <Card className="rounded-xl border border-gray-200 shadow-sm">
+            <Tabs
+              activeKey={reportInnerTab}
+              onChange={(k) => {
+                const key = k as InnerListTabKey;
+                if (key === 'detail' && !selectedReport) return;
+                setReportInnerTab(key);
+              }}
+              destroyInactiveTabPane={false}
+              items={[
+                {
+                  key: 'list',
+                  label: 'My requests',
+                  children: renderRequestList(filteredRequestsByTab('report'), {
+                    onViewDetail: (it) => {
+                      setSelectedReport(it);
+                      setReportInnerTab('detail');
+                    },
+                  }),
+                },
+                {
+                  key: 'detail',
+                  label: selectedReport ? `Detail · ${selectedReport.subtitle}` : 'Detail',
+                  disabled: !selectedReport,
+                  children: renderStudentRequestDetail(selectedReport, () => {
+                    setReportInnerTab('list');
+                    setSelectedReport(null);
+                  }),
+                },
+              ]}
+            />
+          </Card>
+        </div>
+      ),
+    },
+    {
+      key: 'other',
+      label: (
+        <span className="flex items-center gap-2">
+          <FileSearchOutlined /> Other
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button type="primary" onClick={() => handleNewRequest('other')}>
+              New Other Request
+            </Button>
+          </div>
+          <Card className="rounded-xl border border-gray-200 shadow-sm">
+            <Tabs
+              activeKey={otherSubTab}
+              onChange={(k) => {
+                const key = k as OtherSubTabKey;
+                if (key === 'detail' && !selectedOther) return;
+                setOtherSubTab(key);
+              }}
+              destroyInactiveTabPane={false}
+              items={[
+                {
+                  key: 'list',
+                  label: 'My requests',
+                  children: loading ? (
+                    <div style={{ textAlign: 'center', padding: '48px' }}>
+                      <Spin size="large" />
+                    </div>
+                  ) : otherRequests.length === 0 ? (
+                    <Card size="small">
+                      <div style={{ textAlign: 'center', padding: '32px' }}>
+                        <Text type="secondary">No other requests yet</Text>
+                      </div>
+                    </Card>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {otherRequests.map((r) => (
+                        <Card key={r.id} size="small">
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'flex-start',
+                                  gap: '8px',
+                                  marginBottom: '4px',
+                                }}
+                              >
+                                <Text strong style={{ fontSize: '14px' }}>
+                                  {r.title}
+                                </Text>
+                                {getStatusTag(r.status)}
+                              </div>
+                              <Text type="secondary" style={{ fontSize: '12px' }}>
+                                Code: {r.request_code}
+                              </Text>
+                              <div style={{ marginTop: '6px' }}>
+                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                  <ClockCircleOutlined style={{ marginRight: 4 }} />
+                                  {dayjs(r.createdAt).format('DD/MM/YYYY')}
+                                </Text>
+                              </div>
+                            </div>
+                            <Button
+                              type="primary"
+                              size="small"
+                              onClick={() => {
+                                setSelectedOther(r);
+                                setOtherSubTab('detail');
+                              }}
+                            >
+                              View detail
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'detail',
+                  label: selectedOther ? `Detail · ${selectedOther.request_code}` : 'Detail',
+                  disabled: !selectedOther,
+                  children: selectedOther ? (
+                    <div className="space-y-5">
+                      <Button
+                        onClick={() => {
+                          setOtherSubTab('list');
+                        }}
+                      >
+                        ← Back to list
+                      </Button>
+
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+                        <div>
+                          <Text type="secondary">Request Code:</Text>{' '}
+                          <Text strong>{selectedOther.request_code}</Text>
+                        </div>
+                        <div>
+                          <Text type="secondary">Request:</Text> <Text strong>{selectedOther.title}</Text>
+                        </div>
+                        <div>
+                          <Text type="secondary">Your description:</Text>
+                          <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[120px]">
+                            {selectedOther.description || '-'}
+                          </div>
+                        </div>
+                        <div>
+                          <Text type="secondary">Status:</Text> {getStatusTag(selectedOther.status)}
+                        </div>
+                        <div>
+                          <Text type="secondary">Submitted:</Text>{' '}
+                          <Text>
+                            {selectedOther.createdAt
+                              ? dayjs(selectedOther.createdAt).format('DD/MM/YYYY HH:mm')
+                              : '-'}
+                          </Text>
+                        </div>
+                        {selectedOther.status === 'rejected' && selectedOther.rejection_reason && (
+                          <div>
+                            <Text type="secondary">Rejection reason:</Text>
+                            <div className="mt-1 rounded border border-red-100 bg-red-50 p-3 text-sm text-red-800">
+                              {selectedOther.rejection_reason}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <Text type="secondary">Manager response:</Text>
+                          {selectedOther.manager_response ? (
+                            <div className="mt-1 whitespace-pre-wrap rounded border border-blue-100 bg-blue-50 p-3 text-sm">
+                              {selectedOther.manager_response}
+                            </div>
+                          ) : (
+                            <Alert
+                              className="mt-2"
+                              type="info"
+                              showIcon
+                              message="No response from the manager yet. You will be notified when it is updated."
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <Alert
+                      type="info"
+                      message="Choose a request from the list and click View detail."
+                    />
+                  ),
+                },
+              ]}
+            />
+          </Card>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: '32px', background: token.colorBgLayout }}>
+      <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <div className="mb-4">
+            <Title level={4} style={{ margin: 0 }}>
+              My Requests
+            </Title>
+          </div>
+          <Tabs
+            activeKey={activeTab}
+            onChange={(k) => setActiveTab(k as RequestTabKey)}
+            items={tabItems}
+            className="facility-tabs"
+          />
+        </div>
 
         {/* New Request Form Modal */}
         <Modal
@@ -445,12 +1058,14 @@ const Requests: React.FC = () => {
               {selectedType === 'visitor' && 'New Visitor Request'}
               {selectedType === 'maintenance' && 'New Maintenance Request'}
               {selectedType === 'report' && 'New Violation Report'}
+              {selectedType === 'other' && 'New Other Request'}
             </Space>
           }
         >
           {selectedType === 'visitor' && <VisitorForm onSuccess={handleVisitorCreated} />}
           {selectedType === 'maintenance' && <MaintenanceForm />}
           {selectedType === 'report' && <ReportForm onSuccess={handleReportCreated} />}
+          {selectedType === 'other' && <OtherRequestForm onSuccess={handleOtherCreated} />}
         </Modal>
       </div>
     </div>
@@ -838,6 +1453,86 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
 
       <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>
         Submit Report
+      </Button>
+    </Form>
+  );
+};
+
+const OtherRequestForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
+  const { modal } = App.useApp();
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      modal.confirm({
+        title: 'Confirm other request',
+        content: (
+          <div>
+            <p>Are you sure you want to submit this request to manager?</p>
+            <p>
+              <strong>Title:</strong> {values.title}
+            </p>
+            <p>
+              <strong>Description:</strong> {values.description}
+            </p>
+          </div>
+        ),
+        okText: 'Confirm & Submit',
+        cancelText: 'Cancel',
+        onOk: async () => {
+          setSubmitting(true);
+          try {
+            await createOtherRequest({
+              title: values.title,
+              description: values.description,
+            });
+            message.success('Other request submitted successfully');
+            form.resetFields();
+            onSuccess?.();
+          } catch (err: any) {
+            if (err?.message) {
+              message.error(Array.isArray(err.message) ? err.message[0] : err.message);
+            }
+          } finally {
+            setSubmitting(false);
+          }
+        },
+      });
+    } catch (err: any) {
+      if (err?.message && !err.errorFields) {
+        message.error(Array.isArray(err.message) ? err.message[0] : err.message);
+      }
+    }
+  };
+
+  return (
+    <Form form={form} layout="vertical">
+      <Form.Item
+        name="title"
+        label="Title"
+        rules={[
+          { required: true, message: 'Please enter title' },
+          { min: 3, message: 'Title must be at least 3 characters' },
+        ]}
+      >
+        <Input placeholder="Enter request title" maxLength={150} />
+      </Form.Item>
+
+      <Form.Item
+        name="description"
+        label="Description"
+        rules={[
+          { required: true, message: 'Please enter description' },
+          { min: 10, message: 'Description must be at least 10 characters' },
+        ]}
+      >
+        <TextArea rows={5} placeholder="Describe your request in detail..." maxLength={3000} />
+      </Form.Item>
+
+      <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>
+        Submit Request
       </Button>
     </Form>
   );
