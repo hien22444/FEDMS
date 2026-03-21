@@ -145,9 +145,9 @@ const Payment: React.FC = () => {
                         Details
                       </Button>
 
-                      <Button danger icon={<CloseCircleOutlined />} onClick={() => handleCancel(b.id)}>
+                      {/* <Button danger icon={<CloseCircleOutlined />} onClick={() => handleCancel(b.id)}>
                         Cancel
-                      </Button>
+                      </Button> */}
                     </div>
 
                   </Col>

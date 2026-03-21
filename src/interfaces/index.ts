@@ -7,3 +7,5 @@ export * from './manager.interface';
 export * from './violation.interface';
 
 export * from './visitor.interface';
+
+export * from './faceRecognition.interface';

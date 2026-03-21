@@ -183,7 +183,7 @@ export default function StudentNewsPage() {
           </div>
         ) : category !== 'all' ? (
           <div className="space-y-6">
-            {/* Hàng đầu: news lớn + Đọc nhiều nhất */}
+            {/* Hàng đầu: news lớn + Most Read */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <div className="lg:col-span-7 space-y-4">
                 {featured && (
@@ -234,7 +234,7 @@ export default function StudentNewsPage() {
               <div className="lg:col-span-5 space-y-4">
                 <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-100 font-bold text-gray-900">
-                    Đọc nhiều nhất
+                    Most Read
                   </div>
                   <div className="divide-y divide-gray-100">
                     {filteredNews.slice(0, 6).map((item) => (
@@ -429,7 +429,7 @@ export default function StudentNewsPage() {
                       style={{ color: token.colorPrimary }}
                       onClick={() => setCategory(sec.value)}
                     >
-                      Xem tất cả
+                      View All
                     </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

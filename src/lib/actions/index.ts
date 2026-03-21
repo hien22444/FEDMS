@@ -33,3 +33,7 @@ export * from './ai';
 export * from './chat';
 export * from './booking';
 export * from './otherRequest';
+export * from './faceRecognition';
+export * from './accessLog';
+export * from './camera';
+export * from './dateConfig';
