@@ -9,7 +9,6 @@ import {
   Input,
   Select,
   DatePicker,
-  Upload,
   Row,
   Col,
   theme,
@@ -23,7 +22,6 @@ import {
 import {
   FileSearchOutlined,
   ClockCircleOutlined,
-  UploadOutlined,
   TeamOutlined,
   ToolOutlined,
   FlagOutlined,
@@ -39,7 +37,14 @@ import {
   cancelVisitorRequest as cancelVisitorRequestAction,
   createOtherRequest,
   getMyOtherRequests,
+  createMaintenanceRequest,
+  getMyMaintenanceRequests,
+  getMyRoomEquipmentForMaintenance,
+  getMyMaintenanceContext,
 } from '@/lib/actions';
+import type { StudentMaintenanceRequest } from '@/lib/actions/maintenanceRequest';
+import type { MaintenanceContext } from '@/lib/actions/maintenanceRequest';
+import type { RoomEquipment } from '@/lib/actions/admin';
 import type { IVisitor } from '@/interfaces';
 import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
 import violationActions from '@/lib/actions/violation';
@@ -71,12 +76,21 @@ const VIOLATION_TYPE_LABEL: Record<string, string> = {
   other: 'Other',
 };
 
+function formatMaintenanceRoom(room?: StudentMaintenanceRequest['room']) {
+  if (!room) return '—';
+  const dorm = room.block?.dorm?.dorm_name;
+  const block = room.block?.block_name;
+  const num = room.room_number;
+  const parts = [dorm, block, num ? `Room ${num}` : null].filter(Boolean) as string[];
+  return parts.length ? parts.join(' · ') : '—';
+}
+
 type OtherSubTabKey = 'list' | 'detail';
 type InnerListTabKey = 'list' | 'detail';
 
 type UnifiedListItem = {
   id: string;
-  type: 'visitor' | 'report' | 'other';
+  type: 'visitor' | 'report' | 'other' | 'maintenance';
   title: string;
   subtitle: string;
   status: string;
@@ -85,7 +99,7 @@ type UnifiedListItem = {
   rejection_reason?: string | null | undefined;
   manager_response?: string | null | undefined;
   visitors: IVisitor.Visitor[] | undefined;
-  raw: IVisitor.VisitorRequest | IViolation.ViolationReport | StudentOtherRequest;
+  raw: IVisitor.VisitorRequest | IViolation.ViolationReport | StudentOtherRequest | StudentMaintenanceRequest;
   sortTime: number;
 };
 
@@ -106,19 +120,23 @@ const Requests: React.FC = () => {
   const [reportInnerTab, setReportInnerTab] = useState<InnerListTabKey>('list');
   const [selectedReport, setSelectedReport] = useState<UnifiedListItem | null>(null);
   const [maintenanceInnerTab, setMaintenanceInnerTab] = useState<InnerListTabKey>('list');
+  const [selectedMaintenance, setSelectedMaintenance] = useState<UnifiedListItem | null>(null);
+  const [maintenanceRequests, setMaintenanceRequests] = useState<StudentMaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchMyRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const [visitorData, reportData, otherData] = await Promise.all([
+      const [visitorData, reportData, otherData, maintData] = await Promise.all([
         getMyVisitorRequests(),
         getMyViolationReports().catch(() => []),
         getMyOtherRequests().catch(() => []),
+        getMyMaintenanceRequests().catch(() => []),
       ]);
       setVisitorRequests(visitorData);
       setViolationReports(Array.isArray(reportData) ? reportData : []);
       setOtherRequests(Array.isArray(otherData) ? otherData : []);
+      setMaintenanceRequests(Array.isArray(maintData) ? maintData : []);
     } catch {
       // silent — API may not be ready
     } finally {
@@ -185,8 +203,22 @@ const Requests: React.FC = () => {
         raw: r,
         sortTime: dayjs(r.createdAt).valueOf(),
       })),
+      ...maintenanceRequests.map((r) => ({
+        id: r.id,
+        type: 'maintenance' as const,
+        title: 'Maintenance request',
+        subtitle: r.request_code,
+        status: r.status,
+        date: dayjs(r.requested_at || r.id).format('DD/MM/YYYY'),
+        detail: formatMaintenanceRoom(r.room),
+        rejection_reason: r.rejection_reason,
+        manager_response: r.completion_notes ?? undefined,
+        visitors: undefined,
+        raw: r,
+        sortTime: dayjs(r.requested_at || Date.now()).valueOf(),
+      })),
     ],
-    [visitorRequests, violationReports, otherRequests]
+    [visitorRequests, violationReports, otherRequests, maintenanceRequests]
   );
 
   useEffect(() => {
@@ -207,6 +239,12 @@ const Requests: React.FC = () => {
     if (next) setSelectedReport(next);
   }, [allRequests, selectedReport?.id]);
 
+  useEffect(() => {
+    if (!selectedMaintenance?.id) return;
+    const next = allRequests.find((i) => i.id === selectedMaintenance.id && i.type === 'maintenance');
+    if (next) setSelectedMaintenance(next);
+  }, [allRequests, selectedMaintenance?.id]);
+
   const getStatusTag = (status: string) => {
     switch (status) {
       case 'pending':
@@ -215,8 +253,18 @@ const Requests: React.FC = () => {
         return <Tag color="success">Approved</Tag>;
       case 'in_progress':
         return <Tag color="warning">In Progress</Tag>;
+      case 'assigned':
+        return <Tag color="blue">Assigned</Tag>;
+      case 'waiting_parts':
+        return <Tag color="orange">Waiting parts</Tag>;
       case 'completed':
         return <Tag color="cyan">Completed</Tag>;
+      case 'done':
+        return <Tag color="success">Done</Tag>;
+      case 'need_rework':
+        return <Tag color="volcano">Need rework</Tag>;
+      case 'cannot_fix':
+        return <Tag color="default">Cannot fix</Tag>;
       case 'rejected':
         return <Tag color="error">Rejected</Tag>;
       case 'cancelled':
@@ -247,6 +295,8 @@ const Requests: React.FC = () => {
         return <ToolOutlined style={{ fontSize: '24px', color: '#52c41a' }} />;
       case 'report':
         return <FlagOutlined style={{ fontSize: '24px', color: '#fa541c' }} />;
+      case 'other':
+        return <FileSearchOutlined style={{ fontSize: '24px', color: '#722ed1' }} />;
       default:
         return <FileSearchOutlined />;
     }
@@ -293,6 +343,11 @@ const Requests: React.FC = () => {
   };
 
   const handleOtherCreated = () => {
+    handleCloseForm();
+    fetchMyRequests();
+  };
+
+  const handleMaintenanceCreated = () => {
     handleCloseForm();
     fetchMyRequests();
   };
@@ -452,6 +507,94 @@ const Requests: React.FC = () => {
                 <Text type="secondary">Review notes (manager):</Text>
                 <div className="mt-1 rounded border border-gray-200 bg-white p-3 text-sm whitespace-pre-wrap">
                   {r.review_notes}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (item.type === 'maintenance') {
+      const m = item.raw as StudentMaintenanceRequest;
+      const eq = m.equipment;
+      const eqLabel =
+        eq && eq.template
+          ? `${eq.template.equipment_name || 'Equipment'}${
+              eq.template.brand ? ` (${eq.template.brand})` : ''
+            } · ${eq.equipment_code || ''}`
+          : null;
+      return (
+        <div className="space-y-5">
+          <Button onClick={onBack}>← Back to list</Button>
+          {showTypeBadge && <Tag color="green">Maintenance</Tag>}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+            <div>
+              <Text type="secondary">Request code:</Text> <Text strong>{m.request_code}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Status:</Text> {getStatusTag(m.status)}
+            </div>
+            <div>
+              <Text type="secondary">Room:</Text> <Text>{formatMaintenanceRoom(m.room)}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Bed:</Text> <Text>{m.bed?.bed_number || '-'}</Text>
+            </div>
+            {eqLabel && (
+              <div>
+                <Text type="secondary">Equipment:</Text> <Text>{eqLabel}</Text>
+              </div>
+            )}
+            <div>
+              <Text type="secondary">Description:</Text>
+              <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[100px]">
+                {m.description || '-'}
+              </div>
+            </div>
+            {m.evidence_urls && m.evidence_urls.length > 0 && (
+              <div>
+                <Text type="secondary" className="block mb-1">
+                  Evidence links
+                </Text>
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  {m.evidence_urls.map((url, i) => (
+                    <li key={i}>
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        {url}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div>
+              <Text type="secondary">Submitted:</Text>{' '}
+              <Text>
+                {m.requested_at ? dayjs(m.requested_at).format('DD/MM/YYYY HH:mm') : '-'}
+              </Text>
+            </div>
+            {m.status === 'rejected' && m.rejection_reason && (
+              <div>
+                <Text type="secondary">Rejection reason:</Text>
+                <div className="mt-1 rounded border border-red-100 bg-red-50 p-3 text-sm text-red-800">
+                  {m.rejection_reason}
+                </div>
+              </div>
+            )}
+            {(m.technician_name || m.technician_phone) && (
+              <div>
+                <Text type="secondary">Technician:</Text>{' '}
+                <Text>
+                  {[m.technician_name, m.technician_phone].filter(Boolean).join(' · ') || '—'}
+                </Text>
+              </div>
+            )}
+            {m.completion_notes && (
+              <div>
+                <Text type="secondary">Completion notes:</Text>
+                <div className="mt-1 whitespace-pre-wrap rounded border border-blue-100 bg-blue-50 p-3 text-sm">
+                  {m.completion_notes}
                 </div>
               </div>
             )}
@@ -776,7 +919,7 @@ const Requests: React.FC = () => {
               activeKey={maintenanceInnerTab}
               onChange={(k) => {
                 const key = k as InnerListTabKey;
-                if (key === 'detail') return;
+                if (key === 'detail' && !selectedMaintenance) return;
                 setMaintenanceInnerTab(key);
               }}
               destroyInactiveTabPane={false}
@@ -786,22 +929,23 @@ const Requests: React.FC = () => {
                   label: 'My requests',
                   children: (
                     <div className="space-y-4">
-                      <Alert
-                        type="info"
-                        showIcon
-                        message="Maintenance requests are not available yet. Your tickets will appear here with View detail when this feature is enabled."
-                      />
-                      {renderRequestList(filteredRequestsByTab('maintenance'))}
+                      {renderRequestList(filteredRequestsByTab('maintenance'), {
+                        onViewDetail: (it) => {
+                          setSelectedMaintenance(it);
+                          setMaintenanceInnerTab('detail');
+                        },
+                      })}
                     </div>
                   ),
                 },
                 {
                   key: 'detail',
-                  label: 'Detail',
-                  disabled: true,
-                  children: (
-                    <Alert type="info" message="No maintenance requests to display yet." />
-                  ),
+                  label: selectedMaintenance ? `Detail · ${selectedMaintenance.subtitle}` : 'Detail',
+                  disabled: !selectedMaintenance,
+                  children: renderStudentRequestDetail(selectedMaintenance, () => {
+                    setMaintenanceInnerTab('list');
+                    setSelectedMaintenance(null);
+                  }),
                 },
               ]}
             />
@@ -1063,7 +1207,7 @@ const Requests: React.FC = () => {
           }
         >
           {selectedType === 'visitor' && <VisitorForm onSuccess={handleVisitorCreated} />}
-          {selectedType === 'maintenance' && <MaintenanceForm />}
+          {selectedType === 'maintenance' && <MaintenanceForm onSuccess={handleMaintenanceCreated} />}
           {selectedType === 'report' && <ReportForm onSuccess={handleReportCreated} />}
           {selectedType === 'other' && <OtherRequestForm onSuccess={handleOtherCreated} />}
         </Modal>
@@ -1239,55 +1383,152 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   );
 };
 
-// ─── Maintenance Request Form (placeholder — no API yet) ───
-const MaintenanceForm: React.FC = () => (
-  <Space direction="vertical" size="large" style={{ width: '100%' }}>
-    <div>
-      <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-        Issue Type <Text type="danger">*</Text>
-      </Text>
-      <Select
-        placeholder="Select issue type..."
-        style={{ width: '100%' }}
-        size="large"
-        options={[
-          { label: 'Air Conditioning', value: 'ac' },
-          { label: 'Plumbing', value: 'plumbing' },
-          { label: 'Electrical', value: 'electrical' },
-          { label: 'Furniture/Fixture', value: 'furniture' },
-          { label: 'Internet/WiFi', value: 'internet' },
-          { label: 'Other', value: 'other' },
-        ]}
+// ─── Maintenance Request Form (assigned room from active contract) ───
+const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+  const [roomEquipment, setRoomEquipment] = useState<RoomEquipment[]>([]);
+  const [loadingEq, setLoadingEq] = useState(true);
+  const [loadingContext, setLoadingContext] = useState(true);
+  const [context, setContext] = useState<MaintenanceContext | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingContext(true);
+      try {
+        const ctx = await getMyMaintenanceContext();
+        if (!cancelled) setContext(ctx);
+      } catch {
+        if (!cancelled) setContext(null);
+      } finally {
+        if (!cancelled) setLoadingContext(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingEq(true);
+      try {
+        const list = await getMyRoomEquipmentForMaintenance();
+        if (!cancelled) setRoomEquipment(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) setRoomEquipment([]);
+      } finally {
+        if (!cancelled) setLoadingEq(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const equipmentOptions = roomEquipment.map((eq) => {
+    const tpl = typeof eq.template === 'object' ? eq.template : null;
+    const name = tpl?.equipment_name || 'Equipment';
+    const brand = tpl?.brand ? ` (${tpl.brand})` : '';
+    return {
+      // Send equipment_code (like manager UI) and let BE resolve to RoomEquipment.
+      value: eq.equipment_code,
+      // Only show the equipment name (hide equipment_code).
+      label: `${name}${brand}`,
+    };
+  });
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setSubmitting(true);
+      await createMaintenanceRequest({
+        description: values.description,
+        equipment: values.equipment || undefined,
+        evidence_urls: values.evidence_urls?.length ? values.evidence_urls : undefined,
+      });
+      message.success('Maintenance request submitted');
+      form.resetFields();
+      onSuccess();
+    } catch (err: any) {
+      if (err?.errorFields) return;
+      if (err?.message) {
+        message.error(Array.isArray(err.message) ? err.message[0] : err.message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Form
+      form={form}
+      layout="vertical"
+      initialValues={{}}
+    >
+      <Alert
+        type="info"
+        showIcon
+        message="Phòng được gắn với hợp đồng đang hiệu lực của bạn. Chọn thiết bị trong danh sách nếu sự cố liên quan đến một món cụ thể (danh sách theo phòng của bạn)."
+        style={{ marginBottom: 16 }}
       />
-    </div>
-    <div>
-      <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-        Location <Text type="danger">*</Text>
-      </Text>
-      <Input placeholder="e.g., Room 205, Block A" size="large" />
-    </div>
-    <div>
-      <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-        Description <Text type="danger">*</Text>
-      </Text>
-      <TextArea placeholder="Describe the issue..." rows={4} size="large" />
-    </div>
-    <div>
-      <Text strong style={{ display: 'block', marginBottom: '8px' }}>
-        Upload Photos
-      </Text>
-      <Upload.Dragger multiple listType="picture" beforeUpload={() => false}>
-        <p className="ant-upload-drag-icon">
-          <UploadOutlined style={{ fontSize: '36px', color: '#52c41a' }} />
-        </p>
-        <Text>Click to upload or drag and drop</Text>
-      </Upload.Dragger>
-    </div>
-    <Button type="primary" size="large" disabled>
-      Coming Soon
-    </Button>
-  </Space>
-);
+      <div style={{ marginBottom: 16 }}>
+        {loadingContext ? (
+          <Alert type="info" showIcon message="Đang tải thông tin phòng/giường..." />
+        ) : (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+            <div>
+              <Text type="secondary">Student:</Text>{' '}
+              <Text strong>
+                {context?.student?.full_name || '-'}{' '}
+                {context?.student?.student_code ? `(${context?.student?.student_code})` : ''}
+              </Text>
+            </div>
+            <div>
+              <Text type="secondary">Room:</Text> <Text>{formatMaintenanceRoom(context?.room)}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Bed:</Text> <Text>{context?.bed?.bed_number || '-'}</Text>
+            </div>
+          </div>
+        )}
+      </div>
+      <Form.Item name="equipment" label="Affected equipment (optional)">
+        <Select
+          allowClear
+          loading={loadingEq}
+          placeholder={loadingEq ? 'Loading…' : 'General room issue — leave empty'}
+          options={equipmentOptions}
+          size="large"
+          showSearch
+          optionFilterProp="label"
+        />
+      </Form.Item>
+      <Form.Item
+        name="description"
+        label="Description"
+        rules={[
+          { required: true, message: 'Please describe the issue' },
+          { min: 10, message: 'At least 10 characters' },
+        ]}
+      >
+        <TextArea rows={4} placeholder="Mô tả chi tiết hư hại hoặc sự cố…" size="large" />
+      </Form.Item>
+      <Form.Item name="evidence_urls" label="Evidence image URLs (optional)">
+        <Select
+          mode="tags"
+          placeholder="Paste image URLs, press Enter"
+          tokenSeparators={[',']}
+        />
+      </Form.Item>
+      <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>
+        Submit request
+      </Button>
+    </Form>
+  );
+};
 
 // ─── Violation Report Form (placeholder — no API yet) ───
 const violationTypeOptions = [
