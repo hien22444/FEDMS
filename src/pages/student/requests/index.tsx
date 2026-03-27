@@ -582,12 +582,23 @@ const Requests: React.FC = () => {
                 </div>
               </div>
             )}
-            {(m.technician_name || m.technician_phone) && (
+            {(m.technician_name || m.technician_phone || m.scheduled_time) && (
               <div>
-                <Text type="secondary">Technician:</Text>{' '}
-                <Text>
-                  {[m.technician_name, m.technician_phone].filter(Boolean).join(' · ') || '—'}
+                <Text type="secondary" className="block mb-1">
+                  Technician information:
                 </Text>
+                <div className="rounded border border-gray-200 bg-white p-3 text-sm space-y-1.5">
+                  <div>
+                    <Text type="secondary">Name:</Text> <Text>{m.technician_name || '-'}</Text>
+                  </div>
+                  <div>
+                    <Text type="secondary">Phone:</Text> <Text>{m.technician_phone || '-'}</Text>
+                  </div>
+                  <div>
+                    <Text type="secondary">Scheduled time:</Text>{' '}
+                    <Text>{m.scheduled_time ? dayjs(m.scheduled_time).format('DD/MM/YYYY HH:mm') : '-'}</Text>
+                  </div>
+                </div>
               </div>
             )}
             {m.completion_notes && (

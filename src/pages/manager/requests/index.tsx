@@ -22,12 +22,7 @@ const maintenanceStatusColor: Record<string, string> = {
   approved: 'success',
   assigned: 'blue',
   in_progress: 'warning',
-  waiting_parts: 'orange',
   completed: 'cyan',
-  done: 'success',
-  need_rework: 'volcano',
-  cannot_fix: 'default',
-  cancelled: 'default',
   rejected: 'error',
 };
 
@@ -151,10 +146,27 @@ export default function ManagerRequestsPage() {
   };
 
   const getMaintenanceNextStatusDefault = (currentStatus?: string) => {
-    if (!currentStatus) return 'approved';
-    if (currentStatus === 'pending') return 'approved';
-    if (currentStatus === 'approved') return 'approved';
-    return currentStatus;
+    const optionsByStatus: Record<string, string[]> = {
+      pending: ['approved', 'rejected'],
+      approved: ['assigned'],
+      assigned: ['in_progress'],
+      in_progress: ['completed'],
+    };
+    const options = optionsByStatus[String(currentStatus || 'pending')] || [];
+    return options[0];
+  };
+
+  const getMaintenanceTransitionOptions = (currentStatus?: string) => {
+    const optionsByStatus: Record<string, Array<{ label: string; value: string }>> = {
+      pending: [
+        { label: 'Approved', value: 'approved' },
+        { label: 'Rejected', value: 'rejected' },
+      ],
+      approved: [{ label: 'Assigned', value: 'assigned' }],
+      assigned: [{ label: 'In progress', value: 'in_progress' }],
+      in_progress: [{ label: 'Completed', value: 'completed' }],
+    };
+    return optionsByStatus[String(currentStatus || 'pending')] || [];
   };
 
   const openMaintenanceDetail = (item: StudentMaintenanceRequest) => {
@@ -189,7 +201,11 @@ export default function ManagerRequestsPage() {
       setMaintenanceReviewLoading(true);
       const payload: any = { status: status as any };
       if (status === 'assigned') {
-        payload.technician_name = values.technician_name || undefined;
+        if (values.scheduled_time && dayjs(values.scheduled_time).isBefore(dayjs())) {
+          message.error('Scheduled time must be in the future');
+          return;
+        }
+        payload.technician_name = values.technician_name?.trim() || undefined;
         payload.technician_phone = values.technician_phone || undefined;
         payload.scheduled_time = values.scheduled_time
           ? values.scheduled_time.toISOString()
@@ -554,6 +570,12 @@ export default function ManagerRequestsPage() {
                 {maintenanceSelected.status}
               </Tag>
             </div>
+            {maintenanceSelected.scheduled_time && (
+              <div>
+                <Text type="secondary">Technician scheduled time:</Text>{' '}
+                <Text>{dayjs(maintenanceSelected.scheduled_time).format('DD/MM/YYYY HH:mm')}</Text>
+              </div>
+            )}
             {maintenanceSelected.status === 'rejected' && maintenanceSelected.rejection_reason && (
               <div>
                 <Text type="secondary">Rejection reason:</Text>
@@ -602,28 +624,76 @@ export default function ManagerRequestsPage() {
             >
               <Select
                 disabled={isMaintenanceTerminal}
-                options={[
-                  { label: 'Approved', value: 'approved' },
-                  { label: 'Assigned', value: 'assigned' },
-                  { label: 'In progress', value: 'in_progress' },
-                  { label: 'Completed', value: 'completed' },
-                  { label: 'Rejected', value: 'rejected' },
-                ]}
+                options={getMaintenanceTransitionOptions(maintenanceSelected.status)}
               />
             </Form.Item>
 
             {selectedMaintenanceStatus === 'assigned' && (
               <>
-                <Form.Item name="technician_name" label="Technician name">
-                  <Input disabled={isMaintenanceTerminal} placeholder="Optional" />
+                <Form.Item
+                  name="technician_name"
+                  label="Technician name"
+                  rules={[
+                    { required: true, message: 'Technician name is required' },
+                    {
+                      pattern: /^[\p{L}\s]+$/u,
+                      message: 'Technician name must contain letters and spaces only',
+                    },
+                  ]}
+                >
+                  <Input
+                    disabled={isMaintenanceTerminal}
+                    placeholder="Enter technician name"
+                    maxLength={100}
+                  />
                 </Form.Item>
 
-                <Form.Item name="technician_phone" label="Technician phone">
-                  <Input disabled={isMaintenanceTerminal} placeholder="Optional" />
+                <Form.Item
+                  name="technician_phone"
+                  label="Technician phone"
+                  normalize={(v) => String(v || '').replace(/\D/g, '')}
+                  rules={[
+                    { required: true, message: 'Technician phone is required' },
+                    { pattern: /^\d{10}$/, message: 'Phone must be exactly 10 digits' },
+                  ]}
+                >
+                  <Input
+                    disabled={isMaintenanceTerminal}
+                    placeholder="Enter 10-digit phone number"
+                    maxLength={10}
+                  />
                 </Form.Item>
 
-                <Form.Item name="scheduled_time" label="Scheduled time (optional)">
-                  <DatePicker disabled={isMaintenanceTerminal} showTime style={{ width: '100%' }} />
+                <Form.Item
+                  name="scheduled_time"
+                  label="Scheduled time"
+                  rules={[{ required: true, message: 'Scheduled time is required' }]}
+                >
+                  <DatePicker
+                    disabled={isMaintenanceTerminal}
+                    showTime={{ format: 'HH:mm' }}
+                    format="DD/MM/YYYY HH:mm"
+                    style={{ width: '100%' }}
+                    disabledDate={(current) =>
+                      !!current && current.endOf('day').isBefore(dayjs().startOf('day'))
+                    }
+                    disabledTime={(current) => {
+                      if (!current || !current.isSame(dayjs(), 'day')) {
+                        return {};
+                      }
+                      const now = dayjs();
+                      const disabledHours = Array.from({ length: now.hour() }, (_, i) => i);
+                      const disabledMinutes =
+                        current.hour() === now.hour()
+                          ? Array.from({ length: now.minute() + 1 }, (_, i) => i)
+                          : [];
+                      return {
+                        disabledHours: () => disabledHours,
+                        disabledMinutes: () => disabledMinutes,
+                        disabledSeconds: () => Array.from({ length: 60 }, (_, i) => i),
+                      };
+                    }}
+                  />
                 </Form.Item>
               </>
             )}
@@ -736,12 +806,7 @@ export default function ManagerRequestsPage() {
                   { label: 'Approved', value: 'approved' },
                   { label: 'Assigned', value: 'assigned' },
                   { label: 'In progress', value: 'in_progress' },
-                  { label: 'Waiting parts', value: 'waiting_parts' },
-                  { label: 'Need rework', value: 'need_rework' },
                   { label: 'Completed', value: 'completed' },
-                  { label: 'Done', value: 'done' },
-                  { label: 'Cannot fix', value: 'cannot_fix' },
-                  { label: 'Cancelled', value: 'cancelled' },
                   { label: 'Rejected', value: 'rejected' },
                 ]}
               />
