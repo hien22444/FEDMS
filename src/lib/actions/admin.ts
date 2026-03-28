@@ -516,6 +516,34 @@ export const updateRoomEquipment = async (id: string, body: { quantity?: number;
   return api.patch<RoomEquipment>(`equipment/room-equipments/${id}`, body);
 };
 
+export interface EquipmentHistoryItem {
+  id: string;
+  equipment: string;
+  action_type: 'added' | 'removed' | 'repaired' | 'replaced' | 'status_changed' | 'moved' | string;
+  old_status?: string;
+  new_status?: string;
+  old_room?: string | null;
+  new_room?: string | null;
+  notes?: string;
+  performed_by?: { id?: string; full_name?: string; staff_code?: string } | null;
+  performed_at: string;
+}
+
+export interface EquipmentHistoryResponse {
+  items: EquipmentHistoryItem[];
+  repairedCount: number;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export const fetchRoomEquipmentHistory = async (id: string, params?: { page?: number; limit?: number; action_type?: string }) => {
+  const query = new URLSearchParams();
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.limit) query.set('limit', String(params.limit));
+  if (params?.action_type) query.set('action_type', params.action_type);
+  const qs = query.toString();
+  return api.get<EquipmentHistoryResponse>(`equipment/room-equipments/${id}/history${qs ? `?${qs}` : ''}`);
+};
+
 // ===== Bed Management =====
 
 export type BedStatus = 'available' | 'occupied' | 'maintenance' | 'reserved';
