@@ -547,13 +547,15 @@ export default function ManagerRequestsPage() {
             <div>
               <Text type="secondary">Bed:</Text> <Text>{maintenanceSelected.bed?.bed_number || '-'}</Text>
             </div>
-            {maintenanceSelected.equipment?.equipment_code && (
+            {maintenanceSelected.equipment &&
+              typeof maintenanceSelected.equipment.template === 'object' &&
+              maintenanceSelected.equipment.template !== null && (
               <div>
                 <Text type="secondary">Affected equipment:</Text>{' '}
                 <Text>
-                  {maintenanceSelected.equipment.equipment_code}
-                  {maintenanceSelected.equipment.template?.equipment_name
-                    ? ` · ${maintenanceSelected.equipment.template.equipment_name}`
+                  {maintenanceSelected.equipment.template.equipment_name || 'Equipment'}
+                  {maintenanceSelected.equipment.template.brand
+                    ? ` (${maintenanceSelected.equipment.template.brand})`
                     : ''}
                 </Text>
               </div>

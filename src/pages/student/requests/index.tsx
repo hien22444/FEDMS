@@ -522,7 +522,7 @@ const Requests: React.FC = () => {
         eq && eq.template
           ? `${eq.template.equipment_name || 'Equipment'}${
               eq.template.brand ? ` (${eq.template.brand})` : ''
-            } · ${eq.equipment_code || ''}`
+            }`
           : null;
       return (
         <div className="space-y-5">
