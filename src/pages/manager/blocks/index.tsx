@@ -493,13 +493,14 @@ export default function ManagerBlocksPage() {
             name="block_code"
             rules={[
               { required: true, message: 'Please enter block code' },
-              { pattern: /^\d+$/, message: 'Block code must contain numbers only' },
+              { pattern: /^\d{3}$/, message: 'Block code must be exactly 3 digits' },
             ]}
           >
             <Input
               placeholder="e.g. 101"
+              maxLength={3}
               onChange={(e) => {
-                const numericOnly = e.target.value.replace(/\D/g, '');
+                const numericOnly = e.target.value.replace(/\D/g, '').slice(0, 3);
                 form.setFieldValue('block_code', numericOnly);
               }}
             />
@@ -515,8 +516,14 @@ export default function ManagerBlocksPage() {
               disabled
             />
           </Form.Item>
-          <Form.Item label="Total Rooms" name="total_rooms" rules={[{ type: 'number', min: 0 }]}>
-            <InputNumber style={{ width: '100%' }} min={0} />
+          <Form.Item
+            label="Total Rooms"
+            name="total_rooms"
+            rules={[
+              { type: 'number', min: 0, max: 10, message: 'Total rooms must be between 0 and 10' },
+            ]}
+          >
+            <InputNumber style={{ width: '100%' }} min={0} max={10} />
           </Form.Item>
           {!editingBlock && (
             <Form.Item
