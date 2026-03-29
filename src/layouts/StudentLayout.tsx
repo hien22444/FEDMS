@@ -224,37 +224,12 @@ const StudentLayout = () => {
   const handleMenuClick = ({ key }: { key: string }) => { navigate(key); };
   const handleLogout = () => { logout(); };
 
-  const [managerToken] = useState(() => localStorage.getItem('managerToken'));
-  const handleBackToManager = () => {
-    if (managerToken) {
-      localStorage.setItem('token', managerToken);
-      localStorage.removeItem('managerToken');
-    }
-    window.location.href = '/manager';
-  };
-
   const displayName = profile?.full_name || profile?.student_code || user?.email?.split('@')[0] || 'Student';
   const studentCode = profile?.student_code || '';
   const behavioralScore = profile?.behavioral_score ?? 'N/A';
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      {/* ── Manager impersonation banner ── */}
-      {managerToken && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100,
-          background: '#fef9c3', borderBottom: '1px solid #fde047',
-          padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span style={{ fontSize: 13, color: '#92400e' }}>
-            👁 Viewing as student: <strong>{displayName}</strong>
-            {profile?.student_code ? ` (${profile.student_code})` : ''}
-          </span>
-          <Button size="small" onClick={handleBackToManager}>
-            ← Back to Manager
-          </Button>
-        </div>
-      )}
       {/* ── Sidebar ── */}
       <Sider
         collapsible
@@ -266,7 +241,7 @@ const StudentLayout = () => {
           backgroundColor: '#ea580c',
           position: 'fixed',
           left: 0,
-          top: managerToken ? 41 : 0,
+          top: 0,
           bottom: 0,
           overflowY: 'hidden',
           overflowX: 'hidden',

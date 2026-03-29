@@ -19,12 +19,6 @@ export default function LoginAsStudentPage() {
     try {
       const res = await loginAsStudent(studentCode.trim());
 
-      // Save manager token so we can restore later
-      const managerToken = localStorage.getItem('token');
-      if (managerToken) {
-        localStorage.setItem('managerToken', managerToken);
-      }
-
       // Switch to student token
       localStorage.setItem('token', res.token);
 
