@@ -2,16 +2,18 @@ import { useState, useEffect } from 'react';
 import {
   Table,
   Tag,
-  Select,
   Input,
   Space,
   Card,
   Button,
   message,
+  Modal,
+  Form,
 } from 'antd';
-import { Search } from 'lucide-react';
+import { Search, Mail } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import { getAllBookings } from '@/lib/actions';
+import toast from 'react-hot-toast';
+import { getAllBookings, sendEmailToStudent, sendEmailToAllStudents } from '@/lib/actions';
 import type { BookingRequestItem } from '@/lib/actions';
 
 const statusConfig: Record<string, { color: string; label: string }> = {
@@ -21,9 +23,6 @@ const statusConfig: Record<string, { color: string; label: string }> = {
   expired: { color: 'error', label: 'Expired' },
 };
 
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
-
 const ManagerBookings = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<BookingRequestItem[]>([]);
@@ -32,17 +31,22 @@ const ManagerBookings = () => {
     limit: 10,
     total: 0,
   });
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
-  const [semesterFilter, setSemesterFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [emailModal, setEmailModal] = useState<{ open: boolean; bookingId: string; studentName: string } | null>(null);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailForm] = Form.useForm();
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastForm] = Form.useForm();
 
-  const fetchData = async (page = 1) => {
+  const fetchData = async (page = 1, overrides?: { search?: string }) => {
     setLoading(true);
+    const q = overrides !== undefined ? overrides.search : search;
     try {
       const res = await getAllBookings({
         page,
         limit: pagination.limit,
-        status: statusFilter,
-        semester: semesterFilter || undefined,
+        search: q || undefined,
       });
       setData(res.items);
       setPagination((prev) => ({
@@ -64,9 +68,38 @@ const ManagerBookings = () => {
   const handleSearch = () => fetchData(1);
 
   const handleReset = () => {
-    setStatusFilter(undefined);
-    setSemesterFilter('');
-    setTimeout(() => fetchData(1), 0);
+    setSearch('');
+    fetchData(1, { search: '' });
+  };
+
+  const handleBroadcast = async () => {
+    const values = await broadcastForm.validateFields();
+    setBroadcastSending(true);
+    try {
+      const res = await sendEmailToAllStudents({ subject: values.subject, body: values.body });
+      toast.success(`Email sent to ${res.count} students!`);
+      setBroadcastOpen(false);
+      broadcastForm.resetFields();
+    } catch {
+      toast.error('Failed to send broadcast email');
+    } finally {
+      setBroadcastSending(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    const values = await emailForm.validateFields();
+    setEmailSending(true);
+    try {
+      await sendEmailToStudent(emailModal!.bookingId, { subject: values.subject, body: values.body });
+      toast.success('Email sent successfully!');
+      setEmailModal(null);
+      emailForm.resetFields();
+    } catch {
+      toast.error('Failed to send email');
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   const columns: ColumnsType<BookingRequestItem> = [
@@ -83,32 +116,22 @@ const ManagerBookings = () => {
       ),
     },
     {
-      title: 'Room',
-      key: 'room',
-      width: 140,
-      render: (_, record) => (
-        <span className="font-mono text-sm">{record.room?.room_number || '—'}</span>
-      ),
-    },
-    {
-      title: 'Dorm / Block',
-      key: 'dorm_block',
+      title: 'Bed',
+      key: 'bed',
       width: 160,
       render: (_, record) => {
         const block = record.room?.block;
+        const dormCode = block?.dorm?.dorm_code || '';
+        const blockCode = block?.block_code || '';
+        const roomNumber = record.room?.room_number || '';
+        const bedNumber = record.bed?.bed_number || '';
+        if (!dormCode && !blockCode && !roomNumber && !bedNumber) return '—';
         return (
-          <span className="text-sm">
-            {block?.dorm?.dorm_name || '—'} / {block?.block_code || '—'}
+          <span className="font-mono text-sm">
+            {dormCode}{blockCode}-{roomNumber} Bed {bedNumber}
           </span>
         );
       },
-    },
-    {
-      title: 'Bed',
-      dataIndex: ['bed', 'bed_number'],
-      key: 'bed',
-      width: 80,
-      render: (val: string) => val || '—',
     },
     {
       title: 'Room Type',
@@ -122,26 +145,6 @@ const ManagerBookings = () => {
       key: 'semester',
       width: 120,
       render: (val: string) => val?.replace('-', ' - ') || '—',
-    },
-    {
-      title: 'Invoice',
-      key: 'invoice',
-      width: 160,
-      render: (_, record) => {
-        if (!record.invoice) return '—';
-        return (
-          <div>
-            <span className="text-sm">{formatCurrency(record.invoice.total_amount)}</span>
-            <br />
-            <Tag
-              color={record.invoice.payment_status === 'paid' ? 'success' : 'warning'}
-              style={{ marginTop: 2 }}
-            >
-              {record.invoice.payment_status}
-            </Tag>
-          </div>
-        );
-      },
     },
     {
       title: 'Status',
@@ -161,6 +164,33 @@ const ManagerBookings = () => {
       render: (val: string) =>
         val ? new Date(val).toLocaleString('vi-VN') : '—',
     },
+    {
+      title: 'Note',
+      dataIndex: 'note',
+      key: 'note',
+      width: 180,
+      render: (val: string) => val || '',
+    },
+    {
+      title: 'Email',
+      key: 'email',
+      width: 130,
+      render: (_, record: any) => (
+        <Button
+          size="small"
+          icon={<Mail className="w-3.5 h-3.5" />}
+          onClick={() =>
+            setEmailModal({
+              open: true,
+              bookingId: record.id,
+              studentName: record.student?.full_name || 'Student',
+            })
+          }
+        >
+          Send Email
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -171,24 +201,14 @@ const ManagerBookings = () => {
       </div>
 
       <Card>
-        <div className="flex flex-wrap gap-4">
-          <Select
-            placeholder="Status"
-            allowClear
-            value={statusFilter}
-            onChange={setStatusFilter}
-            style={{ width: 180 }}
-            options={Object.entries(statusConfig).map(([value, cfg]) => ({
-              value,
-              label: cfg.label,
-            }))}
-          />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-4">
           <Input
-            placeholder="Semester (e.g. Summer-2026)"
+            placeholder="Search by name, student code or semester..."
             prefix={<Search className="w-4 h-4 text-gray-400" />}
-            value={semesterFilter}
-            onChange={(e) => setSemesterFilter(e.target.value)}
-            style={{ width: 220 }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 320 }}
             onPressEnter={handleSearch}
           />
           <Space>
@@ -197,6 +217,14 @@ const ManagerBookings = () => {
             </Button>
             <Button onClick={handleReset}>Reset</Button>
           </Space>
+          </div>
+          <Button
+            type="primary"
+            icon={<Mail className="w-4 h-4" />}
+            onClick={() => setBroadcastOpen(true)}
+          >
+            Send Email to All Students
+          </Button>
         </div>
       </Card>
 
@@ -220,6 +248,59 @@ const ManagerBookings = () => {
           }}
         />
       </Card>
+      <Modal
+        title="Send Email to All Students"
+        open={broadcastOpen}
+        onOk={handleBroadcast}
+        onCancel={() => { setBroadcastOpen(false); broadcastForm.resetFields(); }}
+        okText="Send to All"
+        confirmLoading={broadcastSending}
+        destroyOnClose
+      >
+        <Form form={broadcastForm} layout="vertical" className="mt-4">
+          <Form.Item
+            name="subject"
+            label="Subject"
+            rules={[{ required: true, message: 'Please enter a subject' }]}
+          >
+            <Input placeholder="Email subject" />
+          </Form.Item>
+          <Form.Item
+            name="body"
+            label="Content"
+            rules={[{ required: true, message: 'Please enter content' }]}
+          >
+            <Input.TextArea rows={6} placeholder="Email content..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={`Send Email to ${emailModal?.studentName}`}
+        open={emailModal?.open ?? false}
+        onOk={handleSendEmail}
+        onCancel={() => { setEmailModal(null); emailForm.resetFields(); }}
+        okText="Send"
+        confirmLoading={emailSending}
+        destroyOnClose
+      >
+        <Form form={emailForm} layout="vertical" className="mt-4">
+          <Form.Item
+            name="subject"
+            label="Subject"
+            rules={[{ required: true, message: 'Please enter a subject' }]}
+          >
+            <Input placeholder="Email subject" />
+          </Form.Item>
+          <Form.Item
+            name="body"
+            label="Content"
+            rules={[{ required: true, message: 'Please enter content' }]}
+          >
+            <Input.TextArea rows={6} placeholder="Email content..." />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

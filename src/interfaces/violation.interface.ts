@@ -149,6 +149,12 @@ export namespace IViolation {
     penalties: Penalty[];
   }
 
+  /** GET /violations/my-penalties — same shape but student may be null if account has no student record */
+  export interface MyPenaltiesResponse {
+    student: StudentPenaltiesResponse['student'] | null;
+    penalties: Penalty[];
+  }
+
   export interface ViolationStatistics {
     totalReports: number;
     byStatus: {

@@ -67,6 +67,11 @@ export interface BookingInvoice {
 
 export interface BookingRequestItem {
   id: string;
+  student?: {
+    full_name: string;
+    student_code: string;
+    user?: { email: string };
+  };
   room: BookingRoom;
   bed?: { id: string; bed_number: string };
   invoice?: BookingInvoice;
@@ -232,12 +237,20 @@ export const getRoommates = async (bookingId: string) => {
   return api.get<RoommateItem[]>(`bookings/${bookingId}/roommates`);
 };
 
-export const getAllBookings = async (params?: { status?: string; semester?: string; page?: number; limit?: number }) => {
+export const getAllBookings = async (params?: { status?: string; search?: string; page?: number; limit?: number }) => {
   const query = new URLSearchParams();
   if (params?.status) query.set('status', params.status);
-  if (params?.semester) query.set('semester', params.semester);
+  if (params?.search) query.set('search', params.search);
   if (params?.page) query.set('page', params.page.toString());
   if (params?.limit) query.set('limit', params.limit.toString());
   const qs = query.toString();
   return api.get<BookingListResponse>(`bookings${qs ? `?${qs}` : ''}`);
+};
+
+export const sendEmailToStudent = async (bookingId: string, payload: { subject: string; body: string }) => {
+  return api.post<{ sent: boolean; to: string }>(`bookings/${bookingId}/send-email`, payload);
+};
+
+export const sendEmailToAllStudents = async (payload: { subject: string; body: string }) => {
+  return api.post<{ sent: boolean; count: number }>(`bookings/send-email-all`, payload);
 };
