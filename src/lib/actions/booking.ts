@@ -67,6 +67,11 @@ export interface BookingInvoice {
 
 export interface BookingRequestItem {
   id: string;
+  student?: {
+    full_name: string;
+    student_code: string;
+    user?: { email: string };
+  };
   room: BookingRoom;
   bed?: { id: string; bed_number: string };
   invoice?: BookingInvoice;
@@ -84,6 +89,7 @@ export interface BookingRequestItem {
   note?: string;
   expires_at?: string;
   requested_at: string;
+  checkout_date?: string | null;
 }
 
 export interface BookingListResponse {
@@ -175,12 +181,76 @@ export const cancelBookingRequest = async (id: string) => {
   return api.patch<BookingRequestItem>(`bookings/${id}/cancel`, {});
 };
 
-export const getAllBookings = async (params?: { status?: string; semester?: string; page?: number; limit?: number }) => {
+export const keepBed = async (): Promise<SubmitBookingResponse> => {
+  return api.post<SubmitBookingResponse>('bookings/keep-bed', {});
+};
+
+export interface CheckoutStudentInfo {
+  student: {
+    id: string;
+    full_name: string;
+    student_code: string;
+    gender: string;
+    student_type: string;
+    email?: string;
+  };
+  active_contract: {
+    id: string;
+    semester: string;
+    start_date: string;
+    end_date: string;
+    room_price: number;
+    status: string;
+    room: {
+      room_number: string;
+      room_type: string;
+      floor: number;
+      block?: { block_name: string; block_code: string; dorm?: { dorm_name: string; dorm_code: string } };
+    };
+    bed: { bed_number: string };
+  } | null;
+}
+
+export interface CheckoutResult {
+  message: string;
+  student_code: string;
+  full_name: string;
+  checkout_date: string;
+}
+
+export const searchStudentForCheckout = async (studentCode: string) => {
+  return api.get<CheckoutStudentInfo>(`bookings/checkout/search?student_code=${encodeURIComponent(studentCode)}`);
+};
+
+export const checkoutStudent = async (studentCode: string) => {
+  return api.post<CheckoutResult>('bookings/checkout', { student_code: studentCode });
+};
+
+export interface RoommateItem {
+  student_code: string;
+  full_name: string;
+  bed_number: string;
+  phone: string;
+}
+
+export const getRoommates = async (bookingId: string) => {
+  return api.get<RoommateItem[]>(`bookings/${bookingId}/roommates`);
+};
+
+export const getAllBookings = async (params?: { status?: string; search?: string; page?: number; limit?: number }) => {
   const query = new URLSearchParams();
   if (params?.status) query.set('status', params.status);
-  if (params?.semester) query.set('semester', params.semester);
+  if (params?.search) query.set('search', params.search);
   if (params?.page) query.set('page', params.page.toString());
   if (params?.limit) query.set('limit', params.limit.toString());
   const qs = query.toString();
   return api.get<BookingListResponse>(`bookings${qs ? `?${qs}` : ''}`);
+};
+
+export const sendEmailToStudent = async (bookingId: string, payload: { subject: string; body: string }) => {
+  return api.post<{ sent: boolean; to: string }>(`bookings/${bookingId}/send-email`, payload);
+};
+
+export const sendEmailToAllStudents = async (payload: { subject: string; body: string }) => {
+  return api.post<{ sent: boolean; count: number }>(`bookings/send-email-all`, payload);
 };

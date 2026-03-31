@@ -11,6 +11,7 @@ export const ROUTES = {
   CHECKOUT_REQUESTS: '/security/checkout-requests',
   VISITORS: '/security/visitors',
   SECURITY_REPORT_VIOLATION: '/security/report-violation',
+  SECURITY_REPORTS: '/security/reports',
   PROJECTS: '/projects',
   RENDER: '/render',
 
@@ -59,6 +60,7 @@ export const ROUTES = {
   MANAGER_NEWS: '/manager/news',
   MANAGER_CHAT: '/manager/chat',
   MANAGER_SETTINGS: '/manager/settings',
+  MANAGER_FACE_REGISTRATION: '/manager/face-registration',
 };
 
 export const SUB_ROUTES = {

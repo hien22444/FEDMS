@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -8,15 +9,27 @@ import {
   LogOut,
   Shield,
   AlertTriangle,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { cn } from '@/utils';
 import { useAuth } from '@/contexts';
+import { connectSocket } from '@/lib/socket';
 
 const SecurityLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+
+  // Connect socket so the security user joins the 'security_cameras' room
+  // and receives live face_detection_result events from the backend.
+  useEffect(() => {
+    const socket = connectSocket();
+    return () => {
+      // Socket is a singleton — don't disconnect on unmount,
+      // just let AuthContext handle it on logout.
+    };
+  }, []);
 
   const navItems = [
     { path: ROUTES.DASHBOARD, label: 'Overview', icon: LayoutDashboard },
@@ -24,6 +37,7 @@ const SecurityLayout = () => {
     { path: ROUTES.CHECKOUT_REQUESTS, label: 'Checkout Requests', icon: FileText },
     { path: ROUTES.VISITORS, label: 'Visitors', icon: Users },
     { path: ROUTES.SECURITY_REPORT_VIOLATION, label: 'Report Violation', icon: AlertTriangle },
+    { path: ROUTES.SECURITY_REPORTS, label: 'Reports', icon: FileSpreadsheet },
   ];
 
   const isActive = (path: string) => location.pathname === path;

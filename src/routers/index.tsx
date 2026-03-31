@@ -23,6 +23,7 @@ import CameraCheckinPage from '@/pages/security/camera-checkin';
 import CheckoutRequestsPage from '@/pages/security/checkout-requests';
 import VisitorsPage from '@/pages/security/visitors';
 import SecurityReportViolationPage from '@/pages/security/report-violation';
+import SecurityReportsPage from '@/pages/security/reports';
 
 // Manager pages
 import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/dashboard';
@@ -40,6 +41,10 @@ import ManagerBedsPage from '@/pages/manager/beds';
 import UpdateBedStatusPage from '@/pages/manager/beds/status';
 import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
+import ManagerRequestsPage from '@/pages/manager/requests';
+import FaceRegistrationPage from '@/pages/manager/face-registration';
+import ManagerCheckoutPage from '@/pages/manager/checkout';
+import ManagerDateConfigPage from '@/pages/manager/config';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -201,6 +206,10 @@ const router = createBrowserRouter([
                 path: 'report-violation',
                 element: <SecurityReportViolationPage />,
               },
+              {
+                path: 'reports',
+                element: <SecurityReportsPage />,
+              },
             ],
           },
         ],
@@ -303,8 +312,12 @@ const router = createBrowserRouter([
                 element: <ManagerBookingsPage />,
               },
               {
+                path: 'face-registration',
+                element: <FaceRegistrationPage />,
+              },
+              {
                 path: 'checkout',
-                element: <ComingSoon label="Checkout Management" />,
+                element: <ManagerCheckoutPage />,
               },
               {
                 path: 'login-student',
@@ -324,7 +337,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'requests',
-                element: <ComingSoon label="Request List" />,
+                element: <ManagerRequestsPage />,
               },
               {
                 path: 'electricity',
@@ -364,7 +377,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'config',
-                element: <ComingSoon label="Data Configuration" />,
+                element: <ManagerDateConfigPage />,
               },
               {
                 path: 'settings',

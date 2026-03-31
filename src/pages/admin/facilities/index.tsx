@@ -40,11 +40,13 @@ import {
   addRoomEquipment,
   updateRoomEquipment,
   deleteRoomEquipment,
+  fetchRoomEquipmentHistory,
   fetchRooms,
   type EquipmentCategory,
   type EquipmentTemplate,
   type RoomTypeEquipmentConfig,
   type RoomEquipment,
+  type EquipmentHistoryItem,
   type Room,
 } from '@/lib/actions/admin';
 
@@ -447,7 +449,7 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
             </Form.Item>
             <Form.Item label="Active" name="is_active" valuePropName="checked"><Switch /></Form.Item>
           </div>
-          <Form.Item label="Specifications" name="specifications"><Input.TextArea rows={2} placeholder="Technical specifications or notes" /></Form.Item>
+
         </Form>
       </Modal>
 
@@ -759,6 +761,11 @@ function RoomEquipmentTab() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyEquipment, setHistoryEquipment] = useState<RoomEquipment | null>(null);
+  const [historyItems, setHistoryItems] = useState<EquipmentHistoryItem[]>([]);
+  const [repairedCount, setRepairedCount] = useState<number>(0);
   // Add optional modal
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -1001,10 +1008,47 @@ function RoomEquipmentTab() {
     {
       title: 'Action',
       key: 'action',
-      width: 100,
+      width: 180,
       align: 'center',
       render: (_: any, record: RoomEquipment) => (
         <div className="flex gap-2">
+          <Button
+            size="small"
+            onClick={async () => {
+              setHistoryEquipment(record);
+              setHistoryOpen(true);
+              setHistoryLoading(true);
+              try {
+                const allItems: EquipmentHistoryItem[] = [];
+                let reqPage = 1;
+                const pageSize = 500;
+                let repairedTotal = 0;
+                let totalPages = 1;
+                do {
+                  const res = await fetchRoomEquipmentHistory(record.id, { page: reqPage, limit: pageSize });
+                  if (reqPage === 1) {
+                    repairedTotal = Number(res.repairedCount) || 0;
+                  }
+                  allItems.push(...(Array.isArray(res.items) ? res.items : []));
+                  totalPages = res.pagination?.totalPages ?? 1;
+                  reqPage += 1;
+                } while (reqPage <= totalPages);
+                setHistoryItems(allItems);
+                setRepairedCount(repairedTotal);
+              } catch (error: any) {
+                setHistoryItems([]);
+                setRepairedCount(0);
+                const errMsg = Array.isArray(error?.message)
+                  ? error.message.join(', ')
+                  : error?.message || 'Failed to load equipment history';
+                message.error(errMsg);
+              } finally {
+                setHistoryLoading(false);
+              }
+            }}
+          >
+            History
+          </Button>
           <Button size="small" onClick={() => handleEditEquipment(record)}>Edit</Button>
           <Button danger size="small" onClick={() => openDeleteModal(record)}>Delete</Button>
         </div>
@@ -1140,12 +1184,69 @@ function RoomEquipmentTab() {
             {deleting && (
               <div className="text-sm text-gray-600 mt-2">
                 <p><strong>Equipment:</strong> {typeof deleting.template === 'object' ? deleting.template.equipment_name : 'Unknown'}</p>
-                <p><strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{deleting.equipment_code}</span></p>
+                <p><strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{(() => { const n = typeof deleting.template === 'object' ? deleting.template.equipment_name : ''; return roomCode && n ? `${roomCode}-${n}` : (n || '-'); })()}</span></p>
               </div>
             )}
             <p className="text-xs text-gray-500 mt-2">This action cannot be undone.</p>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={historyOpen}
+        title={
+          <div className="space-y-1">
+            <div>Equipment repair history</div>
+            <div className="text-xs text-gray-500">
+              Repairs: <span className="font-semibold">{repairedCount}</span>
+              {historyEquipment && typeof historyEquipment.template === 'object'
+                ? ` · ${historyEquipment.template.equipment_name}`
+                : ''}
+            </div>
+          </div>
+        }
+        onCancel={() => {
+          setHistoryOpen(false);
+          setHistoryEquipment(null);
+          setHistoryItems([]);
+          setRepairedCount(0);
+        }}
+        footer={null}
+        destroyOnHidden
+        width={860}
+      >
+        <Table<EquipmentHistoryItem>
+          rowKey="id"
+          loading={historyLoading}
+          dataSource={historyItems}
+          pagination={false}
+          size="small"
+          columns={[
+            {
+              title: 'Action',
+              dataIndex: 'action_type',
+              width: 120,
+              render: (v: string) => <Tag className="capitalize">{v}</Tag>,
+            },
+            {
+              title: 'Performed at',
+              dataIndex: 'performed_at',
+              width: 170,
+              render: (v: string) => (v ? dayjs(v).format('DD/MM/YYYY HH:mm') : '-'),
+            },
+            {
+              title: 'Performed by',
+              dataIndex: 'performed_by',
+              width: 200,
+              render: (p: any) => (p?.full_name ? `${p.full_name}${p.staff_code ? ` (${p.staff_code})` : ''}` : '-'),
+            },
+            {
+              title: 'Notes',
+              dataIndex: 'notes',
+              render: (v: string) => v || '-',
+            },
+          ]}
+        />
       </Modal>
 
       <Modal
@@ -1169,7 +1270,7 @@ function RoomEquipmentTab() {
                 <strong>Equipment:</strong> {typeof editing.template === 'object' ? editing.template.equipment_name : 'Unknown'}
               </p>
               <p className="text-sm text-gray-600">
-                <strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{editing.equipment_code}</span>
+                <strong>Code:</strong> <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{(() => { const n = typeof editing.template === 'object' ? editing.template.equipment_name : ''; return roomCode && n ? `${roomCode}-${n}` : (n || '-'); })()}</span>
               </p>
             </div>
             <Form form={editForm} layout="vertical">

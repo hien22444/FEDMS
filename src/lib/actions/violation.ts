@@ -86,6 +86,12 @@ export const getStudentPenalties = async (studentCode: string) => {
   return res;
 };
 
+/** Student: CFD score summary + penalty deductions (own record only) */
+export const getMyPenalties = async () => {
+  const res = await api.get<IViolation.MyPenaltiesResponse>(`${API_PREFIX}/my-penalties`);
+  return res;
+};
+
 /**
  * Get violation statistics
  */
@@ -99,6 +105,7 @@ export const getViolationStatistics = async () => {
 const violationActions = {
   getViolationReports,
   getMyViolationReports,
+  getMyPenalties,
   getViolationReportById,
   createViolationReport,
   reviewViolationReport,
