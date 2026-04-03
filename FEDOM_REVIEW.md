@@ -1,5 +1,5 @@
 # FEDOM Frontend — Review & Documentation
-> Senior Code Review | Updated: 2026-03-05 (session 6)
+> Senior Code Review | Updated: 2026-04-03 (session 7)
 
 ---
 
@@ -39,7 +39,7 @@
 | `/student/news` | NewsPage | 🔲 Placeholder |
 | `/student/schedule` | SchedulePage | 🔲 Placeholder |
 | `/student/booking` | BookingPage | ✅ Kết nối API — cascading filter + payment |
-| `/student/utilities` | UtilitiesPage | 🔲 Placeholder |
+| `/student/utilities` | UtilitiesPage | ✅ Kết nối API — EW usage + invoices |
 | `/student/payment` | PaymentPage | 🔲 Placeholder |
 | `/student/requests` | RequestsPage | ✅ Kết nối API |
 | `/student/cfd-points` | CFDPage | 🔲 Placeholder |
@@ -50,7 +50,7 @@
 | `/student/notifications` | NotificationsPage | ✅ Kết nối API |
 | `/student/chat` | StudentChatPage | ✅ Kết nối API + Socket.io |
 
-**5/14 trang Student có nội dung thực (Dashboard, Booking, Requests, Notifications, Chat).**
+**6/14 trang Student có nội dung th��c (Dashboard, Booking, Requests, Utilities, Notifications, Chat).**
 
 ### 2.3 Security Routes — `role: 'security'` — Layout: `SecurityLayout`
 
@@ -1132,3 +1132,18 @@ Tất cả thay đổi là FE-only. API hiện có đã đủ.
 | `src/pages/student/booking/index.tsx` | UI redesign 2026-03-05 — layout khớp mockup: title h1, 4 dropdowns hàng ngang + slot count, bed cards emoji+badge+room, confirm modal 2-col form |
 | `src/pages/manager/bookings/index.tsx` | CREATE — read-only table |
 | `src/routers/index.tsx` | MODIFY — wire ManagerBookingsPage |
+
+---
+
+## 15. EW USAGE & INVOICE FIX LOG (2026-04-03)
+
+| File | Action | Mô tả |
+|------|--------|-------|
+| `src/pages/student/utilities/index.tsx` | FIX | Error handling: tách catch riêng cho EW usage và invoice API — 1 API fail không ẩn cả page |
+| `src/pages/student/utilities/index.tsx` | FIX | Unit hardcode: đổi `${v} kW` thành `${v} ${r.unit}` cho meter_left, meter_right, consumption, price_per_unit — hiển thị đúng m³ cho water |
+| `src/pages/manager/electricity/index.tsx` | FIX | Thêm `fetchData(page)` sau recalculate thành công — refresh bảng EW usage |
+| `src/lib/actions/ewUsage.ts` | UPDATE | Thêm `warnings` field vào `EWImportResult` interface |
+| `src/pages/manager/electricity/index.tsx` | UPDATE | Import result modal: thêm hiển thị warnings count (chỉ số giảm) + update type |
+| `src/lib/actions/ewUsage.ts` | REFACTOR | `resetMeter(id, meter_right)` gửi body thay vì empty. Xoá `resetAllMeters()` |
+| `src/pages/manager/electricity/index.tsx` | REFACTOR | Reset: đổi Popconfirm → Modal form (nhập chỉ số mới). Xoá nút "Reset công tơ (all)" |
+| `src/pages/manager/electricity/index.tsx` | FEATURE | Edit: bỏ date picker (chỉ sửa meter + term). Disable Edit/Reset cho record không phải mới nhất (useMemo latestIds per block+type) |

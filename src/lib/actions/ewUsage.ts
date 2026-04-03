@@ -34,15 +34,16 @@ export interface EWUsagePaginatedResponse {
 
 export interface EWImportResult {
   created: number;
-  updated: number;
+  duplicateInFile: number;
+  duplicateInDB: number;
   failed: number;
+  warnings: number;
   errors: { row: number; block: string; error: string }[];
 }
 
 export interface CreateEWUsageDto {
   block: string;
   type: 'electric' | 'water';
-  meter_left: number;
   meter_right?: number;
   date: string;
   term: string;
@@ -71,8 +72,8 @@ export const updateEWUsage = async (id: string, body: UpdateEWUsageDto): Promise
   return api.put<EWUsage>(`ew-usages/${id}`, body);
 };
 
-export const resetMeter = async (id: string): Promise<EWUsage> => {
-  return api.put<EWUsage>(`ew-usages/${id}/reset`, {});
+export const resetMeter = async (block: string, type: string, meter_right: number): Promise<EWUsage> => {
+  return api.put<EWUsage>('ew-usages/reset', { block, type, meter_right });
 };
 
 export const importEWUsages = async (file: File): Promise<EWImportResult> => {
@@ -103,8 +104,15 @@ export const exportEWUsages = async (params?: EWUsageFilter): Promise<void> => {
   URL.revokeObjectURL(url);
 };
 
-export const recalculateEWUsages = async (): Promise<{ message: string }> => {
-  return api.post<{ message: string }>('ew-usages/recalculate', {});
+export interface RecalculateResult {
+  invoicesCreated: number;
+  invoicesUpdated: number;
+  totalStudents: number;
+  message: string;
+}
+
+export const recalculateEWUsages = async (): Promise<RecalculateResult> => {
+  return api.post<RecalculateResult>('ew-usages/recalculate', {});
 };
 
 export interface MyEWRecord {
@@ -117,8 +125,8 @@ export interface MyEWRecord {
   unit: string;
   price_per_unit: number;
   occupied_beds: number;
-  total_amount: number;   // tổng tiền cả block
-  amount: number;         // tiền sinh viên phải trả (chia đều theo số bed)
+  total_amount: number;   // total amount for the entire block
+  amount: number;         // amount charged to the student after splitting by occupied beds
 }
 
 export interface MyEWUsageResponse {
