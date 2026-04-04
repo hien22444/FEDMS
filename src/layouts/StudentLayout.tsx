@@ -1,5 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Layout, Menu, Avatar, Space, Button, Badge, Input, Popover, Typography, notification, theme, ConfigProvider } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Layout,
+  Menu,
+  Avatar,
+  Space,
+  Button,
+  Badge,
+  Input,
+  Popover,
+  Typography,
+  notification,
+  theme,
+  ConfigProvider,
+  Drawer,
+} from 'antd';
 import {
   HomeOutlined,
   FileTextOutlined,
@@ -19,54 +33,53 @@ import {
   MessageOutlined,
   BellOutlined,
   SearchOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { getMyNotifications, markAllNotificationsRead, type INotification } from '@/lib/actions/notification';
-import { connectSocket } from '@/lib/socket';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/contexts';
+import { connectSocket } from '@/lib/socket';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
 const StudentLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [bellOpen, setBellOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
+  const { width } = useWindowSize();
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
 
-  // Get user data from AuthContext
   const { user, profile, logout } = useAuth();
 
   const refreshNotifications = () => {
     getMyNotifications()
-      .then((data) => { if (Array.isArray(data)) setNotifications(data); })
-      .catch(() => { });
+      .then((data) => {
+        if (Array.isArray(data)) setNotifications(data);
+      })
+      .catch(() => {});
   };
 
-  // Refetch on every page navigation so the bell count stays in sync after
-  // the student marks notifications as read on the notifications page.
   useEffect(() => {
     refreshNotifications();
   }, [location.pathname]);
 
-  // Refetch immediately when the notifications page signals a change
-  // (mark-as-read, mark-all-read, delete) so the bell count updates in real-time.
   useEffect(() => {
     window.addEventListener('student:notifications:changed', refreshNotifications);
     return () => window.removeEventListener('student:notifications:changed', refreshNotifications);
   }, []);
 
-  // ─── Real-time notification via personal socket room ──────
-  // Server emits 'new_notification' to user_${id} room when a new notification
-  // is created for this student (e.g. manager closes a conversation).
   useEffect(() => {
     const socket = connectSocket();
 
     const handleNewNotification = ({ title, message: msg }: { title: string; message: string }) => {
-      // Prepend a synthetic unread notification so the bell count increments immediately
       const synthetic: INotification = {
         id: `tmp_${Date.now()}`,
         user: '',
@@ -77,9 +90,8 @@ const StudentLayout = () => {
         is_read: false,
         created_at: new Date().toISOString(),
       };
-      setNotifications((prev) => [synthetic, ...prev]);
 
-      // Show toast in the top-right corner
+      setNotifications((prev) => [synthetic, ...prev]);
       notification.info({
         message: title,
         description: msg,
@@ -89,24 +101,36 @@ const StudentLayout = () => {
     };
 
     socket.on('new_notification', handleNewNotification);
-    return () => { socket.off('new_notification', handleNewNotification); };
+    return () => {
+      socket.off('new_notification', handleNewNotification);
+    };
   }, []);
+
+  useEffect(() => {
+    if (isDesktop) {
+      setMobileSidebarOpen(false);
+      return;
+    }
+    setCollapsed(false);
+  }, [isDesktop]);
+
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  // Mark all as read when the bell popover opens
   const handleBellOpenChange = (open: boolean) => {
     setBellOpen(open);
     if (open && unreadCount > 0) {
       markAllNotificationsRead()
         .then(() => setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true }))))
-        .catch(() => { });
+        .catch(() => {});
     }
   };
 
-  // ─── Notification popover content ─────────────────────────
   const notifPopoverContent = (
-    <div style={{ width: 320 }}>
+    <div style={{ width: isTablet ? 320 : 280, maxWidth: 'calc(100vw - 32px)' }}>
       <div
         style={{
           fontWeight: 600,
@@ -135,7 +159,10 @@ const StudentLayout = () => {
           notifications.slice(0, 6).map((n) => (
             <div
               key={n.id}
-              onClick={() => { navigate(ROUTES.STUDENT_NOTIFICATIONS); setBellOpen(false); }}
+              onClick={() => {
+                navigate(ROUTES.STUDENT_NOTIFICATIONS);
+                setBellOpen(false);
+              }}
               style={{
                 padding: '8px 4px',
                 borderBottom: '1px solid #f5f5f5',
@@ -143,13 +170,7 @@ const StudentLayout = () => {
                 cursor: 'pointer',
               }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 6,
-                }}
-              >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                 {!n.is_read && (
                   <span
                     style={{
@@ -191,210 +212,264 @@ const StudentLayout = () => {
           }}
           onClick={() => navigate(ROUTES.STUDENT_NOTIFICATIONS)}
         >
-          View all notifications →
+          View all notifications
         </button>
       </div>
     </div>
   );
 
-  // ─── Sidebar menu items ────────────────────────────────────
-  const menuItems = [
-    { key: ROUTES.STUDENT_DASHBOARD, icon: <HomeOutlined />, label: 'Home' },
-    { key: ROUTES.STUDENT_NEWS, icon: <FileTextOutlined />, label: 'News' },
-    { key: ROUTES.STUDENT_SCHEDULE, icon: <CalendarOutlined />, label: 'Room History' },
-    { key: ROUTES.STUDENT_BOOKING, icon: <KeyOutlined />, label: 'Booking' },
-    { key: ROUTES.STUDENT_UTILITIES, icon: <ThunderboltOutlined />, label: 'Utilities' },
-    { key: ROUTES.STUDENT_PAYMENT, icon: <CreditCardOutlined />, label: 'Payment' },
-    { key: ROUTES.STUDENT_REQUESTS, icon: <FileSearchOutlined />, label: 'Requests' },
-    { key: ROUTES.STUDENT_CFD_POINTS, icon: <AlertOutlined />, label: 'CFD Points' },
-    { key: ROUTES.STUDENT_DORM_RULES, icon: <TeamOutlined />, label: 'Dorm Rules' },
-    { key: ROUTES.STUDENT_FAQ, icon: <QuestionCircleOutlined />, label: 'FAQ' },
-    { key: ROUTES.STUDENT_CHAT, icon: <MessageOutlined />, label: 'Support Chat' },
-    {
-      key: ROUTES.STUDENT_NOTIFICATIONS,
-      icon: (
-        <Badge count={unreadCount} size="small" offset={[6, 0]}>
-          <BellOutlined />
-        </Badge>
-      ),
-      label: 'Notifications',
-    },
-  ];
+  const menuItems = useMemo(
+    () => [
+      { key: ROUTES.STUDENT_DASHBOARD, icon: <HomeOutlined />, label: 'Home' },
+      { key: ROUTES.STUDENT_NEWS, icon: <FileTextOutlined />, label: 'News' },
+      { key: ROUTES.STUDENT_SCHEDULE, icon: <CalendarOutlined />, label: 'Room History' },
+      { key: ROUTES.STUDENT_BOOKING, icon: <KeyOutlined />, label: 'Booking' },
+      { key: ROUTES.STUDENT_UTILITIES, icon: <ThunderboltOutlined />, label: 'Utilities' },
+      { key: ROUTES.STUDENT_PAYMENT, icon: <CreditCardOutlined />, label: 'Payment' },
+      { key: ROUTES.STUDENT_REQUESTS, icon: <FileSearchOutlined />, label: 'Requests' },
+      { key: ROUTES.STUDENT_CFD_POINTS, icon: <AlertOutlined />, label: 'CFD Points' },
+      { key: ROUTES.STUDENT_DORM_RULES, icon: <TeamOutlined />, label: 'Dorm Rules' },
+      { key: ROUTES.STUDENT_FAQ, icon: <QuestionCircleOutlined />, label: 'FAQ' },
+      { key: ROUTES.STUDENT_CHAT, icon: <MessageOutlined />, label: 'Support Chat' },
+      {
+        key: ROUTES.STUDENT_NOTIFICATIONS,
+        icon: (
+          <Badge count={unreadCount} size="small" offset={[6, 0]}>
+            <BellOutlined />
+          </Badge>
+        ),
+        label: 'Notifications',
+      },
+    ],
+    [unreadCount]
+  );
 
-  const handleMenuClick = ({ key }: { key: string }) => { navigate(key); };
-  const handleLogout = () => { logout(); };
+  const handleMenuClick = ({ key }: { key: string }) => {
+    navigate(key);
+  };
+
+  const handleLogout = () => {
+    setMobileSidebarOpen(false);
+    logout();
+  };
 
   const displayName = profile?.full_name || profile?.student_code || user?.email?.split('@')[0] || 'Student';
   const studentCode = profile?.student_code || '';
   const behavioralScore = profile?.behavioral_score ?? 'N/A';
+  const sidebarWidth = collapsed ? 80 : 240;
 
-  return (
-    <Layout style={{ minHeight: '100vh' }}>
-      {/* ── Sidebar ── */}
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        trigger={null}
-        width={240}
+  const sidebarContent = (mobile = false) => (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ea580c' }}>
+      <div
         style={{
-          backgroundColor: '#ea580c',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          overflowY: 'hidden',
-          overflowX: 'hidden',
+          padding: '16px',
           display: 'flex',
-          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid #c2410c',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          {/* Logo / brand */}
-          <div
-            style={{
-              padding: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid #c2410c',
-            }}
-          >
-            {!collapsed ? (
-              <Space>
-                <div
-                  style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px',
-                    padding: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
-                </div>
-                <div>
-                  <div style={{ color: 'white', fontWeight: 'bold' }}>DOM</div>
-                  <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>FPT Dormitory</div>
-                </div>
-              </Space>
-            ) : (
-              <div style={{ width: '100%', textAlign: 'center' }}>
-                <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
-              </div>
-            )}
-            <Button
-              type="text"
-              icon={
-                collapsed
-                  ? <MenuUnfoldOutlined style={{ color: 'white' }} />
-                  : <MenuFoldOutlined style={{ color: 'white' }} />
-              }
-              onClick={() => setCollapsed(!collapsed)}
-              style={{ color: 'white' }}
-            />
-          </div>
-
-          {/* Student profile */}
-          <div style={{ padding: '16px', borderBottom: '1px solid #c2410c' }}>
-            <Space size="middle">
-              <Avatar
-                size={collapsed ? 32 : 40}
-                src={profile?.avatar_url}
-                icon={!profile?.avatar_url && <UserOutlined />}
-                style={{
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                }}
-              />
-              {!collapsed && (
-                <div>
-                  <div style={{ color: 'white', fontWeight: 600, fontSize: '12px' }}>{displayName}</div>
-                  <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '11px' }}>
-                    {studentCode && `${studentCode} • `}CFD: {behavioralScore}
-                  </div>
-                </div>
-              )}
-            </Space>
-          </div>
-
-          {/* Menu */}
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-            <ConfigProvider
-              theme={{
-                components: {
-                  Menu: {
-                    darkItemBg: 'transparent',
-                    darkSubMenuItemBg: 'transparent',
-                    darkItemSelectedBg: '#ffffff',
-                    darkItemSelectedColor: '#ea580c',
-                    darkItemColor: 'rgba(255, 255, 255, 0.95)',
-                    darkItemHoverBg: 'rgba(255, 255, 255, 0.1)',
-                    darkItemHoverColor: '#ffffff',
-                  },
-                },
+        {!collapsed || mobile ? (
+          <Space>
+            <div
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '8px',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <Menu
-                mode="inline"
-                selectedKeys={[location.pathname]}
-                onClick={handleMenuClick}
-                style={{ backgroundColor: 'transparent', border: 'none', marginTop: '16px' }}
-                theme="dark"
-                items={menuItems}
-              />
-            </ConfigProvider>
+              <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
+            </div>
+            <div>
+              <div style={{ color: 'white', fontWeight: 'bold' }}>DOM</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>FPT Dormitory</div>
+            </div>
+          </Space>
+        ) : (
+          <div style={{ width: '100%', textAlign: 'center' }}>
+            <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
           </div>
+        )}
 
-          {/* Logout */}
-          <div
+        {mobile ? (
+          <Button
+            type="text"
+            icon={<CloseOutlined style={{ color: 'white' }} />}
+            onClick={() => setMobileSidebarOpen(false)}
+            style={{ color: 'white' }}
+          />
+        ) : (
+          <Button
+            type="text"
+            icon={
+              collapsed ? (
+                <MenuUnfoldOutlined style={{ color: 'white' }} />
+              ) : (
+                <MenuFoldOutlined style={{ color: 'white' }} />
+              )
+            }
+            onClick={() => setCollapsed((prev) => !prev)}
+            style={{ color: 'white' }}
+          />
+        )}
+      </div>
+
+      <div style={{ padding: '16px', borderBottom: '1px solid #c2410c' }}>
+        <Space size="middle">
+          <Avatar
+            size={collapsed && !mobile ? 32 : 40}
+            src={profile?.avatar_url}
+            icon={!profile?.avatar_url && <UserOutlined />}
             style={{
-              flexShrink: 0,
-              padding: '16px',
-              borderTop: '1px solid #c2410c',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
             }}
-          >
-            <Button
-              type="text"
-              icon={<LogoutOutlined />}
-              onClick={handleLogout}
-              block
-              style={{ color: 'rgba(255, 255, 255, 0.8)', textAlign: collapsed ? 'center' : 'left' }}
-            >
-              {!collapsed && 'Logout'}
-            </Button>
-          </div>
-        </div>
-      </Sider>
+          />
+          {(!collapsed || mobile) && (
+            <div>
+              <div style={{ color: 'white', fontWeight: 600, fontSize: '12px' }}>{displayName}</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '11px' }}>
+                {studentCode && `${studentCode} - `}CFD: {behavioralScore}
+              </div>
+            </div>
+          )}
+        </Space>
+      </div>
 
-      {/* ── Main area ── */}
-      <Layout style={{ marginLeft: collapsed ? 80 : 240, transition: 'all 0.2s' }}>
-        {/* Persistent top header */}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <ConfigProvider
+          theme={{
+            components: {
+              Menu: {
+                darkItemBg: 'transparent',
+                darkSubMenuItemBg: 'transparent',
+                darkItemSelectedBg: '#ffffff',
+                darkItemSelectedColor: '#ea580c',
+                darkItemColor: 'rgba(255, 255, 255, 0.95)',
+                darkItemHoverBg: 'rgba(255, 255, 255, 0.1)',
+                darkItemHoverColor: '#ffffff',
+              },
+            },
+          }}
+        >
+          <Menu
+            mode="inline"
+            selectedKeys={[location.pathname]}
+            onClick={handleMenuClick}
+            style={{ backgroundColor: 'transparent', border: 'none', marginTop: '16px' }}
+            theme="dark"
+            inlineCollapsed={!mobile && collapsed}
+            items={menuItems}
+          />
+        </ConfigProvider>
+      </div>
+
+      <div style={{ flexShrink: 0, padding: '16px', borderTop: '1px solid #c2410c' }}>
+        <Button
+          type="text"
+          icon={<LogoutOutlined />}
+          onClick={handleLogout}
+          block
+          style={{ color: 'rgba(255, 255, 255, 0.8)', textAlign: collapsed && !mobile ? 'center' : 'left' }}
+        >
+          {collapsed && !mobile ? null : 'Logout'}
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <Layout style={{ minHeight: '100vh', background: token.colorBgLayout }}>
+      {isDesktop && (
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          trigger={null}
+          width={240}
+          collapsedWidth={80}
+          style={{
+            backgroundColor: '#ea580c',
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            overflowY: 'hidden',
+            overflowX: 'hidden',
+          }}
+        >
+          {sidebarContent(false)}
+        </Sider>
+      )}
+
+      {!isDesktop && (
+        <Drawer
+          placement="left"
+          open={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+          closable={false}
+          width={288}
+          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0, background: '#ea580c' } }}
+        >
+          {sidebarContent(true)}
+        </Drawer>
+      )}
+
+      <Layout
+        style={{
+          marginLeft: isDesktop ? sidebarWidth : 0,
+          transition: 'all 0.2s',
+          minWidth: 0,
+          background: token.colorBgLayout,
+        }}
+      >
         <div
           style={{
             backgroundColor: token.colorBgContainer,
             borderBottom: `1px solid ${token.colorBorder}`,
-            padding: '0 32px',
-            height: 64,
+            padding: isTablet ? '0 24px' : '0 16px',
+            minHeight: 64,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             position: 'sticky',
             top: 0,
             zIndex: 10,
+            gap: 12,
           }}
         >
-          <Title level={3} style={{ margin: 0 }}>
-            Student <span style={{ color: token.colorPrimary }}>Board</span>
-          </Title>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+            {!isDesktop && (
+              <Button
+                type="text"
+                icon={<MenuUnfoldOutlined style={{ fontSize: 18 }} />}
+                onClick={() => setMobileSidebarOpen(true)}
+              />
+            )}
+            <div style={{ minWidth: 0 }}>
+              <Title level={isTablet ? 3 : 4} style={{ margin: 0 }}>
+                Student <span style={{ color: token.colorPrimary }}>Board</span>
+              </Title>
+              {!isTablet && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Dormitory services and updates
+                </Text>
+              )}
+            </div>
+          </div>
 
-          <Space size="middle">
-            <Input
-              placeholder="Search..."
-              prefix={<SearchOutlined />}
-              style={{ width: 250 }}
-            />
+          <Space size={isTablet ? 'middle' : 'small'}>
+            {isTablet && (
+              <Input
+                placeholder="Search..."
+                prefix={<SearchOutlined />}
+                style={{ width: width >= 1280 ? 250 : 180 }}
+              />
+            )}
 
             <Popover
               content={notifPopoverContent}
@@ -405,31 +480,28 @@ const StudentLayout = () => {
               onOpenChange={handleBellOpenChange}
             >
               <Badge count={unreadCount} size="small">
-                <Button
-                  type="text"
-                  icon={<BellOutlined style={{ fontSize: '20px' }} />}
-                  size="large"
-                />
+                <Button type="text" icon={<BellOutlined style={{ fontSize: '20px' }} />} size="large" />
               </Badge>
             </Popover>
 
-            <div
-              style={{
-                borderLeft: `1px solid ${token.colorBorder}`,
-                paddingLeft: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <EnvironmentOutlined style={{ color: token.colorPrimary, fontSize: '18px' }} />
-              <Text strong>Da Nang</Text>
-            </div>
+            {isTablet && (
+              <div
+                style={{
+                  borderLeft: `1px solid ${token.colorBorder}`,
+                  paddingLeft: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <EnvironmentOutlined style={{ color: token.colorPrimary, fontSize: '18px' }} />
+                <Text strong>Da Nang</Text>
+              </div>
+            )}
           </Space>
         </div>
 
-        {/* Page content */}
-        <Content>
+        <Content style={{ minWidth: 0 }}>
           <Outlet />
         </Content>
       </Layout>

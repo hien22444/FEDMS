@@ -27,7 +27,14 @@ import {
   RiDownloadLine,
   RiArrowDownSLine,
   RiArrowUpSLine,
+  RiCloseLine,
 } from 'react-icons/ri';
+
+type ManagerSidebarProps = {
+  isDesktop?: boolean;
+  mobileOpen?: boolean;
+  onClose?: () => void;
+};
 
 const iconMap: Record<string, React.ReactNode> = {
   dashboard: <RiDashboardLine size={18} />,
@@ -55,7 +62,11 @@ const iconMap: Record<string, React.ReactNode> = {
   gear: <RiSettings3Line size={18} />,
 };
 
-export default function ManagerSidebar() {
+export default function ManagerSidebar({
+  isDesktop = false,
+  mobileOpen = false,
+  onClose,
+}: ManagerSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
@@ -70,8 +81,19 @@ export default function ManagerSidebar() {
   const isActive = (path: string) =>
     path === '/manager' ? location.pathname === '/manager' : location.pathname.startsWith(path);
 
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    if (!isDesktop) onClose?.();
+  };
+
   return (
-    <aside className="w-[280px] bg-orange-600 text-white flex flex-col fixed left-0 top-0 h-screen z-20">
+    <aside
+      className={[
+        'fixed left-0 top-0 z-40 h-screen w-[280px] bg-orange-600 text-white flex flex-col transition-transform duration-300 ease-out',
+        isDesktop || mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        'lg:translate-x-0',
+      ].join(' ')}
+    >
       {/* Brand */}
       <div className="h-16 px-5 flex items-center gap-3 border-b border-orange-700 shrink-0">
         <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center font-bold text-base">
@@ -81,6 +103,15 @@ export default function ManagerSidebar() {
           <div className="font-semibold text-base">FPT Dormitory</div>
           <div className="text-xs text-white/70">Manager Panel</div>
         </div>
+        {!isDesktop && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white lg:hidden"
+          >
+            <RiCloseLine size={18} />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -129,7 +160,7 @@ export default function ManagerSidebar() {
                                 <li key={child.key}>
                                   <button
                                     type="button"
-                                    onClick={() => navigate(child.path)}
+                                    onClick={() => handleNavigate(child.path)}
                                     className={[
                                       'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors',
                                       childActive
@@ -148,7 +179,7 @@ export default function ManagerSidebar() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => navigate(item.path)}
+                        onClick={() => handleNavigate(item.path)}
                         className={[
                           'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors',
                           active
@@ -174,7 +205,10 @@ export default function ManagerSidebar() {
       <div className="p-4 border-t border-orange-700 shrink-0">
         <button
           type="button"
-          onClick={() => logout()}
+          onClick={() => {
+            logout();
+            if (!isDesktop) onClose?.();
+          }}
           className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:bg-white/10 transition-colors"
         >
           <RiLogoutBoxLine size={18} />

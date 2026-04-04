@@ -14,9 +14,14 @@ import {
   type Dorm,
   type Room,
 } from '@/lib/actions/admin';
+import { useWindowSize } from '@/hooks/useWindowSize';
+
+type GenderType = Exclude<Block['gender_type'], undefined>;
 
 export default function AdminBlocksPage() {
   const { modal: appModal } = App.useApp();
+  const { width } = useWindowSize();
+  const isTablet = width >= 768;
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [dorms, setDorms] = useState<Dorm[]>([]);
   const [loadingBlocks, setLoadingBlocks] = useState(false);
@@ -28,7 +33,7 @@ export default function AdminBlocksPage() {
 
   // Status & Gender quick-change
   const [confirmStatusTarget, setConfirmStatusTarget] = useState<{ block: Block; newIsActive: boolean } | null>(null);
-  const [confirmGenderTarget, setConfirmGenderTarget] = useState<{ block: Block; newGender: string } | null>(null);
+  const [confirmGenderTarget, setConfirmGenderTarget] = useState<{ block: Block; newGender: GenderType } | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [updatingGenderId, setUpdatingGenderId] = useState<string | null>(null);
 
@@ -383,12 +388,12 @@ export default function AdminBlocksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Block Management</h1>
           <p className="text-sm text-gray-500 mt-1">Manage blocks within dormitory buildings.</p>
         </div>
-        <Button type="primary" onClick={openCreateModal}>
+        <Button type="primary" onClick={openCreateModal} block={!isTablet}>
           Add Block
         </Button>
       </div>
@@ -403,7 +408,7 @@ export default function AdminBlocksPage() {
           <Select
             allowClear
             placeholder="Filter by dorm"
-            style={{ minWidth: 200 }}
+            style={{ minWidth: isTablet ? 200 : '100%', width: isTablet ? undefined : '100%' }}
             value={filterDormId}
             onChange={(v) => setFilterDormId(v)}
             options={dorms.map((dorm) => ({ label: dorm.dorm_name, value: dorm.id }))}
@@ -411,7 +416,7 @@ export default function AdminBlocksPage() {
           <Select
             allowClear
             placeholder="Filter by gender"
-            style={{ minWidth: 150 }}
+            style={{ minWidth: isTablet ? 150 : '100%', width: isTablet ? undefined : '100%' }}
             value={filterGender}
             onChange={(v) => setFilterGender(v)}
             options={[
@@ -421,7 +426,7 @@ export default function AdminBlocksPage() {
           />
           <Input
             placeholder="Search by block name/code"
-            style={{ minWidth: 200 }}
+            style={{ minWidth: isTablet ? 200 : '100%', width: isTablet ? undefined : '100%' }}
             value={filterSearch}
             onChange={(e) => setFilterSearch(e.target.value)}
             onPressEnter={handleApplyFilter}
@@ -429,7 +434,7 @@ export default function AdminBlocksPage() {
           <Select
             allowClear
             placeholder="Filter by status"
-            style={{ minWidth: 150 }}
+            style={{ minWidth: isTablet ? 150 : '100%', width: isTablet ? undefined : '100%' }}
             value={filterStatus}
             onChange={(v) => setFilterStatus(v)}
             options={[
@@ -437,11 +442,11 @@ export default function AdminBlocksPage() {
               { label: 'Maintenance', value: 'inactive' },
             ]}
           />
-          <Space>
-            <Button type="primary" onClick={handleApplyFilter}>
+          <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+            <Button type="primary" onClick={handleApplyFilter} block={!isTablet}>
               Apply
             </Button>
-            <Button onClick={handleResetFilter}>Reset</Button>
+            <Button onClick={handleResetFilter} block={!isTablet}>Reset</Button>
           </Space>
         </div>
 
@@ -465,7 +470,7 @@ export default function AdminBlocksPage() {
         okText="Save"
         cancelText="Cancel"
         destroyOnClose
-        width={600}
+        width={isTablet ? 600 : 'calc(100vw - 24px)'}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -647,7 +652,7 @@ export default function AdminBlocksPage() {
         title={detailsBlock ? `${detailsBlock.block_name} — Rooms` : 'Rooms'}
         open={!!detailsBlock}
         onClose={() => setDetailsBlock(null)}
-        width={640}
+        width={isTablet ? 640 : '100%'}
       >
         <Table<Room>
           rowKey="id"

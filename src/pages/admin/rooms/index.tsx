@@ -32,6 +32,7 @@ import {
   type RoomType,
   type Bed,
 } from '@/lib/actions/admin';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 const fallbackRoomTypeOptions: { label: string; value: RoomType }[] = [
   { label: '2 Person', value: '2_person' },
@@ -61,6 +62,8 @@ const statusColorMap: Record<RoomStatus, string> = {
 
 export default function AdminRoomsPage() {
   const { modal } = App.useApp();
+  const { width } = useWindowSize();
+  const isTablet = width >= 768;
   const [rooms, setRooms] = useState<Room[]>([]);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [dorms, setDorms] = useState<Dorm[]>([]);
@@ -540,12 +543,12 @@ export default function AdminRoomsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Room Management</h1>
           <p className="text-sm text-gray-500 mt-1">Manage rooms within blocks.</p>
         </div>
-        <Button type="primary" onClick={openCreateModal}>
+        <Button type="primary" onClick={openCreateModal} block={!isTablet}>
           Add Room
         </Button>
       </div>
@@ -559,7 +562,7 @@ export default function AdminRoomsPage() {
         <div className="mb-4 flex flex-wrap gap-3 items-center">
           <Input
             placeholder="Search by block or room name (e.g. A101 or A101-2)"
-            style={{ minWidth: 240 }}
+            style={{ minWidth: isTablet ? 240 : '100%', width: isTablet ? undefined : '100%' }}
             value={filterSearch}
             onChange={(e) => setFilterSearch(e.target.value)}
             onPressEnter={loadRooms}
@@ -567,7 +570,7 @@ export default function AdminRoomsPage() {
           <Select
             allowClear
             placeholder="Filter by room type"
-            style={{ minWidth: 160 }}
+            style={{ minWidth: isTablet ? 160 : '100%', width: isTablet ? undefined : '100%' }}
             value={filterRoomType}
             onChange={(v) => setFilterRoomType(v)}
             options={roomTypeOptions}
@@ -575,7 +578,7 @@ export default function AdminRoomsPage() {
           <Select
             allowClear
             placeholder="Filter by student type"
-            style={{ minWidth: 180 }}
+            style={{ minWidth: isTablet ? 180 : '100%', width: isTablet ? undefined : '100%' }}
             value={filterStudentType}
             onChange={(v) => setFilterStudentType(v)}
             options={[
@@ -586,16 +589,17 @@ export default function AdminRoomsPage() {
           <Select
             allowClear
             placeholder="Filter by status"
-            style={{ minWidth: 150 }}
+            style={{ minWidth: isTablet ? 150 : '100%', width: isTablet ? undefined : '100%' }}
             value={filterStatus}
             onChange={(v) => setFilterStatus(v)}
             options={roomStatusOptions}
           />
-          <Space>
-            <Button type="primary" onClick={loadRooms}>
+          <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+            <Button type="primary" onClick={loadRooms} block={!isTablet}>
               Apply
             </Button>
             <Button
+              block={!isTablet}
               onClick={() => {
                 setFilterSearch('');
                 setFilterRoomType(undefined);
@@ -629,7 +633,7 @@ export default function AdminRoomsPage() {
         okText="Save"
         cancelText="Cancel"
         destroyOnClose
-        width={700}
+        width={isTablet ? 700 : 'calc(100vw - 24px)'}
       >
         <Form form={form} layout="vertical">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -797,7 +801,7 @@ export default function AdminRoomsPage() {
         title="Select Block"
         onCancel={() => setBlockPickerOpen(false)}
         footer={null}
-        width={800}
+        width={isTablet ? 800 : 'calc(100vw - 24px)'}
         destroyOnClose
         zIndex={1010}
       >
@@ -938,7 +942,7 @@ export default function AdminRoomsPage() {
         })() : 'Beds'}
         open={!!detailsRoom}
         onClose={() => setDetailsRoom(null)}
-        width={480}
+        width={isTablet ? 480 : '100%'}
       >
         <Table<Bed>
           rowKey="id"

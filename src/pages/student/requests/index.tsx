@@ -50,6 +50,7 @@ import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
 import violationActions from '@/lib/actions/violation';
 const { getMyViolationReports, createViolationReport } = violationActions;
 import dayjs from 'dayjs';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -105,6 +106,8 @@ type UnifiedListItem = {
 
 const Requests: React.FC = () => {
   const { token } = theme.useToken();
+  const { width } = useWindowSize();
+  const isTablet = width >= 768;
   const [selectedType, setSelectedType] = useState<RequestType>(null);
   const [activeTab, setActiveTab] = useState<RequestTabKey>('all');
   const [showForm, setShowForm] = useState(false);
@@ -788,9 +791,13 @@ const Requests: React.FC = () => {
                 )}
               </div>
 
-              <Space direction="vertical" size="small" style={{ flexShrink: 0 }}>
+              <Space
+                direction={isTablet ? 'vertical' : 'horizontal'}
+                size="small"
+                style={{ flexShrink: 0, width: isTablet ? 'auto' : '100%' }}
+              >
                 {onViewDetail && (
-                  <Button type="primary" size="small" onClick={() => onViewDetail(req)}>
+                  <Button type="primary" size="small" onClick={() => onViewDetail(req)} block={!isTablet}>
                     View detail
                   </Button>
                 )}
@@ -800,6 +807,7 @@ const Requests: React.FC = () => {
                     size="small"
                     icon={<CloseOutlined />}
                     onClick={() => handleCancel(req.id)}
+                    block={!isTablet}
                   >
                     Cancel
                   </Button>
@@ -872,7 +880,7 @@ const Requests: React.FC = () => {
       children: (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button type="primary" onClick={() => handleNewRequest('visitor')}>
+            <Button type="primary" onClick={() => handleNewRequest('visitor')} block={!isTablet}>
               New Visitor Request
             </Button>
           </div>
@@ -921,7 +929,7 @@ const Requests: React.FC = () => {
       children: (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button type="primary" onClick={() => handleNewRequest('maintenance')}>
+            <Button type="primary" onClick={() => handleNewRequest('maintenance')} block={!isTablet}>
               New Maintenance Request
             </Button>
           </div>
@@ -974,7 +982,7 @@ const Requests: React.FC = () => {
       children: (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button type="primary" onClick={() => handleNewRequest('report')}>
+            <Button type="primary" onClick={() => handleNewRequest('report')} block={!isTablet}>
               New Violation Report
             </Button>
           </div>
@@ -1023,7 +1031,7 @@ const Requests: React.FC = () => {
       children: (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button type="primary" onClick={() => handleNewRequest('other')}>
+            <Button type="primary" onClick={() => handleNewRequest('other')} block={!isTablet}>
               New Other Request
             </Button>
           </div>
@@ -1095,6 +1103,7 @@ const Requests: React.FC = () => {
                                 setSelectedOther(r);
                                 setOtherSubTab('detail');
                               }}
+                              block={!isTablet}
                             >
                               View detail
                             </Button>
@@ -1184,9 +1193,9 @@ const Requests: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '32px', background: token.colorBgLayout }}>
+    <div style={{ padding: isTablet ? '32px' : '16px', background: token.colorBgLayout }}>
       <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm sm:p-6">
           <div className="mb-4">
             <Title level={4} style={{ margin: 0 }}>
               My Requests
@@ -1205,7 +1214,7 @@ const Requests: React.FC = () => {
           open={showForm}
           onCancel={handleCloseForm}
           footer={null}
-          width={720}
+          width={isTablet ? 720 : 'calc(100vw - 24px)'}
           destroyOnClose
           title={
             <Space>
@@ -1264,7 +1273,7 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   return (
     <Form form={form} layout="vertical" initialValues={{ visitors: [{}] }}>
       <Alert
-        message="Khung giờ tiếp khách: 07:00 – 17:00 hằng ngày. Người thân có thể đến và về bất kỳ lúc nào trong khung giờ này."
+        message="Visiting hours are 07:00 - 17:00 every day. Guests may arrive and leave at any time within this window."
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -1482,12 +1491,12 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
       <Alert
         type="info"
         showIcon
-        message="Phòng được gắn với hợp đồng đang hiệu lực của bạn. Chọn thiết bị trong danh sách nếu sự cố liên quan đến một món cụ thể (danh sách theo phòng của bạn)."
+        message="The room is linked to your active contract. Choose an item from the list if the issue relates to a specific piece of equipment assigned to your room."
         style={{ marginBottom: 16 }}
       />
       <div style={{ marginBottom: 16 }}>
         {loadingContext ? (
-          <Alert type="info" showIcon message="Đang tải thông tin phòng/giường..." />
+          <Alert type="info" showIcon message="Loading room and bed information..." />
         ) : (
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
             <div>
@@ -1525,7 +1534,7 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
           { min: 10, message: 'At least 10 characters' },
         ]}
       >
-        <TextArea rows={4} placeholder="Mô tả chi tiết hư hại hoặc sự cố…" size="large" />
+        <TextArea rows={4} placeholder="Describe the damage or issue in detail..." size="large" />
       </Form.Item>
       <Form.Item name="evidence_urls" label="Evidence image URLs (optional)">
         <Select
