@@ -44,7 +44,14 @@ const Utilities = () => {
 
     const fetchInvoices = getMyInvoices()
       .then((data) => {
-        setInvoices(data.filter((inv) => inv.invoice_code.startsWith('EW-')));
+        const ewInvoices = data.filter((inv) => inv.invoice_code.startsWith('EW-'));
+        const uniqueByMonth = new Map<string, StudentInvoice>();
+        ewInvoices.forEach((invoice) => {
+          if (!uniqueByMonth.has(invoice.invoice_month)) {
+            uniqueByMonth.set(invoice.invoice_month, invoice);
+          }
+        });
+        setInvoices(Array.from(uniqueByMonth.values()));
       })
       .catch(() => {});
 
@@ -56,6 +63,16 @@ const Utilities = () => {
 
   const usageColumns = [
     { title: 'Term', dataIndex: 'term', key: 'term' },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+      render: (value: string) => (
+        <Tag color={value === 'electric' ? 'orange' : 'blue'}>
+          {value === 'electric' ? 'Electric' : 'Water'}
+        </Tag>
+      ),
+    },
     {
       title: 'Recorded Date',
       dataIndex: 'date',
@@ -87,10 +104,10 @@ const Utilities = () => {
       render: (value: number, record: MyEWRecord) => `${value.toLocaleString('en-US')} VND/${record.unit}`,
     },
     {
-      title: 'Occupied Beds',
+      title: 'Students',
       dataIndex: 'occupied_beds',
       key: 'occupied_beds',
-      render: (value: number) => `${value} beds`,
+      render: (value: number) => value,
     },
     {
       title: 'Your Share',
@@ -175,7 +192,7 @@ const Utilities = () => {
         </div>
 
         {noRoom ? (
-          <Card>
+          <Card style={{ marginBottom: 24 }}>
             <Empty description="You have not been assigned a room yet or there is no utility data." />
           </Card>
         ) : (
@@ -205,7 +222,7 @@ const Utilities = () => {
                 <div style={{ flex: 1 }}>
                   <Text type="secondary">Latest Term</Text>
                   <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>
-                    {latest ? `${latest.consumption} kW` : '-'}
+                    {latest ? `${latest.consumption} ${latest.unit}` : '-'}
                   </div>
                   <Text type="secondary" style={{ fontSize: 13 }}>{latest?.term}</Text>
                 </div>
@@ -221,38 +238,38 @@ const Utilities = () => {
               </div>
             </Card>
 
-            <Card title="Electricity Usage by Term" style={{ marginBottom: 24 }}>
+            <Card title="Utility Usage by Term" style={{ marginBottom: 24 }}>
               <Table
                 rowKey="id"
                 columns={usageColumns}
                 dataSource={records}
                 pagination={false}
                 size="middle"
-                scroll={{ x: 980 }}
-                locale={{ emptyText: 'No electricity usage data yet' }}
-              />
-            </Card>
-
-            <Card
-              title={
-                <span>
-                  <FileTextOutlined style={{ marginRight: 8 }} />
-                  Utility Invoices
-                </span>
-              }
-            >
-              <Table
-                rowKey="id"
-                columns={invoiceColumns}
-                dataSource={invoices}
-                pagination={false}
-                size="middle"
-                scroll={{ x: 920 }}
-                locale={{ emptyText: 'No invoices yet' }}
+                scroll={{ x: 1100 }}
+                locale={{ emptyText: 'No utility usage data yet' }}
               />
             </Card>
           </>
         )}
+
+        <Card
+          title={
+            <span>
+              <FileTextOutlined style={{ marginRight: 8 }} />
+              Utility Invoices
+            </span>
+          }
+        >
+          <Table
+            rowKey="id"
+            columns={invoiceColumns}
+            dataSource={invoices}
+            pagination={false}
+            size="middle"
+            scroll={{ x: 920 }}
+            locale={{ emptyText: 'No invoices yet' }}
+          />
+        </Card>
       </div>
     </div>
   );

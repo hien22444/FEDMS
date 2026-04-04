@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Table, Button, Select, Input, Modal, Form, DatePicker, InputNumber,
   Space, Typography, Card, Upload, message, Popconfirm, Tag, Descriptions,
@@ -11,6 +11,7 @@ import {
   getEWUsages, createEWUsage, updateEWUsage, resetMeter,
   importEWUsages, exportEWUsages, recalculateEWUsages,
   type EWUsage, type EWUsageFilter, type CreateEWUsageDto, type UpdateEWUsageDto,
+  type EWImportResult, type RecalculateResult,
 } from '@/lib/actions/ewUsage';
 import { fetchBlocks, type Block } from '@/lib/actions';
 import { useWindowSize } from '@/hooks/useWindowSize';
@@ -50,10 +51,10 @@ export default function ElectricityPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [importFile, setImportFile] = useState<UploadFile | null>(null);
-  const [importResult, setImportResult] = useState<null | { created: number; duplicateInFile: number; duplicateInDB: number; failed: number; warnings: number; errors: { row: number; block: string; error: string }[] }>(null);
+  const [importResult, setImportResult] = useState<EWImportResult | null>(null);
 
   const [recalcLoading, setRecalcLoading] = useState(false);
-  const [recalcResult, setRecalcResult] = useState<null | { invoicesCreated: number; invoicesUpdated: number; totalStudents: number; message: string }>(null);
+  const [recalcResult, setRecalcResult] = useState<RecalculateResult | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<EWUsage | null>(null);
@@ -84,7 +85,7 @@ export default function ElectricityPage() {
     }
   }, [blockName, filterType, filterMonth, filterYear, page]);
 
-  useEffect(() => { fetchData(1); setPage(1); }, []);
+  useEffect(() => { fetchData(1); setPage(1); }, [fetchData]);
 
   useEffect(() => {
     fetchBlocks()
@@ -133,6 +134,9 @@ export default function ElectricityPage() {
     try {
       const result = await importEWUsages(importFile.originFileObj as File);
       setImportResult(result);
+      if (result.billing) {
+        message.success('Import completed and utility invoices were synchronized');
+      }
       fetchData(1);
     } catch {
       message.error('Import failed');
@@ -213,19 +217,6 @@ export default function ElectricityPage() {
     }
   };
 
-  // Only the latest record for each block + type can be edited or reset
-  const latestIds = useMemo(() => {
-    const map = new Map<string, { id: string; date: string }>();
-    for (const r of data) {
-      const key = `${r.block}_${r.type}`;
-      const cur = map.get(key);
-      if (!cur || new Date(r.date) > new Date(cur.date)) {
-        map.set(key, { id: r.id, date: r.date });
-      }
-    }
-    return new Set(Array.from(map.values()).map((v) => v.id));
-  }, [data]);
-
   // ── Table columns ────────────────────────────────────────────────
   const columns = [
     {
@@ -288,7 +279,7 @@ export default function ElectricityPage() {
       key: 'edit',
       width: 80,
       render: (r: EWUsage) => (
-        <Button size="small" type="link" onClick={() => openEdit(r)} disabled={!latestIds.has(r.id)}>Edit</Button>
+        <Button size="small" type="link" onClick={() => openEdit(r)} disabled={!r.is_latest_editable}>Edit</Button>
       ),
     },
   ];
@@ -421,7 +412,9 @@ export default function ElectricityPage() {
             <p style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
               Excel file format: <b>Dorm | Block | Type (E/W) | Date | Meter | Term</b>
               <br />
-              <span style={{ color: '#999' }}>Type: E = Electric, W = Water. Meter: current reading (≥ 0).</span>
+              <span style={{ color: '#999' }}>
+                Type: E = Electric, W = Water. Meter: current reading (&gt;= 0). Invoices are recalculated automatically after a successful import.
+              </span>
             </p>
             <Upload
               accept=".xlsx,.xls"
@@ -439,6 +432,16 @@ export default function ElectricityPage() {
             <p>Already exists in database: <b>{importResult.duplicateInDB}</b></p>
             {importResult.warnings > 0 && <p>Meter decrease warnings: <b>{importResult.warnings}</b></p>}
             <p>Other errors: <b>{importResult.failed}</b></p>
+            {importResult.billing && (
+              <div style={{ marginBottom: 12, padding: 12, borderRadius: 6, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+                <p style={{ marginBottom: 4 }}>
+                  Invoices synced: <b>{importResult.billing.invoicesCreated}</b> new, <b>{importResult.billing.invoicesUpdated}</b> updated
+                </p>
+                <p style={{ marginBottom: 0 }}>
+                  Cancelled: <b>{importResult.billing.invoicesCancelled ?? 0}</b>, Students affected: <b>{importResult.billing.totalStudents}</b>
+                </p>
+              </div>
+            )}
             {importResult.errors.length > 0 && (
               <div style={{ maxHeight: 200, overflowY: 'auto', fontSize: 12, background: '#fff1f0', padding: 8, borderRadius: 4 }}>
                 {importResult.errors.map((e, i) => (
@@ -544,6 +547,7 @@ export default function ElectricityPage() {
           <Descriptions column={1} bordered size="small" style={{ marginTop: 12 }}>
             <Descriptions.Item label="New invoices">{recalcResult.invoicesCreated}</Descriptions.Item>
             <Descriptions.Item label="Updated invoices">{recalcResult.invoicesUpdated}</Descriptions.Item>
+            <Descriptions.Item label="Cancelled invoices">{recalcResult.invoicesCancelled ?? 0}</Descriptions.Item>
             <Descriptions.Item label="Students">{recalcResult.totalStudents}</Descriptions.Item>
             <Descriptions.Item label="Message">{recalcResult.message}</Descriptions.Item>
           </Descriptions>

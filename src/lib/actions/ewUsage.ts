@@ -14,6 +14,7 @@ export interface EWUsage {
   unit: string;
   createdAt: string;
   updatedAt: string;
+  is_latest_editable?: boolean;
 }
 
 export interface EWUsageFilter {
@@ -39,6 +40,7 @@ export interface EWImportResult {
   failed: number;
   warnings: number;
   errors: { row: number; block: string; error: string }[];
+  billing?: RecalculateResult | null;
 }
 
 export interface CreateEWUsageDto {
@@ -107,6 +109,7 @@ export const exportEWUsages = async (params?: EWUsageFilter): Promise<void> => {
 export interface RecalculateResult {
   invoicesCreated: number;
   invoicesUpdated: number;
+  invoicesCancelled?: number;
   totalStudents: number;
   message: string;
 }
@@ -119,6 +122,7 @@ export interface MyEWRecord {
   id: string;
   term: string;
   date: string;
+  type: 'electric' | 'water';
   meter_left: number;
   meter_right: number;
   consumption: number;
