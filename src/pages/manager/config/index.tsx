@@ -38,11 +38,30 @@ const getWindowStatus = (start: string | null, end: string | null) => {
   return { label: 'Open', color: 'success' as const };
 };
 
+const SEMESTER_ORDER: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
+
 const SEMESTER_OPTIONS = [
   { value: 'Spring', label: '1 - Spring' },
   { value: 'Summer', label: '2 - Summer' },
   { value: 'Fall',   label: '3 - Fall' },
 ];
+
+/** Returns the semester name + year + numeric rank for today */
+const getCurrentSemester = () => {
+  const now = dayjs();
+  const year = now.year();
+  const mmdd = now.format('MM-DD');
+  let name: 'Spring' | 'Summer' | 'Fall';
+  if (mmdd < '05-01') name = 'Spring';
+  else if (mmdd < '09-01') name = 'Summer';
+  else name = 'Fall';
+  return { name, year, rank: year * 10 + SEMESTER_ORDER[name] };
+};
+
+const semRank = (name: string | null, year: number | null) => {
+  if (!name || !year || !SEMESTER_ORDER[name]) return 0;
+  return year * 10 + SEMESTER_ORDER[name];
+};
 
 const SectionLabel: React.FC<{ text: string }> = ({ text }) => (
   <Text style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13, color: '#374151' }}>
@@ -172,15 +191,26 @@ const DateConfigPage: React.FC = () => {
               size="large"
               style={{ width: '100%' }}
               placeholder="Select semester"
-              options={SEMESTER_OPTIONS}
+              options={SEMESTER_OPTIONS.map((opt) => {
+                const cur = getCurrentSemester();
+                const rank = semRank(opt.value, targetYear ?? cur.year);
+                return { ...opt, disabled: rank < cur.rank };
+              })}
             />
           </div>
           <div style={{ flex: 1 }}>
             <SectionLabel text="Year" />
             <InputNumber
               value={targetYear}
-              onChange={(val) => setTargetYear(val)}
-              min={2020}
+              onChange={(val) => {
+                setTargetYear(val);
+                // If the newly chosen year makes the current semester invalid, clear it
+                const cur = getCurrentSemester();
+                if (targetSemester && val !== null && semRank(targetSemester, val) < cur.rank) {
+                  setTargetSemester(null);
+                }
+              }}
+              min={getCurrentSemester().year}
               max={2100}
               size="large"
               style={{ width: '100%' }}
