@@ -7,11 +7,10 @@ import { useAuth } from '@/contexts';
 
 const { Title, Text } = Typography;
 
-// Parse "Spring-2026" → { semester: 1, year: 2026 }
-const parseSemester = (sem: string): { semester: number; year: number } => {
+// Parse "Spring-2026" → { semesterName: 'Spring', year: 2026 }
+const parseSemester = (sem: string): { semesterName: string; year: number } => {
   const [name, year] = sem.split('-');
-  const map: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
-  return { semester: map[name] ?? 0, year: parseInt(year, 10) };
+  return { semesterName: name ?? '', year: parseInt(year, 10) };
 };
 
 // Show date only when checkout has actually happened (end_date passed), else blank
@@ -150,8 +149,8 @@ const Schedule: React.FC = () => {
       title: 'Semester',
       key: 'semester',
       render: (_: unknown, record: BookingRequestItem) => {
-        const { semester } = parseSemester(record.semester ?? '');
-        return <Tag color="blue">{semester || '—'}</Tag>;
+        const { semesterName } = parseSemester(record.semester ?? '');
+        return <Tag color="blue">{semesterName || '—'}</Tag>;
       },
     },
     {

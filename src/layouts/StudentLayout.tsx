@@ -18,7 +18,6 @@ import {
   UserOutlined,
   MessageOutlined,
   BellOutlined,
-  SearchOutlined,
 } from '@ant-design/icons';
 import { getMyNotifications, markAllNotificationsRead, type INotification } from '@/lib/actions/notification';
 import { connectSocket } from '@/lib/socket';
@@ -390,12 +389,6 @@ const StudentLayout = () => {
           </Title>
 
           <Space size="middle">
-            <Input
-              placeholder="Search..."
-              prefix={<SearchOutlined />}
-              style={{ width: 250 }}
-            />
-
             <Popover
               content={notifPopoverContent}
               trigger="click"
