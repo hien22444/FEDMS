@@ -7,6 +7,7 @@ import {
   reviewMaintenanceRequest,
   type StudentMaintenanceRequest,
 } from '@/lib/actions/maintenanceRequest';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Title, Text } = Typography;
 
@@ -30,6 +31,8 @@ type TabKey = 'list' | 'detail';
 
 export default function ManagerRequestsPage() {
   const { message } = App.useApp();
+  const { width } = useWindowSize();
+  const isTablet = width >= 768;
   const [items, setItems] = useState<OtherRequestItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -298,6 +301,7 @@ export default function ManagerRequestsPage() {
           loading={loading}
           dataSource={items}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: 980 }}
           columns={[
             {
               title: 'Request Code',
@@ -453,6 +457,7 @@ export default function ManagerRequestsPage() {
           loading={maintenanceLoading}
           dataSource={maintenanceItems}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: 1100 }}
           columns={[
             {
               title: 'Request Code',
@@ -755,11 +760,11 @@ export default function ManagerRequestsPage() {
             </Title>
             <Text type="secondary">Review student Other Requests and update status.</Text>
           </div>
-          <Space>
+          <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
             <Select
               value={statusFilter}
               onChange={setStatusFilter}
-              style={{ width: 180 }}
+              style={{ width: isTablet ? 180 : '100%' }}
               options={[
                 { label: 'All statuses', value: 'all' },
                 { label: 'Pending', value: 'pending' },
@@ -768,7 +773,7 @@ export default function ManagerRequestsPage() {
                 { label: 'Rejected', value: 'rejected' },
               ]}
             />
-            <Button onClick={loadData}>Refresh</Button>
+            <Button onClick={loadData} block={!isTablet}>Refresh</Button>
           </Space>
         </div>
       )}
@@ -797,11 +802,11 @@ export default function ManagerRequestsPage() {
               </Title>
               <Text type="secondary">Review student maintenance requests and update status.</Text>
             </div>
-            <Space>
+            <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
               <Select
                 value={maintenanceStatusFilter}
                 onChange={setMaintenanceStatusFilter}
-                style={{ width: 220 }}
+                style={{ width: isTablet ? 220 : '100%' }}
                 options={[
                   { label: 'All statuses', value: 'all' },
                   { label: 'Pending', value: 'pending' },
@@ -812,7 +817,7 @@ export default function ManagerRequestsPage() {
                   { label: 'Rejected', value: 'rejected' },
                 ]}
               />
-              <Button onClick={loadMaintenanceData}>Refresh</Button>
+              <Button onClick={loadMaintenanceData} block={!isTablet}>Refresh</Button>
             </Space>
           </div>
           <Tabs
@@ -836,6 +841,7 @@ export default function ManagerRequestsPage() {
         onCancel={() => setRejectOpen(false)}
         onOk={submitReject}
         destroyOnClose
+        width={isTablet ? 520 : 'calc(100vw - 24px)'}
       >
         <p className="mb-3 text-gray-600 text-sm">
           Use this if the request is spam or invalid. The student will see the reason you provide.

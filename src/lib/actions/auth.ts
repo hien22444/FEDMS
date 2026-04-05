@@ -64,6 +64,11 @@ export const getProfile = async () => {
   return res;
 };
 
+export const loginAsStudent = async (studentCode: string) => {
+  const res = await api.post<LoginResponse>('auth/login-as-student', { student_code: studentCode });
+  return res;
+};
+
 export const refreshAccessToken = async (): Promise<RefreshTokenResponse | null> => {
   const refreshToken = localStorage.getItem('refreshToken');
   if (!refreshToken) return null;

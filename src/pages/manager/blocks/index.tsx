@@ -15,6 +15,8 @@ import {
   type Room,
 } from '@/lib/actions/admin';
 
+type GenderType = Exclude<Block['gender_type'], undefined>;
+
 export default function ManagerBlocksPage() {
   const { modal: appModal } = App.useApp();
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -28,7 +30,7 @@ export default function ManagerBlocksPage() {
 
   // Status & Gender quick-change
   const [confirmStatusTarget, setConfirmStatusTarget] = useState<{ block: Block; newIsActive: boolean } | null>(null);
-  const [confirmGenderTarget, setConfirmGenderTarget] = useState<{ block: Block; newGender: string } | null>(null);
+  const [confirmGenderTarget, setConfirmGenderTarget] = useState<{ block: Block; newGender: GenderType } | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [updatingGenderId, setUpdatingGenderId] = useState<string | null>(null);
 

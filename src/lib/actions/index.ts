@@ -38,3 +38,4 @@ export * from './faceRecognition';
 export * from './accessLog';
 export * from './camera';
 export * from './dateConfig';
+export * from './ewUsage';
