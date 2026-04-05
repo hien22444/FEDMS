@@ -6,7 +6,7 @@ module.exports = {
     extend: {
       colors: {
         //frequently
-        primary: '#146EF5',
+        primary: '#ea580c',
         'primary-lighter': '#E6F0F9',
         'primary-darker': '#4386D9',
         // primary: '#5C98F2',
@@ -29,15 +29,9 @@ module.exports = {
         secondary: '#8B8B8B',
       },
       fontFamily: {
-        sans: ['InterTight-Regular', 'sans-serif'],
-        display: [
-          ['InterTight-Regular', ...defaultTheme.fontFamily.sans],
-          { fontVariationSettings: '"wdth" 125' },
-        ],
-        medium: ['InterTight-Medium', 'sans-serif'],
-        semibold: ['InterTight-SemiBold', 'sans-serif'],
-        bold: ['InterTight-Bold', 'sans-serif'],
-        extrabold: ['InterTight-ExtraBold', 'sans-serif'],
+        sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        display: [['Inter', ...defaultTheme.fontFamily.sans]],
+
         poppins: ['Poppins-Bold', 'sans-serif'],
       },
       maxWidth: {

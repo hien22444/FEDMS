@@ -1,6 +1,7 @@
 @import './animation.css';
 @import './scroll.css';
 @import './ant-design.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,7 +10,7 @@
 :root {
   --background: #ffffff;
   --foreground: #17171d;
-   --background: oklch(0.985 0.002 90);
+  --background: oklch(0.985 0.002 90);
   --foreground: oklch(0.25 0.02 45);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.25 0.02 45);
@@ -29,9 +30,9 @@
   --input: oklch(0.94 0.005 90);
   --ring: oklch(0.62 0.2 38);
   --chart-1: oklch(0.65 0.22 38);
-  --chart-2: oklch(0.60 0.18 180);
-  --chart-3: oklch(0.58 0.20 280);
-  --chart-4: oklch(0.68 0.20 145);
+  --chart-2: oklch(0.6 0.18 180);
+  --chart-3: oklch(0.58 0.2 280);
+  --chart-4: oklch(0.68 0.2 145);
   --chart-5: oklch(0.55 0.22 330);
   --radius: 0.5rem;
   --sidebar: oklch(1 0 0);
@@ -82,7 +83,9 @@
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary-foreground: var(
+    --sidebar-primary-foreground
+  );
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
