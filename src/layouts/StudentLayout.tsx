@@ -100,9 +100,45 @@ const StudentLayout = () => {
       });
     };
 
+    const handleBookingConfigUpdated = () => {
+      notification.info({
+        message: 'Booking Configuration Updated',
+        description: 'The booking window schedule has been updated. Your booking page will refresh automatically.',
+        placement: 'topRight',
+        duration: 6,
+      });
+      window.dispatchEvent(new Event('student:booking:config_updated'));
+    };
+
+    const handleBookingApproved = () => {
+      notification.success({
+        message: 'Payment Successful',
+        description: 'Your payment has been confirmed and your booking is approved.',
+        placement: 'topRight',
+        duration: 6,
+      });
+      window.dispatchEvent(new Event('student:booking:approved'));
+    };
+
+    const handleBookingCancelled = () => {
+      notification.info({
+        message: 'Booking Cancelled',
+        description: 'Your booking has been cancelled and the bed has been released.',
+        placement: 'topRight',
+        duration: 6,
+      });
+      window.dispatchEvent(new Event('student:booking:cancelled'));
+    };
+
     socket.on('new_notification', handleNewNotification);
+    socket.on('booking_config_updated', handleBookingConfigUpdated);
+    socket.on('booking_approved', handleBookingApproved);
+    socket.on('booking_cancelled', handleBookingCancelled);
     return () => {
       socket.off('new_notification', handleNewNotification);
+      socket.off('booking_config_updated', handleBookingConfigUpdated);
+      socket.off('booking_approved', handleBookingApproved);
+      socket.off('booking_cancelled', handleBookingCancelled);
     };
   }, []);
 

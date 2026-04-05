@@ -314,6 +314,16 @@ const Payment: React.FC = () => {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
+    const refresh = () => load();
+    window.addEventListener('student:booking:approved', refresh);
+    window.addEventListener('student:booking:cancelled', refresh);
+    return () => {
+      window.removeEventListener('student:booking:approved', refresh);
+      window.removeEventListener('student:booking:cancelled', refresh);
+    };
+  }, []);
+
+  useEffect(() => {
     const handleFocus = async () => {
       const hasPending = items.some((b) => b.status === 'awaiting_payment');
       if (!hasPending) return;
