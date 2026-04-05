@@ -57,6 +57,7 @@ import type {
   SubmitBookingResponse,
 } from '@/lib/actions';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { connectSocket } from '@/lib/socket';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -89,6 +90,7 @@ const Booking: React.FC = () => {
   // ─── Booking window state ───
   const [windowStatus, setWindowStatus] = useState<BookingWindowStatusResponse | null>(null);
   const [windowLoading, setWindowLoading] = useState(true);
+  const [windowRefreshing, setWindowRefreshing] = useState(false);
 
   // ─── Tab state ───
   const [activeTab, setActiveTab] = useState('new');
@@ -121,6 +123,8 @@ const Booking: React.FC = () => {
 
   const [confirmModal, setConfirmModal] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [confirmKeepModal, setConfirmKeepModal] = useState(false);
+  const [holdSuccess, setHoldSuccess] = useState(false);
 
   // ─── Payment state ───
   const [paymentBooking, setPaymentBooking] = useState<BookingRequestItem | null>(null);
@@ -144,6 +148,15 @@ const Booking: React.FC = () => {
 
   useEffect(() => {
     checkWindow();
+  }, []);
+
+  // Listen directly on the socket so the page updates in real-time when
+  // the manager saves a new date config, without relying on a DOM-event chain.
+  useEffect(() => {
+    const socket = connectSocket();
+    const handleConfigUpdated = () => refreshWindow();
+    socket.on('booking_config_updated', handleConfigUpdated);
+    return () => { socket.off('booking_config_updated', handleConfigUpdated); };
   }, []);
 
   useEffect(() => {
@@ -214,7 +227,37 @@ const Booking: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentStarted, paymentBooking]);
 
-  // Poll every 5 seconds after opening PayOS to detect cancellation or payment immediately
+  // Real-time: listen for socket-pushed payment result events dispatched by StudentLayout
+  useEffect(() => {
+    if (!paymentStarted || !paymentBooking) return;
+
+    const handleApproved = () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      if (windowStatus?.window_type === 'hold') {
+        setHoldSuccess(true);
+        resetForm();
+        setView('form');
+      } else {
+        resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+      }
+    };
+
+    const handleCancelled = () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      resetForm(); setView('form');
+      if (windowStatus?.window_type !== 'hold') loadRoomTypes();
+    };
+
+    window.addEventListener('student:booking:approved', handleApproved);
+    window.addEventListener('student:booking:cancelled', handleCancelled);
+    return () => {
+      window.removeEventListener('student:booking:approved', handleApproved);
+      window.removeEventListener('student:booking:cancelled', handleCancelled);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentStarted, paymentBooking]);
+
+  // Fallback poll every 5 s in case the webhook is delayed or socket is unavailable
   useEffect(() => {
     if (!paymentStarted || !paymentBooking) return;
     const bookingId = paymentBooking.id;
@@ -222,14 +265,19 @@ const Booking: React.FC = () => {
       try {
         const result = await checkPaymentStatus(bookingId);
         if (result.status === 'cancelled' || result.status === 'expired') {
-          message.info('Booking was cancelled. The bed has been released.');
-          resetForm(); setView('form'); loadRoomTypes();
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          resetForm(); setView('form');
+          if (windowStatus?.window_type !== 'hold') loadRoomTypes();
         } else if (result.paid || result.status === 'approved') {
-          message.success('Payment confirmed! Your booking is approved.');
-          resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          if (windowStatus?.window_type === 'hold') {
+            setHoldSuccess(true); resetForm(); setView('form');
+          } else {
+            resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+          }
         }
       } catch { /* ignore */ }
-    }, 1000);
+    }, 5000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentStarted, paymentBooking]);
@@ -255,10 +303,16 @@ const Booking: React.FC = () => {
   const loadActiveBooking = async () => {
     try {
       const data = await getMyBookings({ page: 1, limit: 50 });
+      const now = new Date();
       const active = data.items.find(
-        (b) => b.status === 'approved' && new Date(b.end_date) > new Date()
+        (b) => b.status === 'approved' && new Date(b.end_date) > now
       ) ?? null;
       setActiveBooking(active);
+      // Detect if student already held their bed (approved booking for a future semester)
+      const alreadyKept = active != null && data.items.some(
+        (b) => b.status === 'approved' && b.id !== active.id && new Date(b.start_date) > now
+      );
+      if (alreadyKept) setHoldSuccess(true);
     } catch { /* ignore */ }
   };
 
@@ -291,6 +345,18 @@ const Booking: React.FC = () => {
       setWindowStatus({ allowed: false, window_type: null });
     } finally {
       setWindowLoading(false);
+    }
+  };
+
+  // Silent refresh triggered by real-time socket events — no full-page spinner.
+  const refreshWindow = async () => {
+    setWindowRefreshing(true);
+    try {
+      const status = await getBookingWindowStatus();
+      setWindowStatus(status);
+    } catch { /* ignore — keep current status */ }
+    finally {
+      setWindowRefreshing(false);
     }
   };
 
@@ -1028,11 +1094,15 @@ const Booking: React.FC = () => {
       {
         title: 'Action',
         key: 'action',
-        render: () => (
+        render: () => holdSuccess ? (
+          <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontSize: 13, padding: '4px 10px' }}>
+            Bed Held Successfully
+          </Tag>
+        ) : (
           <Button
             type="primary"
             loading={loadingKeep}
-            onClick={handleKeepBed}
+            onClick={() => setConfirmKeepModal(true)}
             style={{ background: '#ea580c', borderColor: '#ea580c', borderRadius: 6 }}
           >
             Keep Bed
@@ -1099,6 +1169,70 @@ const Booking: React.FC = () => {
   return (
     <div style={{ padding: isTablet ? '32px 40px' : '16px', background: '#fff', minHeight: '100vh' }}>
       {modalContextHolder}
+
+      {/* Keep Bed Confirm Modal — lives at top level so it renders regardless of active tab */}
+      <Modal
+        open={confirmKeepModal}
+        onCancel={() => { setConfirmKeepModal(false); setAgreedToTerms(false); }}
+        title={<Text strong style={{ fontSize: 16 }}>Confirm Bed Hold</Text>}
+        footer={[
+          <Button key="cancel" onClick={() => { setConfirmKeepModal(false); setAgreedToTerms(false); }}>Cancel</Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            loading={loadingKeep}
+            disabled={!agreedToTerms}
+            onClick={() => { setConfirmKeepModal(false); setAgreedToTerms(false); handleKeepBed(); }}
+          >
+            Confirm
+          </Button>,
+        ]}
+        width={isTablet ? 560 : 'calc(100vw - 24px)'}
+        destroyOnClose
+      >
+        {activeBooking && semester && (
+          <div style={{ paddingTop: 8 }}>
+            {[
+              [['Dorm', activeBooking.room?.block?.dorm?.dorm_name ?? '—'], ['Floor', `Floor ${activeBooking.room?.floor ?? '—'}`]],
+              [['Room', activeBooking.room?.room_number ?? '—'], ['Bed Number', String(activeBooking.bed?.bed_number ?? '—')]],
+              [['Room Type', activeBooking.room?.room_type ?? '—'], ['Next Semester', semester.semester.replace('-', ' - ')]],
+            ].map((row, ri) => (
+              <div key={ri} style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
+                {row.map(([label, value]) => (
+                  <div key={label}>
+                    <Text strong style={{ color: '#1a6ef5', display: 'block', marginBottom: 4, fontSize: 13 }}>{label}</Text>
+                    <Input value={value} readOnly style={{ background: '#f0f5ff', borderColor: '#d6e4ff', color: '#333' }} />
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div style={{ marginBottom: 20 }}>
+              <Text style={{ color: '#555', fontSize: 13 }}>Room Price in VND:</Text>
+              <div>
+                <Text strong style={{ color: '#1a6ef5', fontSize: 22 }}>
+                  {formatCurrency(activeBooking.room?.price_per_semester ?? 0)}
+                </Text>
+              </div>
+            </div>
+            <div style={{ borderTop: '1px solid #e8e8e8', paddingTop: 16 }}>
+              <Checkbox checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)}>
+                <Text style={{ fontSize: 13 }}>
+                  Agree to Dormitory Regulations.{' '}
+                  <Text style={{ fontSize: 13, color: '#fa8c16' }}>(I agree to the dormitory regulations.)</Text>
+                </Text>
+              </Checkbox>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {windowRefreshing && (
+        <div style={{ position: 'fixed', top: 64, right: 24, zIndex: 1000 }}>
+          <Spin size="small" />
+          <Text style={{ marginLeft: 8, fontSize: 12, color: '#888' }}>Updating booking window…</Text>
+        </div>
+      )}
+
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {!windowStatus?.allowed ? renderNotStarted() : (
           view === 'payment' ? renderPaymentPage() :
