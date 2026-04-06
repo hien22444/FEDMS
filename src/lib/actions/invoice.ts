@@ -23,8 +23,48 @@ export interface StudentInvoice {
   createdAt: string;
   room?: { room_number: string };
   line_items: InvoiceLineItem[];
+  payos?: {
+    orderCode?: number | null;
+    paymentLinkId?: string | null;
+    checkoutUrl?: string | null;
+    qrCode?: string | null;
+    status?: string | null;
+  } | null;
 }
 
 export const getMyInvoices = async (): Promise<StudentInvoice[]> => {
   return api.get<StudentInvoice[]>('invoices/my');
+};
+
+export interface InvoicePaymentLinkResponse {
+  invoice: StudentInvoice;
+  payos?: {
+    orderCode?: number | null;
+    paymentLinkId?: string | null;
+    checkoutUrl?: string | null;
+    qrCode?: string | null;
+    status?: string | null;
+  } | null;
+}
+
+export interface InvoicePaymentStatusResponse {
+  status: string;
+  paid?: boolean;
+  message?: string;
+  invoice: StudentInvoice;
+  payos?: {
+    orderCode?: number | null;
+    paymentLinkId?: string | null;
+    checkoutUrl?: string | null;
+    qrCode?: string | null;
+    status?: string | null;
+  } | null;
+}
+
+export const createInvoicePayosLink = async (id: string) => {
+  return api.post<InvoicePaymentLinkResponse>(`invoices/${id}/payos-link`, {});
+};
+
+export const getInvoicePaymentStatus = async (id: string) => {
+  return api.get<InvoicePaymentStatusResponse>(`invoices/${id}/payment-status`);
 };

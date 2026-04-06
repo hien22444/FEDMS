@@ -51,6 +51,15 @@ export interface CreateEWUsageDto {
   term: string;
 }
 
+export interface QuickCreateEWUsageDto {
+  block: string;
+  type: 'electric' | 'water';
+  meter_right?: number;
+  meter_increment?: number;
+  date?: string;
+  term?: string;
+}
+
 export interface UpdateEWUsageDto {
   type?: 'electric' | 'water';
   meter_left?: number;
@@ -68,6 +77,10 @@ export const getEWUsages = async (params?: EWUsageFilter): Promise<EWUsagePagina
 
 export const createEWUsage = async (body: CreateEWUsageDto): Promise<EWUsage> => {
   return api.post<EWUsage>('ew-usages', body);
+};
+
+export const quickCreateEWUsage = async (body: QuickCreateEWUsageDto): Promise<EWUsage> => {
+  return api.post<EWUsage>('ew-usages/quick-create', body);
 };
 
 export const updateEWUsage = async (id: string, body: UpdateEWUsageDto): Promise<EWUsage> => {
