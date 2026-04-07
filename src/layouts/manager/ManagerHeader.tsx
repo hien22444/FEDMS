@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts';
 import { ROUTES } from '@/constants';
 import { getMyNotifications, markAllNotificationsRead, type INotification } from '@/lib/actions/notification';
 import { connectSocket } from '@/lib/socket';
+import { brandPalette } from '@/themes/brandPalette';
 
 type ManagerHeaderProps = {
   isDesktop?: boolean;
@@ -70,7 +71,7 @@ export default function ManagerHeader({
     <div style={{ width: 320 }}>
       <div style={{ fontWeight: 600, borderBottom: '1px solid #f0f0f0', paddingBottom: 8, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Notifications</span>
-        {unreadCount > 0 && <span style={{ fontSize: 12, color: '#f97316', fontWeight: 400 }}>({unreadCount} unread)</span>}
+        {unreadCount > 0 && <span style={{ fontSize: 12, color: brandPalette.primary, fontWeight: 400 }}>({unreadCount} unread)</span>}
       </div>
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
         {notifications.length === 0 ? (
@@ -91,7 +92,7 @@ export default function ManagerHeader({
               }}
             >
               {!n.is_read && (
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f97316', flexShrink: 0, marginTop: 5 }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: brandPalette.primary, flexShrink: 0, marginTop: 5 }} />
               )}
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: n.is_read ? 400 : 600, fontSize: 13 }}>{n.title}</div>
@@ -103,7 +104,7 @@ export default function ManagerHeader({
       </div>
       <div style={{ textAlign: 'center', paddingTop: 10, borderTop: '1px solid #f0f0f0', marginTop: 4 }}>
         <button
-          style={{ color: '#f97316', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}
+          style={{ color: brandPalette.primary, fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}
           onClick={() => { navigate('/manager/notifications'); setBellOpen(false); }}
         >
           View all notifications →

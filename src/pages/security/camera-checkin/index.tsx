@@ -136,7 +136,7 @@ const CameraCheckinPage = () => {
     <div className="space-y-6">
       {/* Page Title */}
       <div className="flex items-center gap-3">
-        <Video className="w-6 h-6 text-[#FF5C00]" />
+        <Video className="w-6 h-6 text-[#F36F21]" />
         <h1 className="text-2xl font-bold text-gray-900">
           Camera Check-In Management
         </h1>
@@ -219,7 +219,7 @@ const CameraCheckinPage = () => {
               placeholder="Full name"
               value={manualName}
               onChange={(e) => setManualName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F36F21]"
             />
           </div>
           <div>
@@ -231,7 +231,7 @@ const CameraCheckinPage = () => {
               placeholder="ID card number"
               value={manualIdCard}
               onChange={(e) => setManualIdCard(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F36F21]"
             />
           </div>
           <div>
@@ -239,7 +239,7 @@ const CameraCheckinPage = () => {
             <select
               value={manualType}
               onChange={(e) => setManualType(e.target.value as 'check_in' | 'check_out')}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F36F21]"
             >
               <option value="check_in">Check In</option>
               <option value="check_out">Check Out</option>
@@ -250,7 +250,7 @@ const CameraCheckinPage = () => {
             <select
               value={manualReason}
               onChange={(e) => setManualReason(e.target.value as 'visitor' | 'other')}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF5C00]"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F36F21]"
             >
               <option value="visitor">Visitor</option>
               <option value="other">Other</option>
@@ -262,7 +262,7 @@ const CameraCheckinPage = () => {
             className={cn(
               'px-6 py-2.5 rounded-lg font-semibold transition-colors',
               manualName.trim() && manualIdCard.trim()
-                ? 'bg-[#FF5C00] text-white hover:bg-[#e65300]'
+                ? 'bg-[#F36F21] text-white hover:bg-[#D85F19]'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             )}
           >

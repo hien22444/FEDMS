@@ -144,7 +144,7 @@ const CheckoutRequestsPage = () => {
             >
               <div className="flex items-start gap-6">
                 {/* Avatar */}
-                <div className="w-16 h-16 bg-[#FF5C00] rounded-lg flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+                <div className="w-16 h-16 bg-[#F36F21] rounded-lg flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
                   {getInitials(request.name)}
                 </div>
 
@@ -154,10 +154,10 @@ const CheckoutRequestsPage = () => {
                     <h3 className="text-lg font-bold text-gray-900">
                       {request.name}
                     </h3>
-                    <span className="bg-[#FF5C00] text-white text-xs px-2 py-1 rounded-full">
+                    <span className="bg-[#F36F21] text-white text-xs px-2 py-1 rounded-full">
                       {request.room}
                     </span>
-                    <span className="text-[#FF5C00] text-sm font-medium">
+                    <span className="text-[#F36F21] text-sm font-medium">
                       {request.type}
                     </span>
                   </div>

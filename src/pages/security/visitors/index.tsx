@@ -150,7 +150,7 @@ const VisitorsPage = () => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <RiGroupLine className="w-6 h-6 text-[#FF5C00]" />
+          <RiGroupLine className="w-6 h-6 text-[#F36F21]" />
           <h1 className="text-2xl font-bold text-gray-900">Visitor Management</h1>
         </div>
       </div>
@@ -162,7 +162,7 @@ const VisitorsPage = () => {
           className={cn(
             'px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2',
             activeTab === 'requests'
-              ? 'border-[#FF5C00] text-[#FF5C00]'
+              ? 'border-[#F36F21] text-[#F36F21]'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           )}
         >
@@ -179,7 +179,7 @@ const VisitorsPage = () => {
           className={cn(
             'px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2',
             activeTab === 'active'
-              ? 'border-[#FF5C00] text-[#FF5C00]'
+              ? 'border-[#F36F21] text-[#F36F21]'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           )}
         >
@@ -213,7 +213,7 @@ const VisitorsPage = () => {
               )}
             >
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 bg-[#FF5C00] rounded-lg flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                <div className="w-14 h-14 bg-[#F36F21] rounded-lg flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                   {req.visitors[0]
                     ? getInitials(req.visitors[0].full_name)
                     : 'VR'}
@@ -388,7 +388,7 @@ const VisitorsPage = () => {
               className="rounded-xl p-6 border-2 bg-green-50 border-green-200"
             >
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 bg-[#FF5C00] rounded-lg flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                <div className="w-14 h-14 bg-[#F36F21] rounded-lg flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                   {av.visitor ? getInitials(av.visitor.full_name) : 'V'}
                 </div>
                 <div className="flex-1">

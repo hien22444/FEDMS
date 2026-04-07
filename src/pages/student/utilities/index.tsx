@@ -9,6 +9,7 @@ import {
   type StudentInvoice,
 } from '@/lib/actions/invoice';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { brandPalette } from '@/themes/brandPalette';
 
 const { Title, Text } = Typography;
 
@@ -79,13 +80,11 @@ const Utilities = () => {
   const handlePayInvoice = async (invoice: StudentInvoice) => {
     try {
       setPayingInvoiceId(invoice.id);
-      const payosLink =
-        invoice.payos?.checkoutUrl && invoice.payos?.status === 'pending'
-          ? { invoice, payos: invoice.payos }
-          : await createInvoicePayosLink(invoice.id);
+      const payosLink = await createInvoicePayosLink(invoice.id);
 
       replaceInvoice({
         ...invoice,
+        ...payosLink.invoice,
         payos: payosLink.payos ?? null,
       });
 
@@ -282,7 +281,7 @@ const Utilities = () => {
           </Card>
         ) : (
           <>
-            <Card style={{ marginBottom: 24, borderLeft: '4px solid #faad14' }}>
+            <Card style={{ marginBottom: 24, borderLeft: `4px solid ${brandPalette.primaryAccent}` }}>
               <div
                 style={{
                   display: 'flex',
@@ -295,14 +294,14 @@ const Utilities = () => {
                   style={{
                     width: 64,
                     height: 64,
-                    background: '#fffbe6',
+                    background: brandPalette.primarySoft,
                     borderRadius: 8,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <ThunderboltOutlined style={{ fontSize: 32, color: '#faad14' }} />
+                  <ThunderboltOutlined style={{ fontSize: 32, color: brandPalette.primaryAccent }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <Text type="secondary">Latest Term</Text>

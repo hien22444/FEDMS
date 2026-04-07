@@ -63,7 +63,7 @@ const SecurityLayout = () => {
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
             <div className="flex min-w-0 items-center gap-3">
-              <div className="bg-[#FF5C00] p-2 rounded-lg">
+              <div className="bg-[#F36F21] p-2 rounded-lg">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div className="min-w-0">
@@ -108,14 +108,14 @@ const SecurityLayout = () => {
                   className={cn(
                     'flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative',
                     active
-                      ? 'text-[#FF5C00]'
+                      ? 'text-[#F36F21]'
                       : 'text-gray-600 hover:text-gray-900'
                   )}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{item.label}</span>
                   {active && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF5C00]"></span>
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#F36F21]"></span>
                   )}
                 </Link>
               );
@@ -133,7 +133,7 @@ const SecurityLayout = () => {
                     to={item.path}
                     className={cn(
                       'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors',
-                      active ? 'bg-[#FFF1E8] text-[#FF5C00]' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      active ? 'bg-[#FFF1E8] text-[#F36F21]' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     )}
                   >
                     <Icon className="h-4 w-4" />

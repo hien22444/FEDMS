@@ -1,5 +1,6 @@
 import { Card, theme } from 'antd';
 import type { FC } from 'react';
+import { brandPalette } from '@/themes/brandPalette';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -22,9 +23,9 @@ export const StatCard: FC<StatCardProps> = ({
     switch (changeType) {
       case 'positive':
         return {
-          bg: '#fef9c3', // yellow-100
-          iconBg: '#fde047', // yellow-300
-          changeColor: '#ea580c', // orange-600
+          bg: brandPalette.primarySoftAlt,
+          iconBg: '#f7b185',
+          changeColor: brandPalette.primary,
         };
       case 'negative':
         return {
@@ -40,8 +41,8 @@ export const StatCard: FC<StatCardProps> = ({
         };
       case 'info':
         return {
-          bg: '#ffedd5', // orange-100
-          iconBg: '#fdba74', // orange-300
+          bg: '#fff4ea',
+          iconBg: '#f6bf93',
           changeColor: '#6b7280', // gray-600
         };
       default:

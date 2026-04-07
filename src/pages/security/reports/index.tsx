@@ -104,7 +104,7 @@ const SecurityReportsPage = () => {
     <div className="space-y-6">
       {/* Page Title */}
       <div className="flex items-center gap-3">
-        <FileSpreadsheet className="w-6 h-6 text-[#FF5C00]" />
+        <FileSpreadsheet className="w-6 h-6 text-[#F36F21]" />
         <h1 className="text-2xl font-bold text-gray-900">Daily Reports</h1>
       </div>
 
@@ -174,7 +174,7 @@ const SecurityReportsPage = () => {
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="flex items-center gap-2 px-4 py-2 bg-[#FF5C00] text-white rounded-lg text-sm font-medium hover:bg-[#e65300] transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-[#F36F21] text-white rounded-lg text-sm font-medium hover:bg-[#D85F19] transition-colors disabled:opacity-50"
             >
               {exporting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -356,7 +356,7 @@ const SecurityReportsPage = () => {
                   className={cn(
                     'px-3 py-1.5 text-sm rounded-lg border',
                     page === pagination.page
-                      ? 'bg-[#FF5C00] text-white border-[#FF5C00]'
+                      ? 'bg-[#F36F21] text-white border-[#F36F21]'
                       : 'border-gray-200 hover:bg-gray-50',
                   )}
                 >

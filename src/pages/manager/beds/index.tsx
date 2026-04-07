@@ -14,6 +14,7 @@ import {
   type Block,
   type Room,
 } from '@/lib/actions/admin';
+import { brandPalette } from '@/themes/brandPalette';
 
 const BED_STATUS_COLOR: Record<BedStatus, string> = {
   available: 'green',
@@ -194,7 +195,7 @@ export default function ManagerBedsPage() {
               size="small"
               loading={isUpdating}
               onClick={() => handleStatusToggle(r, 'maintenance')}
-              style={{ borderColor: '#f97316', color: '#f97316' }}
+              style={{ borderColor: brandPalette.primary, color: brandPalette.primary }}
             >
               Set Maintenance
             </Button>

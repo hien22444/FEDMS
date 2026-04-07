@@ -15,6 +15,7 @@ import {
   type Room,
 } from '@/lib/actions/admin';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { brandPalette } from '@/themes/brandPalette';
 
 type GenderType = Exclude<Block['gender_type'], undefined>;
 
@@ -327,7 +328,7 @@ export default function AdminBlocksPage() {
               size="small"
               loading={isUpdating}
               onClick={() => setConfirmStatusTarget({ block: record, newIsActive: false })}
-              style={{ borderColor: '#f97316', color: '#f97316' }}
+              style={{ borderColor: brandPalette.primary, color: brandPalette.primary }}
             >
               Set Maintenance
             </Button>

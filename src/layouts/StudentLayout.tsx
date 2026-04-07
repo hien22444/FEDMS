@@ -41,9 +41,13 @@ import { ROUTES } from '@/constants';
 import { useAuth } from '@/contexts';
 import { connectSocket } from '@/lib/socket';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { brandPalette } from '@/themes/brandPalette';
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
+const studentSidebarBg = brandPalette.primary;
+const studentSidebarBorder = brandPalette.primaryDark;
+const studentSidebarAccent = 'rgba(255, 255, 255, 0.2)';
 
 const StudentLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -295,21 +299,23 @@ const StudentLayout = () => {
   const sidebarWidth = collapsed ? 80 : 240;
 
   const sidebarContent = (mobile = false) => (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ea580c' }}>
+    <div
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: studentSidebarBg }}
+    >
       <div
         style={{
           padding: '16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #c2410c',
+          borderBottom: `1px solid ${studentSidebarBorder}`,
         }}
       >
         {!collapsed || mobile ? (
           <Space>
             <div
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: studentSidebarAccent,
                 borderRadius: '8px',
                 padding: '8px',
                 display: 'flex',
@@ -353,15 +359,15 @@ const StudentLayout = () => {
         )}
       </div>
 
-      <div style={{ padding: '16px', borderBottom: '1px solid #c2410c' }}>
+      <div style={{ padding: '16px', borderBottom: `1px solid ${studentSidebarBorder}` }}>
         <Space size="middle">
           <Avatar
             size={collapsed && !mobile ? 32 : 40}
             src={profile?.avatar_url}
             icon={!profile?.avatar_url && <UserOutlined />}
             style={{
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: `2px solid ${studentSidebarAccent}`,
+              backgroundColor: studentSidebarAccent,
             }}
           />
           {(!collapsed || mobile) && (
@@ -383,7 +389,7 @@ const StudentLayout = () => {
                 darkItemBg: 'transparent',
                 darkSubMenuItemBg: 'transparent',
                 darkItemSelectedBg: '#ffffff',
-                darkItemSelectedColor: '#ea580c',
+                darkItemSelectedColor: studentSidebarBg,
                 darkItemColor: 'rgba(255, 255, 255, 0.95)',
                 darkItemHoverBg: 'rgba(255, 255, 255, 0.1)',
                 darkItemHoverColor: '#ffffff',
@@ -403,7 +409,7 @@ const StudentLayout = () => {
         </ConfigProvider>
       </div>
 
-      <div style={{ flexShrink: 0, padding: '16px', borderTop: '1px solid #c2410c' }}>
+      <div style={{ flexShrink: 0, padding: '16px', borderTop: `1px solid ${studentSidebarBorder}` }}>
         <Button
           type="text"
           icon={<LogoutOutlined />}
@@ -428,7 +434,7 @@ const StudentLayout = () => {
           width={240}
           collapsedWidth={80}
           style={{
-            backgroundColor: '#ea580c',
+            backgroundColor: studentSidebarBg,
             position: 'fixed',
             left: 0,
             top: 0,
@@ -449,7 +455,7 @@ const StudentLayout = () => {
           closable={false}
           width={288}
           bodyStyle={{ padding: 0 }}
-          styles={{ body: { padding: 0, background: '#ea580c' } }}
+          styles={{ body: { padding: 0, background: studentSidebarBg } }}
         >
           {sidebarContent(true)}
         </Drawer>

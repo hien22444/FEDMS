@@ -33,6 +33,7 @@ import {
   type Bed,
 } from '@/lib/actions/admin';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { brandPalette } from '@/themes/brandPalette';
 
 const fallbackRoomTypeOptions: { label: string; value: RoomType }[] = [
   { label: '2 Person', value: '2_person' },
@@ -503,7 +504,7 @@ export default function AdminRoomsPage() {
               size="small"
               loading={isUpdating}
               onClick={() => setConfirmStatusTarget({ room: record, newStatus: 'maintenance' })}
-              style={{ borderColor: '#f97316', color: '#f97316' }}
+              style={{ borderColor: brandPalette.primary, color: brandPalette.primary }}
             >
               Set Maintenance
             </Button>

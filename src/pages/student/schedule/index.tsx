@@ -5,6 +5,7 @@ import { getMyBookings, getRoommates } from '@/lib/actions';
 import type { BookingRequestItem, RoommateItem } from '@/lib/actions';
 import { useAuth } from '@/contexts';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { brandPalette } from '@/themes/brandPalette';
 
 const { Title, Text } = Typography;
 
@@ -205,7 +206,7 @@ const Schedule: React.FC = () => {
               alt="No record"
               style={{ width: isTablet ? 320 : 220, maxWidth: '100%', marginBottom: 28, opacity: 0.92 }}
             />
-            <Title level={3} style={{ color: '#ea580c', fontWeight: 700, margin: 0 }}>
+            <Title level={3} style={{ color: brandPalette.primary, fontWeight: 700, margin: 0 }}>
               No record found
             </Title>
           </div>
