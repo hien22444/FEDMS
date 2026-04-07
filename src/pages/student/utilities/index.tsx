@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Empty, Spin, Table, Tag, Typography, message, theme } from 'antd';
+import { Button, Card, Descriptions, Empty, Modal, Spin, Table, Tag, Typography, message, theme } from 'antd';
 import { ThunderboltOutlined, FileTextOutlined } from '@ant-design/icons';
 import { getMyEWUsages, type MyEWRecord } from '@/lib/actions/ewUsage';
 import {
@@ -37,6 +37,7 @@ const Utilities = () => {
   const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [checkingInvoiceId, setCheckingInvoiceId] = useState<string | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<MyEWRecord | null>(null);
   const [noRoom, setNoRoom] = useState(false);
 
   const replaceInvoice = (invoice: StudentInvoice) => {
@@ -206,11 +207,11 @@ const Utilities = () => {
     ];
 
   const usageColumns = [
-    { title: 'Term', dataIndex: 'term', key: 'term' },
     {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
+      width: 120,
       render: (value: string) => (
         <Tag color={value === 'electric' ? 'orange' : 'blue'}>
           {value === 'electric' ? 'Electric' : 'Water'}
@@ -221,46 +222,35 @@ const Utilities = () => {
       title: 'Recorded Date',
       dataIndex: 'date',
       key: 'date',
+      width: 160,
       render: (value: string) => new Date(value).toLocaleDateString('en-US'),
-    },
-    {
-      title: 'Previous Meter',
-      dataIndex: 'meter_left',
-      key: 'meter_left',
-      render: (value: number, record: MyEWRecord) => `${value} ${record.unit}`,
-    },
-    {
-      title: 'Current Meter',
-      dataIndex: 'meter_right',
-      key: 'meter_right',
-      render: (value: number, record: MyEWRecord) => `${value} ${record.unit}`,
     },
     {
       title: 'Consumption',
       dataIndex: 'consumption',
       key: 'consumption',
+      width: 160,
       render: (value: number, record: MyEWRecord) => <Tag color="orange">{value} {record.unit}</Tag>,
     },
     {
-      title: 'Unit Price',
-      dataIndex: 'price_per_unit',
-      key: 'price_per_unit',
-      render: (value: number, record: MyEWRecord) => `${value.toLocaleString('en-US')} VND/${record.unit}`,
-    },
-    {
-      title: 'Students',
-      dataIndex: 'occupied_beds',
-      key: 'occupied_beds',
-      render: (value: number) => value,
-    },
-    {
-      title: 'Your Share',
+      title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
+      width: 180,
       render: (value: number) => (
-        <Text strong style={{ color: token.colorError }}>
+        <Text strong style={{ color: token.colorError, whiteSpace: 'nowrap' }}>
           {value.toLocaleString('en-US')} VND
         </Text>
+      ),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      width: 120,
+      render: (_: unknown, record: MyEWRecord) => (
+        <Button size="small" onClick={() => setSelectedRecord(record)}>
+          Details
+        </Button>
       ),
     },
   ];
@@ -340,12 +330,58 @@ const Utilities = () => {
                 dataSource={records}
                 pagination={false}
                 size="middle"
-                scroll={{ x: 1100 }}
+                scroll={{ x: 760 }}
                 locale={{ emptyText: 'No utility usage data yet' }}
               />
             </Card>
           </>
         )}
+
+        <Modal
+          title="Utility Usage Details"
+          open={Boolean(selectedRecord)}
+          onCancel={() => setSelectedRecord(null)}
+          footer={
+            <Button onClick={() => setSelectedRecord(null)}>
+              Close
+            </Button>
+          }
+        >
+          {selectedRecord && (
+            <Descriptions column={1} size="small" bordered>
+              <Descriptions.Item label="Term">{selectedRecord.term}</Descriptions.Item>
+              <Descriptions.Item label="Type">
+                {selectedRecord.type === 'electric' ? 'Electric' : 'Water'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Recorded Date">
+                {new Date(selectedRecord.date).toLocaleDateString('en-US')}
+              </Descriptions.Item>
+              <Descriptions.Item label="Previous Meter">
+                {selectedRecord.meter_left} {selectedRecord.unit}
+              </Descriptions.Item>
+              <Descriptions.Item label="Current Meter">
+                {selectedRecord.meter_right} {selectedRecord.unit}
+              </Descriptions.Item>
+              <Descriptions.Item label="Consumption">
+                {selectedRecord.consumption} {selectedRecord.unit}
+              </Descriptions.Item>
+              <Descriptions.Item label="Unit Price">
+                {selectedRecord.price_per_unit.toLocaleString('en-US')} VND/{selectedRecord.unit}
+              </Descriptions.Item>
+              <Descriptions.Item label="Students">
+                {selectedRecord.occupied_beds}
+              </Descriptions.Item>
+              <Descriptions.Item label="Your Share">
+                <Text strong style={{ color: token.colorError }}>
+                  {selectedRecord.amount.toLocaleString('en-US')} VND
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Total Block Amount">
+                {selectedRecord.total_amount.toLocaleString('en-US')} VND
+              </Descriptions.Item>
+            </Descriptions>
+          )}
+        </Modal>
 
         <Card
           title={
