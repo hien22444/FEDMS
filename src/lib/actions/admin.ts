@@ -656,3 +656,33 @@ export const fetchDashboardStats = async (force = false): Promise<DashboardStats
   }
   return result;
 };
+
+// ===== Bed Usage Stats =====
+
+export interface BedUsageBucket {
+  totalBeds: number;
+  usedBeds: number;
+  freeBeds: number;
+  maintenanceBeds: number;
+}
+
+export interface BedUsageRoomType extends BedUsageBucket {
+  roomType: string;
+}
+
+export interface BedUsageDorm {
+  dormName: string;
+  dormCode: string;
+  roomTypes: BedUsageRoomType[];
+  dormTotal: BedUsageBucket;
+}
+
+export interface BedUsageStatsResponse {
+  grandTotal: BedUsageBucket;
+  byDormAndRoomType: BedUsageDorm[];
+  byRoomType: BedUsageRoomType[];
+}
+
+export const fetchBedUsageStats = async (): Promise<BedUsageStatsResponse> => {
+  return api.get<BedUsageStatsResponse>('stats/bed-usage');
+};
