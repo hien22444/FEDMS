@@ -42,6 +42,7 @@ import { useAuth } from '@/contexts';
 import { connectSocket } from '@/lib/socket';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { brandPalette } from '@/themes/brandPalette';
+import { Agent } from '@/components/agent/Agent';
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -272,7 +273,7 @@ const StudentLayout = () => {
           }}
           onClick={() => navigate(ROUTES.STUDENT_NOTIFICATIONS)}
         >
-          View all notifications
+          View all notifications →
         </button>
       </div>
     </div>
@@ -313,7 +314,11 @@ const StudentLayout = () => {
     logout();
   };
 
-  const displayName = profile?.full_name || profile?.student_code || user?.email?.split('@')[0] || 'Student';
+  const displayName =
+    profile?.full_name ||
+    profile?.student_code ||
+    user?.email?.split('@')[0] ||
+    'Student';
   const studentCode = profile?.student_code || '';
   const behavioralScore = profile?.behavioral_score ?? 'N/A';
   const sidebarWidth = collapsed ? 80 : 240;
@@ -567,6 +572,7 @@ const StudentLayout = () => {
           <Outlet />
         </Content>
       </Layout>
+      <Agent />
     </Layout>
   );
 };
