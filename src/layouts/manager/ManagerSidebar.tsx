@@ -53,6 +53,7 @@ const iconMap: Record<string, React.ReactNode> = {
   import: <RiUploadLine size={18} />,
   export: <RiDownloadLine size={18} />,
   gear: <RiSettings3Line size={18} />,
+  cfdRisk: <RiAlertLine size={18} />,
 };
 
 export default function ManagerSidebar() {

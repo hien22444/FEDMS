@@ -24,6 +24,23 @@ const formatCheckout = (endDate: string): string => {
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
 
+const buildRoomCode = (params: {
+  dormCode?: string;
+  blockCode?: string;
+  roomNumber?: string;
+}) => {
+  const dormCode = String(params.dormCode || '').trim();
+  const blockCode = String(params.blockCode || '').trim();
+  const roomNumber = String(params.roomNumber || '').trim();
+
+  const blockPart = dormCode
+    ? (blockCode.toLowerCase().startsWith(dormCode.toLowerCase()) ? blockCode : `${dormCode}${blockCode}`)
+    : blockCode;
+
+  if (blockPart && roomNumber) return `${blockPart}-${roomNumber}`;
+  return roomNumber || blockPart || '-';
+};
+
 const RoommatesModal: React.FC<{ booking: BookingRequestItem; open: boolean; onClose: () => void }> = ({
   booking, open, onClose,
 }) => {
@@ -89,9 +106,36 @@ const Schedule: React.FC = () => {
         const approved = data.items.filter((b) => b.status === 'approved');
         setRecords(approved);
       })
-      .catch(() => setRecords([]))
+      .catch(() => {
+        setRecords([]);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const isActiveBooking = (record: BookingRequestItem) => {
+    if (record.checkout_date) return false;
+    if (!record.end_date) return true;
+    return new Date(record.end_date) > new Date();
+  };
+
+  const renderBedInfo = (
+    room?: { room_number?: string; block?: { dorm?: { dorm_code?: string }; block_code?: string; block_name?: string } },
+    bedNum?: string | number | null
+  ) => {
+    const roomLabel = buildRoomCode({
+      dormCode: room?.block?.dorm?.dorm_code ?? '',
+      blockCode: room?.block?.block_code ?? room?.block?.block_name ?? '',
+      roomNumber: room?.room_number ?? '',
+    });
+    return (
+      <Text strong>
+        {roomLabel}
+        {bedNum != null && <Text style={{ marginLeft: 10, fontWeight: 400 }}>Bed {bedNum}</Text>}
+      </Text>
+    );
+  };
+
+  const hasAnyBedTransfer = records.some((r) => r.bed_transfer?.bed_number);
 
   const columns = [
     {
@@ -105,21 +149,19 @@ const Schedule: React.FC = () => {
       title: 'Bed Information',
       key: 'bed_info',
       render: (_: unknown, record: BookingRequestItem) => {
-        const dormCode = record.room?.block?.dorm?.dorm_code ?? '';
-        const blockCode = record.room?.block?.block_code ?? '';
-        const roomNum = record.room?.room_number ?? '';
-        const bedNum = record.bed?.bed_number;
-        const roomLabel = `${dormCode}${blockCode}-${roomNum}`;
-        return (
-          <Text strong>
-            {roomLabel}
-            {bedNum != null && (
-              <Text style={{ marginLeft: 10, fontWeight: 400 }}>Bed {bedNum}</Text>
-            )}
-          </Text>
-        );
+        return renderBedInfo(record.room, record.bed?.bed_number);
       },
     },
+    ...(hasAnyBedTransfer
+      ? [{
+          title: 'Bed Transfer',
+          key: 'bed_transfer',
+          render: (_: unknown, record: BookingRequestItem) => {
+            if (!record.bed_transfer?.bed_number) return null;
+            return renderBedInfo(record.bed_transfer.room, record.bed_transfer.bed_number);
+          },
+        }]
+      : []),
     {
       title: 'Check-out Date',
       key: 'checkout',

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   App,
   Card,
@@ -30,6 +31,7 @@ import {
   PlusOutlined,
   MinusCircleOutlined,
   AppstoreOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import {
   createVisitorRequest,
@@ -50,12 +52,13 @@ import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
 import violationActions from '@/lib/actions/violation';
 const { getMyViolationReports, createViolationReport } = violationActions;
 import dayjs from 'dayjs';
+import BedTransferPage from '@/pages/student/bed-transfer';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 type RequestType = 'visitor' | 'maintenance' | 'report' | 'other' | null;
-type RequestTabKey = 'all' | 'visitor' | 'maintenance' | 'report' | 'other';
+type RequestTabKey = 'all' | 'visitor' | 'maintenance' | 'bed-transfer' | 'report' | 'other';
 
 type StudentOtherRequest = {
   id: string;
@@ -105,6 +108,7 @@ type UnifiedListItem = {
 
 const Requests: React.FC = () => {
   const { token } = theme.useToken();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedType, setSelectedType] = useState<RequestType>(null);
   const [activeTab, setActiveTab] = useState<RequestTabKey>('all');
   const [showForm, setShowForm] = useState(false);
@@ -123,6 +127,7 @@ const Requests: React.FC = () => {
   const [selectedMaintenance, setSelectedMaintenance] = useState<UnifiedListItem | null>(null);
   const [maintenanceRequests, setMaintenanceRequests] = useState<StudentMaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [canCreateRequest, setCanCreateRequest] = useState(true);
 
   const fetchMyRequests = useCallback(async () => {
     setLoading(true);
@@ -147,6 +152,28 @@ const Requests: React.FC = () => {
   useEffect(() => {
     fetchMyRequests();
   }, [fetchMyRequests]);
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t === 'bed-transfer' && canCreateRequest) {
+      setActiveTab('bed-transfer');
+    }
+  }, [searchParams, canCreateRequest]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await getMyMaintenanceContext();
+        if (!cancelled) setCanCreateRequest(true);
+      } catch {
+        if (!cancelled) setCanCreateRequest(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Keep detail view in sync after Refresh / background updates */
   useEffect(() => {
@@ -313,6 +340,7 @@ const Requests: React.FC = () => {
     all: 'All',
     visitor: 'Visitor',
     maintenance: 'Maintenance',
+    'bed-transfer': 'Change Bed',
     report: 'Violation',
     other: 'Other',
   };
@@ -323,6 +351,10 @@ const Requests: React.FC = () => {
   };
 
   const handleNewRequest = (type: RequestType) => {
+    if (!canCreateRequest) {
+      message.warning('Bạn không phải là sinh viên ở ký túc xá, không được gửi request.');
+      return;
+    }
     setSelectedType(type);
     setShowForm(true);
   };
@@ -965,6 +997,19 @@ const Requests: React.FC = () => {
       ),
     },
     {
+      key: 'bed-transfer',
+      label: (
+        <span className="flex items-center gap-2">
+          <SwapOutlined /> Change Bed
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <BedTransferPage embedded />
+        </div>
+      ),
+    },
+    {
       key: 'report',
       label: (
         <span className="flex items-center gap-2">
@@ -1192,12 +1237,46 @@ const Requests: React.FC = () => {
               My Requests
             </Title>
           </div>
+          {!canCreateRequest ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '55vh',
+                textAlign: 'center',
+              }}
+            >
+              <img
+                src="/images/booking-not-started.png"
+                alt="No record"
+                style={{ width: 320, marginBottom: 28, opacity: 0.92 }}
+              />
+              <Title level={3} style={{ color: '#ea580c', fontWeight: 700, margin: 0 }}>
+                No record found!
+              </Title>
+            </div>
+          ) : (
           <Tabs
             activeKey={activeTab}
-            onChange={(k) => setActiveTab(k as RequestTabKey)}
+            onChange={(k) => {
+              const key = k as RequestTabKey;
+              setActiveTab(key);
+              setSearchParams((prev) => {
+                const p = new URLSearchParams(prev);
+                if (key === 'bed-transfer') {
+                  p.set('tab', 'bed-transfer');
+                } else {
+                  p.delete('tab');
+                }
+                return p;
+              });
+            }}
             items={tabItems}
             className="facility-tabs"
           />
+          )}
         </div>
 
         {/* New Request Form Modal */}

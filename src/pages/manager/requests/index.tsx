@@ -61,6 +61,7 @@ export default function ManagerRequestsPage() {
     ? terminalMaintenanceStatuses.includes(String(maintenanceSelected.status))
     : false;
 
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -101,6 +102,7 @@ export default function ManagerRequestsPage() {
     loadMaintenanceData();
   }, [loadMaintenanceData]);
 
+
   /** Sync selected row after list refresh (same request still open in detail tab) */
   useEffect(() => {
     if (!maintenanceSelected?.id) return;
@@ -114,6 +116,7 @@ export default function ManagerRequestsPage() {
     const updated = items.find((i) => i.id === selected.id);
     if (updated) setSelected(updated);
   }, [items, selected?.id]);
+
 
   const openDetailTab = (item: OtherRequestItem) => {
     setSelected(item);
@@ -187,6 +190,7 @@ export default function ManagerRequestsPage() {
     setMaintenanceSelected(null);
     maintenanceForm.resetFields();
   };
+
 
   const submitMaintenanceUpdate = async () => {
     if (!maintenanceSelected) return;
@@ -727,6 +731,7 @@ export default function ManagerRequestsPage() {
     },
   ];
 
+
   return (
     <div className="space-y-6">
       <Tabs
@@ -827,6 +832,7 @@ export default function ManagerRequestsPage() {
           />
         </Card>
       )}
+
 
       <Modal
         open={rejectOpen}

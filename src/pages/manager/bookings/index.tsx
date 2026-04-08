@@ -125,11 +125,24 @@ const ManagerBookings = () => {
         const blockCode = block?.block_code || '';
         const roomNumber = record.room?.room_number || '';
         const bedNumber = record.bed?.bed_number || '';
+        const transferRoom = record.bed_transfer?.room || record.room_transfer || null;
+        const transferBlock = transferRoom?.block;
+        const transferDormCode = transferBlock?.dorm?.dorm_code || '';
+        const transferBlockCode = transferBlock?.block_code || transferBlock?.block_name || '';
+        const transferRoomNumber = transferRoom?.room_number || '';
+        const transferBedNumber = record.bed_transfer?.bed_number || '';
         if (!dormCode && !blockCode && !roomNumber && !bedNumber) return '—';
         return (
-          <span className="font-mono text-sm">
-            {dormCode}{blockCode}-{roomNumber} Bed {bedNumber}
-          </span>
+          <div className="font-mono text-sm leading-5">
+            <div>
+              {dormCode}{blockCode}-{roomNumber} Bed {bedNumber}
+            </div>
+            {transferBedNumber ? (
+              <div className="text-xs text-blue-600 mt-0.5">
+                {transferDormCode}{transferBlockCode}-{transferRoomNumber} Bed {transferBedNumber}
+              </div>
+            ) : null}
+          </div>
         );
       },
     },

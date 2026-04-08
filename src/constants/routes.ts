@@ -23,6 +23,7 @@ export const ROUTES = {
   STUDENT_UTILITIES: '/student/utilities',
   STUDENT_PAYMENT: '/student/payment',
   STUDENT_REQUESTS: '/student/requests',
+  STUDENT_BED_TRANSFER: '/student/bed-transfer',
   STUDENT_MAINTENANCE: '/student/maintenance',
   STUDENT_PROFILE: '/student/profile',
   STUDENT_CFD_POINTS: '/student/cfd-points',
