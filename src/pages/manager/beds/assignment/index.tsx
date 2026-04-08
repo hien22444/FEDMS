@@ -15,6 +15,7 @@ import {
   type RoomTransferRequest,
   type TransferReviewApproveResponse,
 } from '@/lib/actions/roomTransfer';
+import { connectSocket } from '@/lib/socket';
 
 const { Text } = Typography;
 
@@ -82,6 +83,20 @@ export default function ChangeBedAssignmentPage() {
 
   useEffect(() => {
     loadTransferRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transferStatusFilter]);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    const refreshAll = () => {
+      void Promise.all([loadTransferRequests(), loadOccupied(), loadAvailable(), loadHistory()]);
+    };
+    socket.on('room_transfer_updated', refreshAll);
+    socket.on('room_transfer_history_updated', refreshAll);
+    return () => {
+      socket.off('room_transfer_updated', refreshAll);
+      socket.off('room_transfer_history_updated', refreshAll);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transferStatusFilter]);
 
@@ -174,46 +189,6 @@ export default function ChangeBedAssignmentPage() {
         rejection_reason: action === 'reject' ? rejectionReason || 'Rejected by manager' : undefined,
       });
       const maybeUpgrade = data as TransferReviewApproveResponse;
-      if (
-        action === 'approve' &&
-        maybeUpgrade &&
-        typeof maybeUpgrade === 'object' &&
-        'payos' in maybeUpgrade &&
-        (maybeUpgrade.payos?.checkoutUrl || maybeUpgrade.supplement)
-      ) {
-        const url = maybeUpgrade.payos?.checkoutUrl;
-        const amt = maybeUpgrade.supplement?.total_amount;
-        modal.info({
-          title: 'Student must pay supplement (10 minutes)',
-          width: 520,
-          content: (
-            <div className="space-y-2 text-sm">
-              <p>
-                The request is waiting for payment. Share the PayOS link with the student so they can pay the difference
-                {typeof amt === 'number' ? ` (${amt.toLocaleString('vi-VN')} ₫)` : ''}.
-              </p>
-              {url ? (
-                <div>
-                  <div className="text-gray-600 mb-1">Checkout URL</div>
-                  <Input readOnly value={url} onFocus={(e) => e.target.select()} />
-                  <Button
-                    type="link"
-                    className="px-0"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(url);
-                      message.success('Copied to clipboard');
-                    }}
-                  >
-                    Copy link
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-amber-700">No checkout URL returned — check PayOS env or ask student to open the request page to refresh the link.</p>
-              )}
-            </div>
-          ),
-        });
-      }
       setSuccessMsg(
         action === 'approve' && maybeUpgrade && 'payos' in maybeUpgrade
           ? 'Upgrade approved — student payment pending.'
@@ -602,7 +577,7 @@ export default function ChangeBedAssignmentPage() {
                 type="warning"
                 showIcon
                 className="mt-1"
-                message="Waiting for student PayOS payment (10 min window)"
+                message="Waiting for student PayOS payment (36h window)"
                 description={
                   <div className="text-sm space-y-1">
                     <div>Supplement: {formatMoneyVnd(transferSelected.supplement_amount)}</div>

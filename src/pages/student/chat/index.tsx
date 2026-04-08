@@ -486,7 +486,7 @@ export default function StudentChatPage() {
               <div className="px-5 py-4 border-t border-gray-100 bg-white">
                 <div className="flex items-end gap-2">
                   <Input.TextArea
-                    ref={inputRef as React.RefObject<HTMLTextAreaElement & { focus(): void }>}
+                    ref={inputRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onPressEnter={(e) => { if (!e.shiftKey) { e.preventDefault(); handleSend(); } }}

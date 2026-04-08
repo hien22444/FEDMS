@@ -43,6 +43,8 @@ import ChangeBedAssignmentPage from '@/pages/manager/beds/assignment';
 import ManagerBookingsPage from '@/pages/manager/bookings';
 import ManagerRequestsPage from '@/pages/manager/requests';
 import FaceRegistrationPage from '@/pages/manager/face-registration';
+import LoginAsStudentPage from '@/pages/manager/login-student';
+import ElectricityPage from '@/pages/manager/electricity';
 import ManagerCheckoutPage from '@/pages/manager/checkout';
 import ManagerStudentsCfdRiskPage from '@/pages/manager/students-cfd-risk';
 import ManagerDateConfigPage from '@/pages/manager/config';
@@ -330,7 +332,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'login-student',
-                element: <ComingSoon label="Login as Student" />,
+                element: <LoginAsStudentPage />,
               },
               {
                 path: 'violations',
@@ -350,15 +352,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'electricity',
-                element: <ComingSoon label="Electricity Management" />,
-              },
-              {
-                path: 'electricity/import',
-                element: <ComingSoon label="Import Electricity Data" />,
-              },
-              {
-                path: 'electricity/create',
-                element: <ComingSoon label="Create Electricity Record" />,
+                element: <ElectricityPage />,
               },
               {
                 path: 'invoices',

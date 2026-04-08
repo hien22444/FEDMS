@@ -45,12 +45,14 @@ export interface RoomTransferRequest {
   current_room?: {
     id: string;
     room_number?: string;
+    price_per_semester?: number;
     block?: { block_name?: string; block_code?: string; dorm?: { dorm_code?: string; dorm_name?: string } };
   } | null;
   current_bed?: { id: string; bed_number?: string; status?: string } | null;
   requested_room?: {
     id: string;
     room_number?: string;
+    price_per_semester?: number;
     block?: { block_name?: string; block_code?: string; dorm?: { dorm_code?: string; dorm_name?: string } };
   } | null;
   requested_bed?: { id: string; bed_number?: string; status?: string } | null;
@@ -126,6 +128,13 @@ export interface TransferPaymentStatusResponse {
   payos?: { orderCode?: number; checkoutUrl?: string | null; qrCode?: string | null };
 }
 
+export interface TransferQuota {
+  semester?: string | null;
+  max: number;
+  used: number;
+  remaining: number;
+}
+
 export const createEmptyBedTransferRequest = async (payload: {
   requested_bed_id: string;
   reason: string;
@@ -154,6 +163,10 @@ export const getMyTransferHistory = async () => {
 
 export const getAvailableBedsForTransfer = async () => {
   return api.get<TransferAvailableBed[]>('room-transfers/my/available-beds');
+};
+
+export const getMyTransferQuota = async () => {
+  return api.get<TransferQuota>('room-transfers/my/quota');
 };
 
 export const respondSwapTransferRequest = async (

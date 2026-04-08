@@ -53,6 +53,7 @@ import violationActions from '@/lib/actions/violation';
 const { getMyViolationReports, createViolationReport } = violationActions;
 import dayjs from 'dayjs';
 import BedTransferPage from '@/pages/student/bed-transfer';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -109,6 +110,8 @@ type UnifiedListItem = {
 const Requests: React.FC = () => {
   const { token } = theme.useToken();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { width } = useWindowSize();
+  const isTablet = width >= 768;
   const [selectedType, setSelectedType] = useState<RequestType>(null);
   const [activeTab, setActiveTab] = useState<RequestTabKey>('all');
   const [showForm, setShowForm] = useState(false);
@@ -352,7 +355,7 @@ const Requests: React.FC = () => {
 
   const handleNewRequest = (type: RequestType) => {
     if (!canCreateRequest) {
-      message.warning('Bạn không phải là sinh viên ở ký túc xá, không được gửi request.');
+      message.warning('You are not currently staying in the dormitory and cannot submit requests.');
       return;
     }
     setSelectedType(type);
@@ -555,7 +558,9 @@ const Requests: React.FC = () => {
           ? `${eq.template.equipment_name || 'Equipment'}${
               eq.template.brand ? ` (${eq.template.brand})` : ''
             }`
-          : null;
+          : m.equipment_other_selected
+            ? 'Other'
+            : null;
       return (
         <div className="space-y-5">
           <Button onClick={onBack}>← Back to list</Button>
@@ -820,9 +825,13 @@ const Requests: React.FC = () => {
                 )}
               </div>
 
-              <Space direction="vertical" size="small" style={{ flexShrink: 0 }}>
+              <Space
+                direction={isTablet ? 'vertical' : 'horizontal'}
+                size="small"
+                style={{ flexShrink: 0, width: isTablet ? 'auto' : '100%' }}
+              >
                 {onViewDetail && (
-                  <Button type="primary" size="small" onClick={() => onViewDetail(req)}>
+                  <Button type="primary" size="small" onClick={() => onViewDetail(req)} block={!isTablet}>
                     View detail
                   </Button>
                 )}
@@ -832,6 +841,7 @@ const Requests: React.FC = () => {
                     size="small"
                     icon={<CloseOutlined />}
                     onClick={() => handleCancel(req.id)}
+                    block={!isTablet}
                   >
                     Cancel
                   </Button>
@@ -904,7 +914,7 @@ const Requests: React.FC = () => {
       children: (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button type="primary" onClick={() => handleNewRequest('visitor')}>
+            <Button type="primary" onClick={() => handleNewRequest('visitor')} block={!isTablet}>
               New Visitor Request
             </Button>
           </div>
@@ -953,7 +963,7 @@ const Requests: React.FC = () => {
       children: (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button type="primary" onClick={() => handleNewRequest('maintenance')}>
+            <Button type="primary" onClick={() => handleNewRequest('maintenance')} block={!isTablet}>
               New Maintenance Request
             </Button>
           </div>
@@ -1019,7 +1029,7 @@ const Requests: React.FC = () => {
       children: (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button type="primary" onClick={() => handleNewRequest('report')}>
+            <Button type="primary" onClick={() => handleNewRequest('report')} block={!isTablet}>
               New Violation Report
             </Button>
           </div>
@@ -1068,7 +1078,7 @@ const Requests: React.FC = () => {
       children: (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Button type="primary" onClick={() => handleNewRequest('other')}>
+            <Button type="primary" onClick={() => handleNewRequest('other')} block={!isTablet}>
               New Other Request
             </Button>
           </div>
@@ -1140,6 +1150,7 @@ const Requests: React.FC = () => {
                                 setSelectedOther(r);
                                 setOtherSubTab('detail');
                               }}
+                              block={!isTablet}
                             >
                               View detail
                             </Button>
@@ -1229,9 +1240,9 @@ const Requests: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '32px', background: token.colorBgLayout }}>
+    <div style={{ padding: isTablet ? '32px' : '16px', background: token.colorBgLayout }}>
       <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm sm:p-6">
           <div className="mb-4">
             <Title level={4} style={{ margin: 0 }}>
               My Requests
@@ -1284,7 +1295,7 @@ const Requests: React.FC = () => {
           open={showForm}
           onCancel={handleCloseForm}
           footer={null}
-          width={720}
+          width={isTablet ? 720 : 'calc(100vw - 24px)'}
           destroyOnClose
           title={
             <Space>
@@ -1297,7 +1308,14 @@ const Requests: React.FC = () => {
           }
         >
           {selectedType === 'visitor' && <VisitorForm onSuccess={handleVisitorCreated} />}
-          {selectedType === 'maintenance' && <MaintenanceForm onSuccess={handleMaintenanceCreated} />}
+          {selectedType === 'maintenance' && (
+            <MaintenanceForm
+              onSuccess={handleMaintenanceCreated}
+              openRequest={maintenanceRequests.find(
+                (r) => !['completed', 'done', 'cannot_fix', 'cancelled', 'rejected'].includes(String(r.status))
+              ) || null}
+            />
+          )}
           {selectedType === 'report' && <ReportForm onSuccess={handleReportCreated} />}
           {selectedType === 'other' && <OtherRequestForm onSuccess={handleOtherCreated} />}
         </Modal>
@@ -1343,7 +1361,7 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   return (
     <Form form={form} layout="vertical" initialValues={{ visitors: [{}] }}>
       <Alert
-        message="Khung giờ tiếp khách: 07:00 – 17:00 hằng ngày. Người thân có thể đến và về bất kỳ lúc nào trong khung giờ này."
+        message="Visiting hours are 07:00 - 17:00 every day. Guests may arrive and leave at any time within this window."
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
@@ -1474,7 +1492,10 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
 };
 
 // ─── Maintenance Request Form (assigned room from active contract) ───
-const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+const MaintenanceForm: React.FC<{
+  onSuccess: () => void;
+  openRequest?: StudentMaintenanceRequest | null;
+}> = ({ onSuccess, openRequest = null }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [roomEquipment, setRoomEquipment] = useState<RoomEquipment[]>([]);
@@ -1529,14 +1550,22 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
       label: `${name}${brand}`,
     };
   });
+  equipmentOptions.push({ value: 'other', label: 'Other' });
 
   const handleSubmit = async () => {
+    if (openRequest) {
+      message.warning(
+        `You already have an active maintenance request (${openRequest.request_code} - ${openRequest.status}). Please wait until it is processed.`
+      );
+      return;
+    }
     try {
       const values = await form.validateFields();
       setSubmitting(true);
+      const selectedEquipment = values.equipment ? String(values.equipment).trim() : undefined;
       await createMaintenanceRequest({
         description: values.description,
-        equipment: values.equipment || undefined,
+        equipment: selectedEquipment,
         evidence_urls: values.evidence_urls?.length ? values.evidence_urls : undefined,
       });
       message.success('Maintenance request submitted');
@@ -1561,12 +1590,21 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
       <Alert
         type="info"
         showIcon
-        message="Phòng được gắn với hợp đồng đang hiệu lực của bạn. Chọn thiết bị trong danh sách nếu sự cố liên quan đến một món cụ thể (danh sách theo phòng của bạn)."
+        message="The room is linked to your active contract. Choose an item from the list if the issue relates to a specific piece of equipment assigned to your room."
         style={{ marginBottom: 16 }}
       />
+      {openRequest ? (
+        <Alert
+          type="warning"
+          showIcon
+          message={`Active request in progress: ${openRequest.request_code} (${openRequest.status})`}
+          description="You can create a new maintenance request only after the current one is finished."
+          style={{ marginBottom: 16 }}
+        />
+      ) : null}
       <div style={{ marginBottom: 16 }}>
         {loadingContext ? (
-          <Alert type="info" showIcon message="Đang tải thông tin phòng/giường..." />
+          <Alert type="info" showIcon message="Loading room and bed information..." />
         ) : (
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
             <div>
@@ -1604,7 +1642,7 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
           { min: 10, message: 'At least 10 characters' },
         ]}
       >
-        <TextArea rows={4} placeholder="Mô tả chi tiết hư hại hoặc sự cố…" size="large" />
+        <TextArea rows={4} placeholder="Describe the damage or issue in detail..." size="large" />
       </Form.Item>
       <Form.Item name="evidence_urls" label="Evidence image URLs (optional)">
         <Select
@@ -1613,7 +1651,13 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
           tokenSeparators={[',']}
         />
       </Form.Item>
-      <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>
+      <Button
+        type="primary"
+        size="large"
+        onClick={handleSubmit}
+        loading={submitting}
+        disabled={!!openRequest}
+      >
         Submit request
       </Button>
     </Form>

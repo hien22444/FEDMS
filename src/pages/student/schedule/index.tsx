@@ -4,21 +4,20 @@ import { TeamOutlined } from '@ant-design/icons';
 import { getMyBookings, getRoommates } from '@/lib/actions';
 import type { BookingRequestItem, RoommateItem } from '@/lib/actions';
 import { useAuth } from '@/contexts';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Title, Text } = Typography;
 
-// Parse "Spring-2026" → { semester: 1, year: 2026 }
-const parseSemester = (sem: string): { semester: number; year: number } => {
-  const [name, year] = sem.split('-');
+const parseSemester = (semesterLabel: string): { semester: number; year: number } => {
+  const [name, year] = semesterLabel.split('-');
   const map: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
   return { semester: map[name] ?? 0, year: parseInt(year, 10) };
 };
 
-// Show date only when checkout has actually happened (end_date passed), else blank
 const formatCheckout = (endDate: string): string => {
   const end = new Date(endDate);
   if (end > new Date()) return '';
-  return end.toLocaleDateString('en-GB'); // DD/MM/YYYY
+  return end.toLocaleDateString('en-GB');
 };
 
 const formatCurrency = (amount: number) =>
@@ -42,7 +41,9 @@ const buildRoomCode = (params: {
 };
 
 const RoommatesModal: React.FC<{ booking: BookingRequestItem; open: boolean; onClose: () => void }> = ({
-  booking, open, onClose,
+  booking,
+  open,
+  onClose,
 }) => {
   const [roommates, setRoommates] = useState<RoommateItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,7 +64,7 @@ const RoommatesModal: React.FC<{ booking: BookingRequestItem; open: boolean; onC
       title: 'Bed',
       dataIndex: 'bed_number',
       key: 'bed_number',
-      render: (val: string) => `Bed ${val}`,
+      render: (value: string) => `Bed ${value}`,
     },
     { title: 'Phone Number', dataIndex: 'phone', key: 'phone' },
   ];
@@ -73,7 +74,7 @@ const RoommatesModal: React.FC<{ booking: BookingRequestItem; open: boolean; onC
       open={open}
       onCancel={onClose}
       footer={<Button onClick={onClose}>Close</Button>}
-      title={<span><TeamOutlined style={{ marginRight: 8 }} />Roommates — Room {booking.room?.room_number}</span>}
+      title={<span><TeamOutlined style={{ marginRight: 8 }} />Roommates - Room {booking.room?.room_number}</span>}
       width={700}
     >
       {loading ? (
@@ -88,6 +89,7 @@ const RoommatesModal: React.FC<{ booking: BookingRequestItem; open: boolean; onC
           pagination={false}
           size="small"
           bordered
+          scroll={{ x: 640 }}
         />
       )}
     </Modal>
@@ -96,6 +98,8 @@ const RoommatesModal: React.FC<{ booking: BookingRequestItem; open: boolean; onC
 
 const Schedule: React.FC = () => {
   const { profile } = useAuth();
+  const { width } = useWindowSize();
+  const isTablet = width >= 768;
   const [records, setRecords] = useState<BookingRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [roommatesBooking, setRoommatesBooking] = useState<BookingRequestItem | null>(null);
@@ -103,7 +107,7 @@ const Schedule: React.FC = () => {
   useEffect(() => {
     getMyBookings({ page: 1, limit: 50 })
       .then((data) => {
-        const approved = data.items.filter((b) => b.status === 'approved');
+        const approved = data.items.filter((booking) => booking.status === 'approved');
         setRecords(approved);
       })
       .catch(() => {
@@ -141,15 +145,23 @@ const Schedule: React.FC = () => {
     {
       title: 'Student ID',
       key: 'student_id',
-      render: () => (
-        <Text strong>{profile?.student_code ?? '—'}</Text>
-      ),
+      render: () => <Text strong>{profile?.student_code ?? '-'}</Text>,
     },
     {
       title: 'Bed Information',
       key: 'bed_info',
       render: (_: unknown, record: BookingRequestItem) => {
-        return renderBedInfo(record.room, record.bed?.bed_number);
+        const dormCode = record.room?.block?.dorm?.dorm_code ?? '';
+        const blockCode = record.room?.block?.block_code ?? '';
+        const roomNumber = record.room?.room_number ?? '';
+        const bedNumber = record.bed?.bed_number;
+        const roomLabel = `${dormCode}${blockCode}-${roomNumber}`;
+        return (
+          <Text strong>
+            {roomLabel}
+            {bedNumber != null && <Text style={{ marginLeft: 10, fontWeight: 400 }}>Bed {bedNumber}</Text>}
+          </Text>
+        );
       },
     },
     ...(hasAnyBedTransfer
@@ -173,8 +185,9 @@ const Schedule: React.FC = () => {
             </Text>
           );
         }
-        const dateStr = record.end_date ? formatCheckout(record.end_date) : '';
-        return dateStr ? <Text>{dateStr}</Text> : <Text type="secondary"></Text>;
+
+        const dateLabel = record.end_date ? formatCheckout(record.end_date) : '';
+        return dateLabel ? <Text>{dateLabel}</Text> : <Text type="secondary"></Text>;
       },
     },
     {
@@ -182,9 +195,7 @@ const Schedule: React.FC = () => {
       key: 'price',
       render: (_: unknown, record: BookingRequestItem) => (
         <Text strong style={{ color: '#1a6ef5' }}>
-          {record.invoice?.total_amount != null
-            ? formatCurrency(record.invoice.total_amount)
-            : '—'}
+          {record.invoice?.total_amount != null ? formatCurrency(record.invoice.total_amount) : '-'}
         </Text>
       ),
     },
@@ -193,7 +204,7 @@ const Schedule: React.FC = () => {
       key: 'semester',
       render: (_: unknown, record: BookingRequestItem) => {
         const { semester } = parseSemester(record.semester ?? '');
-        return <Tag color="blue">{semester || '—'}</Tag>;
+        return <Tag color="blue">{semester || '-'}</Tag>;
       },
     },
     {
@@ -201,7 +212,7 @@ const Schedule: React.FC = () => {
       key: 'year',
       render: (_: unknown, record: BookingRequestItem) => {
         const { year } = parseSemester(record.semester ?? '');
-        return <Text>{year || '—'}</Text>;
+        return <Text>{year || '-'}</Text>;
       },
     },
     {
@@ -222,7 +233,7 @@ const Schedule: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '32px 40px', background: '#fff', minHeight: '100vh' }}>
+    <div style={{ padding: isTablet ? '32px 40px' : '16px', background: '#fff', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <Title level={2} style={{ color: '#1a3c6e', marginBottom: 28 }}>
           Room History
@@ -233,18 +244,23 @@ const Schedule: React.FC = () => {
             <Spin size="large" />
           </div>
         ) : records.length === 0 ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            minHeight: '55vh', textAlign: 'center',
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '55vh',
+              textAlign: 'center',
+            }}
+          >
             <img
               src="/images/booking-not-started.png"
               alt="No record"
-              style={{ width: 320, marginBottom: 28, opacity: 0.92 }}
+              style={{ width: isTablet ? 320 : 220, maxWidth: '100%', marginBottom: 28, opacity: 0.92 }}
             />
             <Title level={3} style={{ color: '#ea580c', fontWeight: 700, margin: 0 }}>
-              No record found!
+              No record found
             </Title>
           </div>
         ) : (
@@ -254,6 +270,7 @@ const Schedule: React.FC = () => {
             rowKey="id"
             pagination={false}
             bordered
+            scroll={{ x: 900 }}
           />
         )}
 

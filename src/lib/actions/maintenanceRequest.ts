@@ -78,6 +78,7 @@ export interface StudentMaintenanceRequest {
       model?: string;
     } | null;
   } | null;
+  equipment_other_selected?: boolean;
   // BE populate student for getAllMaintenanceRequests
   student?: {
     full_name?: string;

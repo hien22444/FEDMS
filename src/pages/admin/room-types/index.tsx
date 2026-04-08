@@ -28,7 +28,6 @@ export default function AdminRoomTypesPage() {
   const { modal } = App.useApp();
   const [data, setData] = useState<RoomTypeRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null); // null = add
@@ -74,7 +73,6 @@ export default function AdminRoomTypesPage() {
 
   const persistRoomTypePrices = async (rows: RoomTypeRow[], showSuccess = false) => {
     try {
-      setSaving(true);
       const prices: RoomTypePriceMap = {};
       const seenKeys = new Set<string>();
 
@@ -125,7 +123,6 @@ export default function AdminRoomTypesPage() {
         zIndex: 2000,
       });
     } finally {
-      setSaving(false);
     }
   };
 
@@ -158,10 +155,6 @@ export default function AdminRoomTypesPage() {
         }
       },
     });
-  };
-
-  const handleSaveAll = async () => {
-    await persistRoomTypePrices(data, true);
   };
 
   const handleEditorOk = async () => {

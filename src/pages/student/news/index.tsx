@@ -149,7 +149,7 @@ export default function StudentNewsPage() {
                 className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap ${category === 'all' ? 'bg-white' : 'bg-white/10 hover:bg-white/15'}`}
                 style={category === 'all' ? { color: token.colorPrimary } : undefined}
               >
-                Tất cả
+                All
               </button>
               {categoryOptions.map((c) => (
                 <button
@@ -183,7 +183,7 @@ export default function StudentNewsPage() {
           </div>
         ) : category !== 'all' ? (
           <div className="space-y-6">
-            {/* Hàng đầu: news lớn + Most Read */}
+            {/* Top row: featured story + Most Read */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               <div className="lg:col-span-7 space-y-4">
                 {featured && (
@@ -223,14 +223,14 @@ export default function StudentNewsPage() {
                         {featured.title}
                       </div>
                       <div className="text-sm font-medium" style={{ color: token.colorPrimary }}>
-                        Xem thêm
+                        Read More
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Right sidebar: Đọc nhiều nhất */}
+              {/* Right sidebar: most read */}
               <div className="lg:col-span-5 space-y-4">
                 <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-100 font-bold text-gray-900">
@@ -275,7 +275,7 @@ export default function StudentNewsPage() {
               </div>
             </div>
 
-            {/* Hàng thứ hai: tất cả news nhỏ kéo dài full width */}
+            {/* Second row: smaller news cards across the full width */}
             {rest.length > 0 && (
               <div className="space-y-2.5">
                 {rest.map((item) => (
@@ -317,7 +317,7 @@ export default function StudentNewsPage() {
                           {item.title}
                         </div>
                         <div className="text-xs font-medium" style={{ color: token.colorPrimary }}>
-                          Xem thêm
+                          Read More
                         </div>
                       </div>
                     </div>
@@ -365,7 +365,7 @@ export default function StudentNewsPage() {
                         {featured.title}
                       </div>
                       <div className="text-sm font-medium" style={{ color: token.colorPrimary }}>
-                        Xem thêm
+                        Read More
                       </div>
                     </div>
                   </div>

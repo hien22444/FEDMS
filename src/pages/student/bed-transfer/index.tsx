@@ -14,80 +14,17 @@ import {
   type BedTransferHistoryItem,
   type TransferAvailableBed,
   type SwapTargetPreview,
+  type TransferQuota,
+  getMyTransferQuota,
 } from '@/lib/actions/roomTransfer';
 import { getMyMaintenanceContext } from '@/lib/actions';
 import { useAuth } from '@/contexts';
+import { Link } from 'react-router-dom';
+import { ROUTES } from '@/constants';
+import { connectSocket } from '@/lib/socket';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
-const formatMoneyVnd = (n?: number) =>
-  typeof n === 'number' && !Number.isNaN(n) ? `${n.toLocaleString('vi-VN')} ₫` : '—';
-
-const UpgradePaymentPanel: React.FC<{ request: RoomTransferRequest; onPaid: () => void }> = ({ request, onPaid }) => {
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-  const [fetching, setFetching] = useState(false);
-
-  const refreshLink = async () => {
-    try {
-      setFetching(true);
-      const res = await checkTransferPaymentStatus(request.id);
-      if (res.paid) {
-        message.success('Payment received. Your bed change is complete.');
-        onPaid();
-        return;
-      }
-      const url = res.payos?.checkoutUrl || null;
-      setCheckoutUrl(url);
-    } catch (e: any) {
-      message.error(e?.message || 'Could not load payment link');
-    } finally {
-      setFetching(false);
-    }
-  };
-
-  useEffect(() => {
-    refreshLink();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when this request row mounts / id changes
-  }, [request.id]);
-
-  return (
-    <Alert
-      className="mt-2"
-      type="info"
-      showIcon
-      message="Pay the price difference to finish your bed upgrade"
-      description={
-        <div className="space-y-2 text-sm">
-          <div>
-            <span className="text-gray-600">Supplement: </span>
-            <strong>{formatMoneyVnd(request.supplement_amount)}</strong>
-          </div>
-          {request.payment_deadline ? (
-            <div className="text-gray-600">
-              Pay within <strong>10 minutes</strong> — deadline: {new Date(request.payment_deadline).toLocaleString('vi-VN')}
-            </div>
-          ) : null}
-          <Space wrap>
-            <Button type="primary" size="small" loading={fetching} onClick={refreshLink}>
-              Refresh payment link
-            </Button>
-            {checkoutUrl ? (
-              <Button
-                size="small"
-                onClick={() => {
-                  window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
-                }}
-              >
-                Open PayOS checkout
-              </Button>
-            ) : null}
-          </Space>
-        </div>
-      }
-    />
-  );
-};
 
 const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const [confirmModal, confirmContextHolder] = Modal.useModal();
@@ -106,20 +43,23 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
   const [swapPreviewLoading, setSwapPreviewLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'requests' | 'history'>('requests');
   const [form] = Form.useForm();
+  const [quota, setQuota] = useState<TransferQuota | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
       await getMyMaintenanceContext();
       setCanCreateRequest(true);
-      const [transferData, bedData, historyData] = await Promise.all([
+      const [transferData, bedData, historyData, quotaData] = await Promise.all([
         getMyTransferRequests().catch(() => []),
         getAvailableBedsForTransfer().catch(() => []),
         getMyTransferHistory().catch(() => []),
+        getMyTransferQuota().catch(() => null),
       ]);
       setRequests(Array.isArray(transferData) ? transferData : []);
       setAvailableBeds(Array.isArray(bedData) ? bedData : []);
       setHistories(Array.isArray(historyData) ? historyData : []);
+      setQuota(quotaData);
     } catch {
       setCanCreateRequest(false);
       setRequests([]);
@@ -133,6 +73,23 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
     load();
   }, []);
 
+  useEffect(() => {
+    const refresh = () => void load();
+    window.addEventListener('student:transfer:upgrade-cancelled', refresh);
+    return () => window.removeEventListener('student:transfer:upgrade-cancelled', refresh);
+  }, []);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    const refresh = () => void load();
+    socket.on('room_transfer_updated', refresh);
+    socket.on('room_transfer_history_updated', refresh);
+    return () => {
+      socket.off('room_transfer_updated', refresh);
+      socket.off('room_transfer_history_updated', refresh);
+    };
+  }, []);
+
   const hasPendingUpgradePayment = requests.some((r) => r.status === 'pending_payment_upgrade');
   useEffect(() => {
     if (!hasPendingUpgradePayment) return;
@@ -143,6 +100,10 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
           const res = await checkTransferPaymentStatus(r.id);
           if (res.paid) {
             message.success('Payment received. Your bed change is complete.');
+            load();
+            return;
+          }
+          if (res.transfer && res.transfer.status !== 'pending_payment_upgrade') {
             load();
             return;
           }
@@ -258,25 +219,45 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
         form.setFields([{ name: 'reason', errors: ['Please enter reason'] }]);
       } else if (raw.includes('target student not found')) {
         form.setFields([{ name: 'target_student_code', errors: ['Student code not found'] }]);
-      } else if (raw.includes('không thể tự đổi chéo') || raw.includes('swap with chính mình')) {
+      } else if (
+        raw.includes('không thể tự đổi chéo') ||
+        raw.includes('swap with chính mình') ||
+        raw.includes('cannot swap with yourself')
+      ) {
         form.setFields([{ name: 'target_student_code', errors: ['You cannot swap with yourself'] }]);
-      } else if (raw.includes('sinh viên') && raw.includes('chưa có giường')) {
+      } else if (
+        (raw.includes('sinh viên') && raw.includes('chưa có giường')) ||
+        (raw.includes('student') && raw.includes('does not currently have a dorm bed'))
+      ) {
         form.setFields([{ name: 'target_student_code', errors: [serverMessage] }]);
-      } else if (raw.includes('chưa có giường') || raw.includes('cannot create bed transfer requests')) {
-        setInlineError('Bạn chưa có giường ở ký túc xá nên không thể gửi yêu cầu đổi giường.');
-      } else if (raw.includes('đang có một đơn đổi giường chưa xử lý') || raw.includes('open request')) {
-        setInlineError('Bạn đang có đơn đổi giường đang chờ xử lý. Vui lòng hoàn tất hoặc hủy đơn hiện tại.');
-      } else if (raw.includes('đang có yêu cầu đổi chéo chờ xác nhận')) {
-        form.setFields([{ name: 'target_student_code', errors: ['Student này đang có yêu cầu swap khác chờ xác nhận'] }]);
+      } else if (
+        raw.includes('chưa có giường') ||
+        raw.includes('cannot create bed transfer requests') ||
+        raw.includes('do not currently have a dorm bed')
+      ) {
+        setInlineError('You do not currently have a dorm bed, so you cannot submit a bed transfer request.');
+      } else if (
+        raw.includes('đang có một đơn đổi giường chưa xử lý') ||
+        raw.includes('open request') ||
+        raw.includes('open bed transfer request')
+      ) {
+        setInlineError('You already have an open bed transfer request. Please complete or cancel the current one first.');
+      } else if (
+        raw.includes('đang có yêu cầu đổi chéo chờ xác nhận') ||
+        raw.includes('pending swap request waiting for partner response')
+      ) {
+        form.setFields([
+          { name: 'target_student_code', errors: ['This student already has another pending swap request'] },
+        ]);
       } else if (raw.includes('requested bed is no longer available')) {
-        form.setFields([{ name: 'requested_bed_id', errors: ['Giường này vừa hết chỗ. Vui lòng chọn giường khác.'] }]);
+        form.setFields([{ name: 'requested_bed_id', errors: ['This bed is no longer available. Please choose another bed.'] }]);
       } else if (raw.includes('requested bed must be different')) {
-        form.setFields([{ name: 'requested_bed_id', errors: ['Bạn đang chọn chính giường hiện tại của mình.'] }]);
+        form.setFields([{ name: 'requested_bed_id', errors: ['You are selecting your current bed. Please choose a different bed.'] }]);
       } else if (raw.includes('same price') || raw.includes('cùng giá') || raw.includes('room prices')) {
         setInlineError(
           mode === 'swap'
-            ? 'Đổi chéo chỉ được với sinh viên có giường cùng giá và chỉ trong kỳ ở.'
-            : 'Trong kỳ ở chỉ được chuyển sang giường/phòng cùng mức giá với hợp đồng hiện tại.'
+            ? 'Swap is only allowed with students whose bed price is the same, and within the same semester stay.'
+            : 'During the semester, transfer is only allowed to a bed/room with the same price as your current contract.'
         );
       }
 
@@ -390,9 +371,20 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
             Change Bed Requests
           </Title>
           <Text type="secondary">Request a move to an empty bed or swap with another student.</Text>
+          {quota && (
+            <div className="mt-1 text-xs text-gray-600">
+              You have used{' '}
+              <span className="font-semibold">
+                {quota.used}/{quota.max}
+              </span>{' '}
+              bed changes this semester. Remaining:{' '}
+              <span className="font-semibold">{quota.remaining}</span>.
+            </div>
+          )}
         </div>
         <Space>
           <Button
+            disabled={quota?.remaining === 0}
             onClick={() => {
               setMode('target_empty');
               form.resetFields();
@@ -403,6 +395,7 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
           </Button>
           <Button
             type="primary"
+            disabled={quota?.remaining === 0}
             onClick={() => {
               setMode('swap');
               form.resetFields();
@@ -447,7 +440,13 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
                           </Text>
                         ) : null}
                         {r.status === 'pending_payment_upgrade' && (
-                          <UpgradePaymentPanel request={r} onPaid={load} />
+                          <Text type="secondary" className="block text-xs mt-2">
+                            Pay the price difference within 36 hours on the{' '}
+                            <Link to={ROUTES.STUDENT_PAYMENT} className="text-blue-600 hover:underline">
+                              Payment
+                            </Link>{' '}
+                            page.
+                          </Text>
                         )}
                         {r.status === 'pending_refund_office' && (
                           <Alert
