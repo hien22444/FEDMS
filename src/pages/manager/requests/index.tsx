@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { connectSocket } from '@/lib/socket';
 import { Alert, App, Button, Card, DatePicker, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { getAllOtherRequests, reviewOtherRequest, type OtherRequestItem } from '@/lib/actions/otherRequest';
@@ -7,6 +8,12 @@ import {
   reviewMaintenanceRequest,
   type StudentMaintenanceRequest,
 } from '@/lib/actions/maintenanceRequest';
+import {
+  getAllCheckoutRequests,
+  reviewCheckoutRequest,
+  completeCheckoutRequest,
+  type StudentCheckoutRequest,
+} from '@/lib/actions/checkoutRequest';
 import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Title, Text } = Typography;
@@ -45,8 +52,8 @@ export default function ManagerRequestsPage() {
   const [rejectForm] = Form.useForm();
   const isSelectedFinalized = selected?.status === 'resolved' || selected?.status === 'rejected';
 
-  // Toggle between Other Requests and Maintenance Requests
-  type RequestModeKey = 'other' | 'maintenance';
+  // Toggle between Other / Maintenance / Checkout Requests
+  type RequestModeKey = 'other' | 'maintenance' | 'checkout';
   const [mode, setMode] = useState<RequestModeKey>('other');
 
   // ===== Maintenance states (manager) =====
@@ -63,6 +70,325 @@ export default function ManagerRequestsPage() {
   const isMaintenanceTerminal = maintenanceSelected
     ? terminalMaintenanceStatuses.includes(String(maintenanceSelected.status))
     : false;
+
+  // ===== Checkout states (manager) =====
+  type CheckoutTabKey = 'list' | 'detail';
+  const [checkoutItems, setCheckoutItems] = useState<StudentCheckoutRequest[]>([]);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutStatusFilter, setCheckoutStatusFilter] = useState<string>('all');
+  const [checkoutSelected, setCheckoutSelected] = useState<StudentCheckoutRequest | null>(null);
+  const [checkoutActiveTab, setCheckoutActiveTab] = useState<CheckoutTabKey>('list');
+  const [checkoutReviewLoading, setCheckoutReviewLoading] = useState(false);
+  const [checkoutRejectOpen, setCheckoutRejectOpen] = useState(false);
+  const [checkoutRejectLoading, setCheckoutRejectLoading] = useState(false);
+  const [checkoutRejectForm] = Form.useForm();
+
+  const loadCheckoutData = useCallback(async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await getAllCheckoutRequests({
+        status: checkoutStatusFilter === 'all' ? undefined : checkoutStatusFilter,
+        page: 1,
+        limit: 100,
+      });
+      setCheckoutItems(Array.isArray(res.data) ? res.data : []);
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to load checkout requests');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }, [message, checkoutStatusFilter]);
+
+  useEffect(() => {
+    loadCheckoutData();
+  }, [loadCheckoutData]);
+
+  // Real-time: checkout events from backend
+  useEffect(() => {
+    const socket = connectSocket(); // ensures socket exists even on first mount
+
+    const handleNewRequest = (req: StudentCheckoutRequest) => {
+      message.info({ content: `New checkout request: ${req.request_code}`, duration: 5 });
+      // Re-fetch from API to keep list in sync with current status filter
+      loadCheckoutData();
+    };
+
+    const handleInspected = (req: StudentCheckoutRequest) => {
+      message.warning({
+        content: `Room inspected: ${req.request_code} — review required`,
+        duration: 6,
+      });
+      setCheckoutItems((prev) =>
+        prev.map((i) => (i.id === req.id ? (req as StudentCheckoutRequest) : i))
+      );
+    };
+
+    const handleStatusUpdated = (req: StudentCheckoutRequest) => {
+      setCheckoutItems((prev) =>
+        prev.map((i) => (i.id === req.id ? (req as StudentCheckoutRequest) : i))
+      );
+      if (checkoutSelected?.id === req.id) {
+        setCheckoutSelected(req as StudentCheckoutRequest);
+      }
+    };
+
+    socket.on('new_checkout_request', handleNewRequest);
+    socket.on('checkout_inspected', handleInspected);
+    socket.on('checkout_status_updated', handleStatusUpdated);
+    return () => {
+      socket.off('new_checkout_request', handleNewRequest);
+      socket.off('checkout_inspected', handleInspected);
+      socket.off('checkout_status_updated', handleStatusUpdated);
+    };
+  }, [message, checkoutSelected?.id, loadCheckoutData]);
+
+  useEffect(() => {
+    if (!checkoutSelected?.id) return;
+    const updated = checkoutItems.find((i) => i.id === checkoutSelected.id);
+    if (updated) setCheckoutSelected(updated);
+  }, [checkoutItems, checkoutSelected?.id]);
+
+  const openCheckoutDetail = (item: StudentCheckoutRequest) => {
+    setCheckoutSelected(item);
+    checkoutRejectForm.resetFields();
+    setCheckoutRejectOpen(false);
+    setCheckoutActiveTab('detail');
+  };
+
+  const backToCheckoutList = () => {
+    setCheckoutActiveTab('list');
+    setCheckoutSelected(null);
+    checkoutRejectForm.resetFields();
+  };
+
+  const submitCheckoutApprove = async () => {
+    if (!checkoutSelected) return;
+    try {
+      setCheckoutReviewLoading(true);
+      await reviewCheckoutRequest(checkoutSelected.id, { status: 'approved' });
+      message.success('Checkout request approved');
+      backToCheckoutList();
+      loadCheckoutData();
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to approve');
+    } finally {
+      setCheckoutReviewLoading(false);
+    }
+  };
+
+  const submitCheckoutReject = async () => {
+    if (!checkoutSelected) return;
+    try {
+      const values = await checkoutRejectForm.validateFields();
+      setCheckoutRejectLoading(true);
+      await reviewCheckoutRequest(checkoutSelected.id, {
+        status: 'rejected',
+        rejection_reason: values.rejection_reason,
+      });
+      message.success('Checkout request rejected');
+      setCheckoutRejectOpen(false);
+      backToCheckoutList();
+      loadCheckoutData();
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.message || 'Failed to reject');
+    } finally {
+      setCheckoutRejectLoading(false);
+    }
+  };
+
+  const submitCheckoutComplete = async () => {
+    if (!checkoutSelected) return;
+    try {
+      setCheckoutReviewLoading(true);
+      await completeCheckoutRequest(checkoutSelected.id);
+      message.success('Checkout completed. Contract terminated and bed freed.');
+      backToCheckoutList();
+      loadCheckoutData();
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to complete checkout');
+    } finally {
+      setCheckoutReviewLoading(false);
+    }
+  };
+
+  const formatCheckoutRoom = (room?: StudentCheckoutRequest['room']) => {
+    if (!room) return '-';
+    const parts = [
+      room.block?.dorm?.dorm_name,
+      room.block?.block_name,
+      room.room_number ? `Room ${room.room_number}` : null,
+    ].filter(Boolean) as string[];
+    return parts.length ? parts.join(' · ') : '-';
+  };
+
+  const checkoutStatusColor: Record<string, string> = {
+    pending: 'processing',
+    approved: 'blue',
+    inspected: 'warning',
+    completed: 'success',
+    rejected: 'error',
+    cancelled: 'default',
+  };
+
+  const checkoutDetailTabLabel = checkoutSelected
+    ? `Detail · ${checkoutSelected.request_code}`
+    : 'Checkout detail';
+
+  const checkoutTabItems = [
+    {
+      key: 'list',
+      label: 'Checkout list',
+      children: (
+        <Table
+          rowKey="id"
+          loading={checkoutLoading}
+          dataSource={checkoutItems}
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: 1000 }}
+          columns={[
+            { title: 'Request Code', dataIndex: 'request_code', width: 170 },
+            {
+              title: 'Student',
+              render: (_: any, r: StudentCheckoutRequest) =>
+                r.student?.full_name || r.student?.user?.email || '-',
+              width: 220,
+            },
+            {
+              title: 'Student Code',
+              render: (_: any, r: StudentCheckoutRequest) => r.student?.student_code || '-',
+              width: 150,
+            },
+            {
+              title: 'Room',
+              render: (_: any, r: StudentCheckoutRequest) => formatCheckoutRoom(r.room),
+              width: 260,
+            },
+            {
+              title: 'Expected Checkout',
+              dataIndex: 'expected_checkout_date',
+              width: 160,
+              render: (v: string) => (v ? dayjs(v).format('DD/MM/YYYY') : '-'),
+            },
+            {
+              title: 'Status',
+              dataIndex: 'status',
+              width: 120,
+              render: (v: string) => (
+                <Tag color={checkoutStatusColor[v] || 'default'}>{v}</Tag>
+              ),
+            },
+            {
+              title: 'Action',
+              width: 100,
+              render: (_: any, r: StudentCheckoutRequest) => (
+                <Button size="small" type="link" onClick={() => openCheckoutDetail(r)} style={{ padding: 0 }}>
+                  Details
+                </Button>
+              ),
+            },
+          ]}
+        />
+      ),
+    },
+    {
+      key: 'detail',
+      label: checkoutDetailTabLabel,
+      disabled: !checkoutSelected,
+      children: checkoutSelected ? (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Button onClick={backToCheckoutList}>← Back to list</Button>
+            <Space>
+              {checkoutSelected.status === 'pending' && (
+                <>
+                  <Button danger onClick={() => { checkoutRejectForm.resetFields(); setCheckoutRejectOpen(true); }}>
+                    Reject
+                  </Button>
+                  <Button type="primary" loading={checkoutReviewLoading} onClick={submitCheckoutApprove}>
+                    Approve
+                  </Button>
+                </>
+              )}
+              {checkoutSelected.status === 'inspected' && (
+                <Button type="primary" loading={checkoutReviewLoading} onClick={submitCheckoutComplete}>
+                  Complete Checkout
+                </Button>
+              )}
+            </Space>
+          </div>
+
+          {/* Inspection result banner */}
+          {checkoutSelected.status === 'inspected' && checkoutSelected.inspection && (() => {
+            const ins = checkoutSelected.inspection;
+            const hasIssue = ins.equipment_status !== 'complete' || ins.cleanliness_status !== 'clean';
+            return (
+              <Alert
+                type={hasIssue ? 'warning' : 'success'}
+                showIcon
+                message={hasIssue ? 'Room inspection found issues' : 'Room inspection passed — no issues found'}
+                description={
+                  <div className="space-y-1 mt-1 text-sm">
+                    <div><span className="font-medium">Cleanliness:</span> {ins.cleanliness_status}</div>
+                    <div><span className="font-medium">Equipment:</span> {ins.equipment_status}</div>
+                    {ins.equipment_notes && <div><span className="font-medium">Equipment notes:</span> {ins.equipment_notes}</div>}
+                    {ins.maintenance_needed && <div><span className="font-medium">Maintenance needed:</span> {ins.maintenance_needed}</div>}
+                    <div className="text-gray-500">
+                      Inspected by {ins.inspected_by?.full_name || 'security'} · {ins.inspected_at ? dayjs(ins.inspected_at).format('DD/MM/YYYY HH:mm') : '-'}
+                    </div>
+                  </div>
+                }
+              />
+            );
+          })()}
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+            <div><Text type="secondary">Request Code:</Text> <Text strong>{checkoutSelected.request_code}</Text></div>
+            <div>
+              <Text type="secondary">Student:</Text>{' '}
+              <Text>{checkoutSelected.student?.full_name || '-'}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Student Code:</Text>{' '}
+              <Text>{checkoutSelected.student?.student_code || '-'}</Text>
+            </div>
+            <div><Text type="secondary">Room:</Text> <Text>{formatCheckoutRoom(checkoutSelected.room)}</Text></div>
+            <div><Text type="secondary">Bed:</Text> <Text>{checkoutSelected.bed?.bed_number || '-'}</Text></div>
+            <div>
+              <Text type="secondary">Expected Checkout Date:</Text>{' '}
+              <Text>{dayjs(checkoutSelected.expected_checkout_date).format('DD/MM/YYYY')}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Reason:</Text>
+              <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[80px]">
+                {checkoutSelected.reason || '-'}
+              </div>
+            </div>
+            <div>
+              <Text type="secondary">Status:</Text>{' '}
+              <Tag color={checkoutStatusColor[checkoutSelected.status] || 'default'}>
+                {checkoutSelected.status}
+              </Tag>
+            </div>
+            {checkoutSelected.status === 'rejected' && checkoutSelected.rejection_reason && (
+              <div>
+                <Text type="secondary">Rejection reason:</Text>
+                <div className="mt-1 rounded border border-red-100 bg-red-50 p-2 text-sm text-red-800">
+                  {checkoutSelected.rejection_reason}
+                </div>
+              </div>
+            )}
+            <div>
+              <Text type="secondary">Submitted:</Text>{' '}
+              <Text>{checkoutSelected.requested_at ? dayjs(checkoutSelected.requested_at).format('DD/MM/YYYY HH:mm') : '-'}</Text>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <Alert type="info" message="Select a checkout request to review." />
+      ),
+    },
+  ];
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -742,6 +1068,8 @@ export default function ManagerRequestsPage() {
           setRejectOpen(false);
           if (next === 'maintenance') {
             backToMaintenanceList();
+          } else if (next === 'checkout') {
+            backToCheckoutList();
           } else {
             resetAfterAction();
           }
@@ -749,6 +1077,7 @@ export default function ManagerRequestsPage() {
         items={[
           { key: 'other', label: 'Other Requests' },
           { key: 'maintenance', label: 'Maintenance Requests' },
+          { key: 'checkout', label: 'Checkout Requests' },
         ]}
       />
 
@@ -832,6 +1161,68 @@ export default function ManagerRequestsPage() {
           />
         </Card>
       )}
+
+      {mode === 'checkout' && (
+        <Card className="rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <Title level={3} style={{ marginBottom: 4 }}>Checkout Request Management</Title>
+              <Text type="secondary">Review and approve or reject student checkout requests.</Text>
+            </div>
+            <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+              <Select
+                value={checkoutStatusFilter}
+                onChange={setCheckoutStatusFilter}
+                style={{ width: isTablet ? 200 : '100%' }}
+                options={[
+                  { label: 'All statuses', value: 'all' },
+                  { label: 'Pending', value: 'pending' },
+                  { label: 'Approved', value: 'approved' },
+                  { label: 'Inspected', value: 'inspected' },
+                  { label: 'Completed', value: 'completed' },
+                  { label: 'Rejected', value: 'rejected' },
+                  { label: 'Cancelled', value: 'cancelled' },
+                ]}
+              />
+              <Button onClick={loadCheckoutData} block={!isTablet}>Refresh</Button>
+            </Space>
+          </div>
+          <Tabs
+            activeKey={checkoutActiveTab}
+            onChange={(k) => {
+              const key = k as CheckoutTabKey;
+              if (key === 'detail' && !checkoutSelected) return;
+              setCheckoutActiveTab(key);
+            }}
+            items={checkoutTabItems}
+            destroyInactiveTabPane={false}
+          />
+        </Card>
+      )}
+
+      <Modal
+        open={checkoutRejectOpen}
+        title="Reject checkout request"
+        okText="Confirm reject"
+        okButtonProps={{ danger: true, loading: checkoutRejectLoading }}
+        onCancel={() => setCheckoutRejectOpen(false)}
+        onOk={submitCheckoutReject}
+        destroyOnClose
+        width={isTablet ? 520 : 'calc(100vw - 24px)'}
+      >
+        <p className="mb-3 text-gray-600 text-sm">
+          Please provide a reason for rejection. The student will be notified.
+        </p>
+        <Form form={checkoutRejectForm} layout="vertical">
+          <Form.Item
+            name="rejection_reason"
+            label="Rejection reason"
+            rules={[{ required: true, message: 'Please enter a rejection reason' }]}
+          >
+            <Input.TextArea rows={4} placeholder="e.g. Contract not eligible for early checkout..." />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         open={rejectOpen}
