@@ -9,15 +9,17 @@ import {
 import type { UploadFile } from 'antd';
 import {
   getEWUsages, createEWUsage, updateEWUsage, resetMeter,
-  importEWUsages, exportEWUsages, recalculateEWUsages,
+  importEWUsages, exportEWUsages, quickCreateEWUsage, recalculateEWUsages,
   type EWUsage, type EWUsageFilter, type CreateEWUsageDto, type UpdateEWUsageDto,
-  type EWImportResult, type RecalculateResult,
+  type EWImportResult, type QuickCreateEWUsageDto, type RecalculateResult,
 } from '@/lib/actions/ewUsage';
 import { fetchBlocks, type Block } from '@/lib/actions';
 import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const getErrorMessage = (error: unknown, fallback: string) =>
+  (error as { message?: string })?.message || fallback;
 
 const MONTHS = [
   { label: 'All', value: '' },
@@ -60,6 +62,9 @@ export default function ElectricityPage() {
   const [editRecord, setEditRecord] = useState<EWUsage | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [form] = Form.useForm();
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickLoading, setQuickLoading] = useState(false);
+  const [quickForm] = Form.useForm();
 
   // Reset modal
   const [resetOpen, setResetOpen] = useState(false);
@@ -78,8 +83,8 @@ export default function ElectricityPage() {
       const res = await getEWUsages(params);
       setData(res.data);
       setTotal(res.total);
-    } catch {
-      message.error('Failed to load data');
+    } catch (err) {
+      message.error(getErrorMessage(err, 'Failed to load data'));
     } finally {
       setLoading(false);
     }
@@ -109,8 +114,8 @@ export default function ElectricityPage() {
       if (filterMonth) params.month = filterMonth;
       if (filterYear) params.year = filterYear;
       await exportEWUsages(params);
-    } catch {
-      message.error('Export failed');
+    } catch (err) {
+      message.error(getErrorMessage(err, 'Export failed'));
     }
   };
 
@@ -120,8 +125,8 @@ export default function ElectricityPage() {
       const res = await recalculateEWUsages();
       setRecalcResult(res);
       fetchData(page);
-    } catch {
-      message.error('Recalculation failed');
+    } catch (err) {
+      message.error(getErrorMessage(err, 'Recalculation failed'));
     } finally {
       setRecalcLoading(false);
     }
@@ -138,8 +143,8 @@ export default function ElectricityPage() {
         message.success('Import completed and utility invoices were synchronized');
       }
       fetchData(1);
-    } catch {
-      message.error('Import failed');
+    } catch (err) {
+      message.error(getErrorMessage(err, 'Import failed'));
     } finally {
       setImportLoading(false);
     }
@@ -152,6 +157,14 @@ export default function ElectricityPage() {
     setEditRecord(null);
     form.resetFields();
     setFormOpen(true);
+  };
+
+  const openQuickCreate = () => {
+    quickForm.setFieldsValue({
+      type: 'electric',
+      meter_increment: 10,
+    });
+    setQuickOpen(true);
   };
 
   const openEdit = (record: EWUsage) => {
@@ -194,9 +207,40 @@ export default function ElectricityPage() {
       setFormOpen(false);
       fetchData(1);
     } catch (err: unknown) {
-      if (err instanceof Error) message.error(err.message);
+      message.error(getErrorMessage(err, 'Failed to save usage record'));
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleQuickCreateSubmit = async () => {
+    try {
+      const values = await quickForm.validateFields();
+      setQuickLoading(true);
+
+      const body: QuickCreateEWUsageDto = {
+        block: values.block,
+        type: values.type,
+        meter_increment: values.meter_increment,
+      };
+      if (values.meter_right !== undefined && values.meter_right !== null) {
+        body.meter_right = values.meter_right;
+      }
+      if (values.date) body.date = values.date.toISOString();
+      if (values.term) body.term = values.term;
+
+      const created = await quickCreateEWUsage(body);
+      message.success(
+        `Quick-created ${created.type} usage for ${created.block_name} (${new Date(created.date).toLocaleDateString('en-US')})`
+      );
+      setQuickOpen(false);
+      quickForm.resetFields();
+      fetchData(1);
+      setPage(1);
+    } catch (err) {
+      message.error(getErrorMessage(err, 'Quick create failed'));
+    } finally {
+      setQuickLoading(false);
     }
   };
 
@@ -210,8 +254,8 @@ export default function ElectricityPage() {
       setResetOpen(false);
       resetForm.resetFields();
       fetchData(page);
-    } catch {
-      message.error('Meter reset failed');
+    } catch (err) {
+      message.error(getErrorMessage(err, 'Meter reset failed'));
     } finally {
       setResetLoading(false);
     }
@@ -304,6 +348,9 @@ export default function ElectricityPage() {
       <Space wrap style={{ marginBottom: 16 }}>
         <Button icon={<UploadOutlined />} onClick={() => setImportOpen(true)}>
           Import Data
+        </Button>
+        <Button onClick={openQuickCreate}>
+          Quick Create
         </Button>
         <Button icon={<PlusOutlined />} type="primary" onClick={openCreate}>
           Create New Record
@@ -451,6 +498,76 @@ export default function ElectricityPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        title="Quick Create EW Usage"
+        open={quickOpen}
+        onCancel={() => {
+          setQuickOpen(false);
+          quickForm.resetFields();
+        }}
+        onOk={handleQuickCreateSubmit}
+        confirmLoading={quickLoading}
+        okText="Create"
+      >
+        <Form form={quickForm} layout="vertical">
+          <Form.Item
+            label="Block"
+            name="block"
+            rules={[{ required: true, message: 'Please select a block' }]}
+          >
+            <Select
+              placeholder="Select block"
+              showSearch
+              optionFilterProp="children"
+            >
+              {blocks.map((block) => (
+                <Option key={block.id} value={block.id}>
+                  {block.block_name || block.block_code}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            label="Type"
+            name="type"
+            rules={[{ required: true, message: 'Please select a type' }]}
+          >
+            <Select>
+              <Option value="electric">Electric</Option>
+              <Option value="water">Water</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            label="Meter Increase"
+            name="meter_increment"
+            tooltip="Used only when Current Meter is left empty"
+          >
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            label="Current Meter"
+            name="meter_right"
+            tooltip="Optional. Leave empty to auto-use previous meter + increase"
+          >
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            label="Recorded Date"
+            name="date"
+            tooltip="Optional. Leave empty to auto-use the next month"
+          >
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            label="Term"
+            name="term"
+            tooltip="Optional. Leave empty to auto-derive from the date"
+          >
+            <Input placeholder="Fall-2026" />
+          </Form.Item>
+        </Form>
       </Modal>
 
       {/* Reset Modal */}

@@ -20,7 +20,7 @@ const DashboardPage = () => {
       detail: '+3 from yesterday',
       icon: FileText,
       bgColor: 'bg-orange-50',
-      iconBg: 'bg-[#FF5C00]',
+      iconBg: 'bg-[#F36F21]',
     },
     {
       title: 'Visitors in Dorm',
@@ -148,7 +148,7 @@ const DashboardPage = () => {
             <h2 className="text-xl font-bold text-gray-900">
               Processing Requests
             </h2>
-            <button className="bg-[#FF5C00] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#e65300] transition-colors text-sm">
+            <button className="bg-[#F36F21] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#D85F19] transition-colors text-sm">
               New Request
             </button>
           </div>
@@ -175,7 +175,7 @@ const DashboardPage = () => {
                     <span className="font-semibold text-gray-900">
                       {request.type}
                     </span>
-                    <span className="bg-[#FF5C00] text-white text-xs px-2 py-0.5 rounded-full">
+                    <span className="bg-[#F36F21] text-white text-xs px-2 py-0.5 rounded-full">
                       {request.room}
                     </span>
                   </div>
@@ -240,7 +240,7 @@ const DashboardPage = () => {
             })}
           </div>
 
-          <button className="mt-6 text-[#FF5C00] text-sm font-medium hover:underline">
+          <button className="mt-6 text-[#F36F21] text-sm font-medium hover:underline">
             View All Notifications
           </button>
         </div>

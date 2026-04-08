@@ -18,28 +18,28 @@ const LandingPage = () => {
       {/* 1. NAVIGATION BAR */}
       <nav className="flex items-center justify-between px-8 py-4 bg-white sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="bg-[#FF5C00] p-1.5 rounded-lg">
+          <div className="bg-[#F36F21] p-1.5 rounded-lg">
             <span className="text-white font-bold text-xl">D</span>
           </div>
           <span className="text-xl font-bold tracking-tight">DormFlow</span>
         </div>
         
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
-          <a href="#" className="hover:text-[#FF5C00]">Features</a>
-          <a href="#" className="hover:text-[#FF5C00]">Pricing</a>
-          <a href="#" className="hover:text-[#FF5C00]">About Us</a>
-          <a href="#" className="hover:text-[#FF5C00]">Contact</a>
+          <a href="#" className="hover:text-[#F36F21]">Features</a>
+          <a href="#" className="hover:text-[#F36F21]">Pricing</a>
+          <a href="#" className="hover:text-[#F36F21]">About Us</a>
+          <a href="#" className="hover:text-[#F36F21]">Contact</a>
         </div>
 
         <div className="flex items-center gap-4">
-          <Link to="/signin" className="text-[#FF5C00] font-semibold px-4 py-2 hover:bg-orange-50 rounded-lg">Sign In</Link>
+          <Link to="/signin" className="text-[#F36F21] font-semibold px-4 py-2 hover:bg-orange-50 rounded-lg">Sign In</Link>
         </div>
       </nav>
 
       {/* 2. HERO SECTION */}
       <section className="container mx-auto px-8 py-16 flex flex-col md:flex-row items-center justify-between">
         <div className="md:w-1/2 space-y-6">
-          <div className="inline-block bg-orange-100 text-[#FF5C00] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+          <div className="inline-block bg-orange-100 text-[#F36F21] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
             ✨ Modern dormitory management solution
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
@@ -50,23 +50,23 @@ const LandingPage = () => {
             DormFlow helps students and dormitory managers connect easily. Manage rooms, payments, and requests all in one app.
           </p>
           <div className="flex items-center gap-4 pt-4">
-            <button className="bg-[#FF5C00] text-white px-8 py-3.5 rounded-lg font-bold flex items-center gap-2 hover:bg-[#e65300]">
+            <button className="bg-[#F36F21] text-white px-8 py-3.5 rounded-lg font-bold flex items-center gap-2 hover:bg-[#D85F19]">
               Get Started <ChevronRight size={20} />
             </button>
-            <button className="border-2 border-orange-200 text-[#FF5C00] px-8 py-3 rounded-lg font-bold hover:bg-orange-50 transition-colors">
+            <button className="border-2 border-orange-200 text-[#F36F21] px-8 py-3 rounded-lg font-bold hover:bg-orange-50 transition-colors">
               View Demo
             </button>
           </div>
           
           <div className="grid grid-cols-3 gap-8 pt-10 border-t border-gray-100">
-            <div><p className="text-2xl font-bold text-[#FF5C00]">500+</p><p className="text-sm text-gray-500">Dormitories</p></div>
-            <div><p className="text-2xl font-bold text-[#FF5C00]">50K+</p><p className="text-sm text-gray-500">Students</p></div>
-            <div><p className="text-2xl font-bold text-[#FF5C00]">4.9/5</p><p className="text-sm text-gray-500">Rating</p></div>
+            <div><p className="text-2xl font-bold text-[#F36F21]">500+</p><p className="text-sm text-gray-500">Dormitories</p></div>
+            <div><p className="text-2xl font-bold text-[#F36F21]">50K+</p><p className="text-sm text-gray-500">Students</p></div>
+            <div><p className="text-2xl font-bold text-[#F36F21]">4.9/5</p><p className="text-sm text-gray-500">Rating</p></div>
           </div>
         </div>
 
         <div className="md:w-1/2 mt-12 md:mt-0 relative flex justify-center items-center">
-          <div className="w-full max-w-[500px] aspect-square bg-[#FF5C00] rounded-[60px] shadow-2xl flex flex-col items-center justify-center text-white p-12 transform hover:scale-105 transition-transform duration-300">
+          <div className="w-full max-w-[500px] aspect-square bg-[#F36F21] rounded-[60px] shadow-2xl flex flex-col items-center justify-center text-white p-12 transform hover:scale-105 transition-transform duration-300">
             <div className="bg-white/20 p-6 rounded-3xl mb-8">
               <Home size={60} strokeWidth={1.5} />
             </div>
@@ -95,7 +95,7 @@ const LandingPage = () => {
               { icon: <Clock className="text-white" />, title: "24/7 Support", desc: "Support team always ready to help you" },
             ].map((item, index) => (
               <div key={index} className="p-8 rounded-2xl bg-[#FFFBF7] hover:shadow-lg transition-shadow border border-orange-50 group">
-                <div className="bg-[#FF5C00] w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-orange-200 shadow-lg">
+                <div className="bg-[#F36F21] w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-orange-200 shadow-lg">
                   {item.icon}
                 </div>
                 <h3 className="text-xl font-bold mb-3">{item.title}</h3>
@@ -108,7 +108,7 @@ const LandingPage = () => {
 
       {/* 4. CTA SECTION */}
       <section className="container mx-auto px-8 py-20">
-        <div className="bg-[#FF5C00] rounded-[40px] p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl">
+        <div className="bg-[#F36F21] rounded-[40px] p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl">
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
             <h2 className="text-4xl md:text-5xl font-bold">Ready to Upgrade Your Dormitory?</h2>
             <p className="text-orange-100 text-lg">
@@ -126,7 +126,7 @@ const LandingPage = () => {
         <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-6">
             <div className="flex items-center gap-2 text-white">
-              <div className="bg-[#FF5C00] p-1.5 rounded-lg">
+              <div className="bg-[#F36F21] p-1.5 rounded-lg">
                 <span className="font-bold text-lg">D</span>
               </div>
               <span className="text-xl font-bold">DormFlow</span>

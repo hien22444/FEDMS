@@ -58,6 +58,7 @@ import type {
 } from '@/lib/actions';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { connectSocket } from '@/lib/socket';
+import { brandPalette } from '@/themes/brandPalette';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -1103,7 +1104,7 @@ const Booking: React.FC = () => {
             type="primary"
             loading={loadingKeep}
             onClick={() => setConfirmKeepModal(true)}
-            style={{ background: '#ea580c', borderColor: '#ea580c', borderRadius: 6 }}
+            style={{ background: brandPalette.primary, borderColor: brandPalette.primary, borderRadius: 6 }}
           >
             Keep Bed
           </Button>
