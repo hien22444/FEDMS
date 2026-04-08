@@ -134,15 +134,35 @@ const StudentLayout = () => {
       window.dispatchEvent(new Event('student:booking:cancelled'));
     };
 
+    const handleRoomTransferUpdated = () => {
+      window.dispatchEvent(new Event('student:transfer:updated'));
+    };
+
+    const handleTransferUpgradePaymentCancelled = () => {
+      notification.info({
+        message: 'Bed upgrade payment cancelled',
+        description: 'PayOS payment was cancelled. Your supplement invoice is closed and your previous bed assignment is unchanged.',
+        placement: 'topRight',
+        duration: 6,
+      });
+      window.dispatchEvent(new Event('student:transfer:upgrade-cancelled'));
+    };
+
     socket.on('new_notification', handleNewNotification);
     socket.on('booking_config_updated', handleBookingConfigUpdated);
     socket.on('booking_approved', handleBookingApproved);
     socket.on('booking_cancelled', handleBookingCancelled);
+    socket.on('room_transfer_updated', handleRoomTransferUpdated);
+    socket.on('room_transfer_history_updated', handleRoomTransferUpdated);
+    socket.on('transfer_upgrade_payment_cancelled', handleTransferUpgradePaymentCancelled);
     return () => {
       socket.off('new_notification', handleNewNotification);
       socket.off('booking_config_updated', handleBookingConfigUpdated);
       socket.off('booking_approved', handleBookingApproved);
       socket.off('booking_cancelled', handleBookingCancelled);
+      socket.off('room_transfer_updated', handleRoomTransferUpdated);
+      socket.off('room_transfer_history_updated', handleRoomTransferUpdated);
+      socket.off('transfer_upgrade_payment_cancelled', handleTransferUpgradePaymentCancelled);
     };
   }, []);
 

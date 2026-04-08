@@ -29,6 +29,8 @@ export namespace IUser {
     violations_current_semester: number;
     is_banned_permanently: boolean;
     ban_until_semester?: string;
+    /** Manager CFD expulsion — login OK, booking blocked */
+    dorm_booking_suspended?: boolean;
   }
 
   export interface SignInDto {

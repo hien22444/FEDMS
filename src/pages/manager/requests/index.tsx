@@ -64,6 +64,7 @@ export default function ManagerRequestsPage() {
     ? terminalMaintenanceStatuses.includes(String(maintenanceSelected.status))
     : false;
 
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -104,6 +105,7 @@ export default function ManagerRequestsPage() {
     loadMaintenanceData();
   }, [loadMaintenanceData]);
 
+
   /** Sync selected row after list refresh (same request still open in detail tab) */
   useEffect(() => {
     if (!maintenanceSelected?.id) return;
@@ -117,6 +119,7 @@ export default function ManagerRequestsPage() {
     const updated = items.find((i) => i.id === selected.id);
     if (updated) setSelected(updated);
   }, [items, selected?.id]);
+
 
   const openDetailTab = (item: OtherRequestItem) => {
     setSelected(item);
@@ -190,6 +193,7 @@ export default function ManagerRequestsPage() {
     setMaintenanceSelected(null);
     maintenanceForm.resetFields();
   };
+
 
   const submitMaintenanceUpdate = async () => {
     if (!maintenanceSelected) return;
@@ -552,19 +556,23 @@ export default function ManagerRequestsPage() {
             <div>
               <Text type="secondary">Bed:</Text> <Text>{maintenanceSelected.bed?.bed_number || '-'}</Text>
             </div>
-            {maintenanceSelected.equipment &&
+            {(maintenanceSelected.equipment &&
               typeof maintenanceSelected.equipment.template === 'object' &&
-              maintenanceSelected.equipment.template !== null && (
+              maintenanceSelected.equipment.template !== null) ||
+              maintenanceSelected.equipment_other_selected ? (
               <div>
                 <Text type="secondary">Affected equipment:</Text>{' '}
                 <Text>
-                  {maintenanceSelected.equipment.template.equipment_name || 'Equipment'}
-                  {maintenanceSelected.equipment.template.brand
-                    ? ` (${maintenanceSelected.equipment.template.brand})`
-                    : ''}
+                  {maintenanceSelected.equipment_other_selected
+                    ? 'Other'
+                    : `${maintenanceSelected.equipment?.template?.equipment_name || 'Equipment'}${
+                      maintenanceSelected.equipment?.template?.brand
+                        ? ` (${maintenanceSelected.equipment.template.brand})`
+                        : ''
+                    }`}
                 </Text>
               </div>
-            )}
+            ) : null}
             <div>
               <Text type="secondary">Description:</Text>
               <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[140px]">
@@ -732,6 +740,7 @@ export default function ManagerRequestsPage() {
     },
   ];
 
+
   return (
     <div className="space-y-6">
       <Tabs
@@ -832,6 +841,7 @@ export default function ManagerRequestsPage() {
           />
         </Card>
       )}
+
 
       <Modal
         open={rejectOpen}

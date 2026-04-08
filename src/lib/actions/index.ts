@@ -34,6 +34,7 @@ export * from './chat';
 export * from './booking';
 export * from './otherRequest';
 export * from './maintenanceRequest';
+export * from './roomTransfer';
 export * from './faceRecognition';
 export * from './accessLog';
 export * from './camera';

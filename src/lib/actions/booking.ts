@@ -74,6 +74,20 @@ export interface BookingRequestItem {
   };
   room: BookingRoom;
   bed?: { id: string; bed_number: string };
+  bed_transfer?: {
+    id: string;
+    bed_number: string;
+    room?: {
+      id: string;
+      room_number?: string;
+      block?: { block_code?: string; block_name?: string; dorm?: { dorm_code?: string } };
+    };
+  } | null;
+  room_transfer?: {
+    id: string;
+    room_number?: string;
+    block?: { block_code?: string; block_name?: string; dorm?: { dorm_code?: string } };
+  } | null;
   invoice?: BookingInvoice;
   payos?: {
     orderCode?: number | null;
@@ -224,6 +238,42 @@ export const searchStudentForCheckout = async (studentCode: string) => {
 
 export const checkoutStudent = async (studentCode: string) => {
   return api.post<CheckoutResult>('bookings/checkout', { student_code: studentCode });
+};
+
+export interface CfdAtRiskStudent {
+  id: string;
+  full_name: string;
+  student_code: string;
+  behavioral_score: number;
+  dorm_booking_suspended: boolean;
+  email?: string;
+  active_contract: {
+    id: string;
+    semester: string;
+    room: {
+      room_number: string;
+      room_type?: string;
+      floor?: number;
+      block?: { block_name?: string; block_code?: string; dorm?: { dorm_name?: string; dorm_code?: string } };
+    };
+    bed?: { bed_number?: string };
+  } | null;
+}
+
+export interface CfdExpelResult {
+  message: string;
+  student_code: string;
+  full_name: string;
+  had_active_contract: boolean;
+  dorm_booking_suspended: boolean;
+}
+
+export const fetchCfdAtRiskStudents = async () => {
+  return api.get<CfdAtRiskStudent[]>('bookings/cfd-at-risk');
+};
+
+export const cfdDormExpelStudent = async (studentCode: string) => {
+  return api.post<CfdExpelResult>('bookings/cfd-expel', { student_code: studentCode });
 };
 
 export interface RoommateItem {

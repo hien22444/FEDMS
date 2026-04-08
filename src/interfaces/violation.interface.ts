@@ -145,6 +145,7 @@ export namespace IViolation {
       violations_current_semester: number;
       is_banned_permanently: boolean;
       ban_until_semester?: string;
+      dorm_booking_suspended?: boolean;
     };
     penalties: Penalty[];
   }

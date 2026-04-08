@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   App,
   Card,
@@ -30,6 +31,7 @@ import {
   PlusOutlined,
   MinusCircleOutlined,
   AppstoreOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import {
   createVisitorRequest,
@@ -50,13 +52,14 @@ import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
 import violationActions from '@/lib/actions/violation';
 const { getMyViolationReports, createViolationReport } = violationActions;
 import dayjs from 'dayjs';
+import BedTransferPage from '@/pages/student/bed-transfer';
 import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 type RequestType = 'visitor' | 'maintenance' | 'report' | 'other' | null;
-type RequestTabKey = 'all' | 'visitor' | 'maintenance' | 'report' | 'other';
+type RequestTabKey = 'all' | 'visitor' | 'maintenance' | 'bed-transfer' | 'report' | 'other';
 
 type StudentOtherRequest = {
   id: string;
@@ -106,6 +109,7 @@ type UnifiedListItem = {
 
 const Requests: React.FC = () => {
   const { token } = theme.useToken();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { width } = useWindowSize();
   const isTablet = width >= 768;
   const [selectedType, setSelectedType] = useState<RequestType>(null);
@@ -126,6 +130,7 @@ const Requests: React.FC = () => {
   const [selectedMaintenance, setSelectedMaintenance] = useState<UnifiedListItem | null>(null);
   const [maintenanceRequests, setMaintenanceRequests] = useState<StudentMaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [canCreateRequest, setCanCreateRequest] = useState(true);
 
   const fetchMyRequests = useCallback(async () => {
     setLoading(true);
@@ -150,6 +155,28 @@ const Requests: React.FC = () => {
   useEffect(() => {
     fetchMyRequests();
   }, [fetchMyRequests]);
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t === 'bed-transfer' && canCreateRequest) {
+      setActiveTab('bed-transfer');
+    }
+  }, [searchParams, canCreateRequest]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await getMyMaintenanceContext();
+        if (!cancelled) setCanCreateRequest(true);
+      } catch {
+        if (!cancelled) setCanCreateRequest(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Keep detail view in sync after Refresh / background updates */
   useEffect(() => {
@@ -316,6 +343,7 @@ const Requests: React.FC = () => {
     all: 'All',
     visitor: 'Visitor',
     maintenance: 'Maintenance',
+    'bed-transfer': 'Change Bed',
     report: 'Violation',
     other: 'Other',
   };
@@ -326,6 +354,10 @@ const Requests: React.FC = () => {
   };
 
   const handleNewRequest = (type: RequestType) => {
+    if (!canCreateRequest) {
+      message.warning('You are not currently staying in the dormitory and cannot submit requests.');
+      return;
+    }
     setSelectedType(type);
     setShowForm(true);
   };
@@ -526,7 +558,9 @@ const Requests: React.FC = () => {
           ? `${eq.template.equipment_name || 'Equipment'}${
               eq.template.brand ? ` (${eq.template.brand})` : ''
             }`
-          : null;
+          : m.equipment_other_selected
+            ? 'Other'
+            : null;
       return (
         <div className="space-y-5">
           <Button onClick={onBack}>← Back to list</Button>
@@ -973,6 +1007,19 @@ const Requests: React.FC = () => {
       ),
     },
     {
+      key: 'bed-transfer',
+      label: (
+        <span className="flex items-center gap-2">
+          <SwapOutlined /> Change Bed
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          <BedTransferPage embedded />
+        </div>
+      ),
+    },
+    {
       key: 'report',
       label: (
         <span className="flex items-center gap-2">
@@ -1201,12 +1248,46 @@ const Requests: React.FC = () => {
               My Requests
             </Title>
           </div>
+          {!canCreateRequest ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '55vh',
+                textAlign: 'center',
+              }}
+            >
+              <img
+                src="/images/booking-not-started.png"
+                alt="No record"
+                style={{ width: 320, marginBottom: 28, opacity: 0.92 }}
+              />
+              <Title level={3} style={{ color: '#ea580c', fontWeight: 700, margin: 0 }}>
+                No record found!
+              </Title>
+            </div>
+          ) : (
           <Tabs
             activeKey={activeTab}
-            onChange={(k) => setActiveTab(k as RequestTabKey)}
+            onChange={(k) => {
+              const key = k as RequestTabKey;
+              setActiveTab(key);
+              setSearchParams((prev) => {
+                const p = new URLSearchParams(prev);
+                if (key === 'bed-transfer') {
+                  p.set('tab', 'bed-transfer');
+                } else {
+                  p.delete('tab');
+                }
+                return p;
+              });
+            }}
             items={tabItems}
             className="facility-tabs"
           />
+          )}
         </div>
 
         {/* New Request Form Modal */}
@@ -1227,7 +1308,14 @@ const Requests: React.FC = () => {
           }
         >
           {selectedType === 'visitor' && <VisitorForm onSuccess={handleVisitorCreated} />}
-          {selectedType === 'maintenance' && <MaintenanceForm onSuccess={handleMaintenanceCreated} />}
+          {selectedType === 'maintenance' && (
+            <MaintenanceForm
+              onSuccess={handleMaintenanceCreated}
+              openRequest={maintenanceRequests.find(
+                (r) => !['completed', 'done', 'cannot_fix', 'cancelled', 'rejected'].includes(String(r.status))
+              ) || null}
+            />
+          )}
           {selectedType === 'report' && <ReportForm onSuccess={handleReportCreated} />}
           {selectedType === 'other' && <OtherRequestForm onSuccess={handleOtherCreated} />}
         </Modal>
@@ -1404,7 +1492,10 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
 };
 
 // ─── Maintenance Request Form (assigned room from active contract) ───
-const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+const MaintenanceForm: React.FC<{
+  onSuccess: () => void;
+  openRequest?: StudentMaintenanceRequest | null;
+}> = ({ onSuccess, openRequest = null }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [roomEquipment, setRoomEquipment] = useState<RoomEquipment[]>([]);
@@ -1459,14 +1550,22 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
       label: `${name}${brand}`,
     };
   });
+  equipmentOptions.push({ value: 'other', label: 'Other' });
 
   const handleSubmit = async () => {
+    if (openRequest) {
+      message.warning(
+        `You already have an active maintenance request (${openRequest.request_code} - ${openRequest.status}). Please wait until it is processed.`
+      );
+      return;
+    }
     try {
       const values = await form.validateFields();
       setSubmitting(true);
+      const selectedEquipment = values.equipment ? String(values.equipment).trim() : undefined;
       await createMaintenanceRequest({
         description: values.description,
-        equipment: values.equipment || undefined,
+        equipment: selectedEquipment,
         evidence_urls: values.evidence_urls?.length ? values.evidence_urls : undefined,
       });
       message.success('Maintenance request submitted');
@@ -1494,6 +1593,15 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
         message="The room is linked to your active contract. Choose an item from the list if the issue relates to a specific piece of equipment assigned to your room."
         style={{ marginBottom: 16 }}
       />
+      {openRequest ? (
+        <Alert
+          type="warning"
+          showIcon
+          message={`Active request in progress: ${openRequest.request_code} (${openRequest.status})`}
+          description="You can create a new maintenance request only after the current one is finished."
+          style={{ marginBottom: 16 }}
+        />
+      ) : null}
       <div style={{ marginBottom: 16 }}>
         {loadingContext ? (
           <Alert type="info" showIcon message="Loading room and bed information..." />
@@ -1543,7 +1651,13 @@ const MaintenanceForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => 
           tokenSeparators={[',']}
         />
       </Form.Item>
-      <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>
+      <Button
+        type="primary"
+        size="large"
+        onClick={handleSubmit}
+        loading={submitting}
+        disabled={!!openRequest}
+      >
         Submit request
       </Button>
     </Form>

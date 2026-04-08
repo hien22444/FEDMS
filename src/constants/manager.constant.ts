@@ -74,6 +74,12 @@ export const MANAGER_MENU = [
       { key: 'booking-history', label: 'Booking Management', icon: 'history', path: '/manager/bookings' },
       { key: 'face-registration', label: 'Face Registration', icon: 'user', path: '/manager/face-registration' },
       { key: 'checkout', label: 'Checkout', icon: 'checkout', path: '/manager/checkout' },
+      {
+        key: 'students-cfd-risk',
+        label: 'CFD at-risk (≤2)',
+        icon: 'cfdRisk',
+        path: '/manager/students-cfd-risk',
+      },
       { key: 'login-student', label: 'Login as Student', icon: 'user', path: '/manager/login-student' },
     ],
   },

@@ -1,6 +1,6 @@
 import { ROUTES } from '@/constants';
 
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 // Auth pages
 import SignInPage from '@/pages/signin';
@@ -46,6 +46,7 @@ import FaceRegistrationPage from '@/pages/manager/face-registration';
 import LoginAsStudentPage from '@/pages/manager/login-student';
 import ElectricityPage from '@/pages/manager/electricity';
 import ManagerCheckoutPage from '@/pages/manager/checkout';
+import ManagerStudentsCfdRiskPage from '@/pages/manager/students-cfd-risk';
 import ManagerDateConfigPage from '@/pages/manager/config';
 
 // Student pages
@@ -146,6 +147,10 @@ const router = createBrowserRouter([
               {
                 path: ROUTES.STUDENT_REQUESTS,
                 element: <RequestsPage />,
+              },
+              {
+                path: ROUTES.STUDENT_BED_TRANSFER,
+                element: <Navigate to={`${ROUTES.STUDENT_REQUESTS}?tab=bed-transfer`} replace />,
               },
               {
                 path: ROUTES.STUDENT_CFD_POINTS,
@@ -320,6 +325,10 @@ const router = createBrowserRouter([
               {
                 path: 'checkout',
                 element: <ManagerCheckoutPage />,
+              },
+              {
+                path: 'students-cfd-risk',
+                element: <ManagerStudentsCfdRiskPage />,
               },
               {
                 path: 'login-student',
