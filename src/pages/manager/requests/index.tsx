@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { connectSocket } from '@/lib/socket';
 import { Alert, App, Button, Card, DatePicker, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { getAllOtherRequests, reviewOtherRequest, type OtherRequestItem } from '@/lib/actions/otherRequest';
@@ -7,6 +8,12 @@ import {
   reviewMaintenanceRequest,
   type StudentMaintenanceRequest,
 } from '@/lib/actions/maintenanceRequest';
+import {
+  getAllCheckoutRequests,
+  reviewCheckoutRequest,
+  completeCheckoutRequest,
+  type StudentCheckoutRequest,
+} from '@/lib/actions/checkoutRequest';
 import { useWindowSize } from '@/hooks/useWindowSize';
 
 const { Title, Text } = Typography;
@@ -45,9 +52,26 @@ export default function ManagerRequestsPage() {
   const [rejectForm] = Form.useForm();
   const isSelectedFinalized = selected?.status === 'resolved' || selected?.status === 'rejected';
 
-  // Toggle between Other Requests and Maintenance Requests
-  type RequestModeKey = 'other' | 'maintenance';
-  const [mode, setMode] = useState<RequestModeKey>('other');
+  // Toggle between All / Other / Maintenance / Checkout Requests
+  type RequestModeKey = 'all' | 'other' | 'maintenance' | 'checkout';
+  const [mode, setMode] = useState<RequestModeKey>('all');
+
+  // ===== All Requests (unified) =====
+  type UnifiedRequest = {
+    id: string;
+    _type: 'other' | 'maintenance' | 'checkout';
+    request_code: string;
+    student_name: string;
+    student_code: string;
+    room: string;
+    status: string;
+    created_at: string;
+    _raw: any;
+  };
+  const [allItems, setAllItems] = useState<UnifiedRequest[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+  const [allStatusFilter, setAllStatusFilter] = useState<string>('all');
+  const [allSearch, setAllSearch] = useState<string>('');
 
   // ===== Maintenance states (manager) =====
   type MaintenanceTabKey = 'list' | 'detail';
@@ -64,6 +88,415 @@ export default function ManagerRequestsPage() {
     ? terminalMaintenanceStatuses.includes(String(maintenanceSelected.status))
     : false;
 
+  // ===== Checkout states (manager) =====
+  type CheckoutTabKey = 'list' | 'detail';
+  const [checkoutItems, setCheckoutItems] = useState<StudentCheckoutRequest[]>([]);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutStatusFilter, setCheckoutStatusFilter] = useState<string>('all');
+  const [checkoutSelected, setCheckoutSelected] = useState<StudentCheckoutRequest | null>(null);
+  const [checkoutActiveTab, setCheckoutActiveTab] = useState<CheckoutTabKey>('list');
+  const [checkoutReviewLoading, setCheckoutReviewLoading] = useState(false);
+  const [checkoutRejectOpen, setCheckoutRejectOpen] = useState(false);
+  const [checkoutRejectLoading, setCheckoutRejectLoading] = useState(false);
+  const [checkoutRejectForm] = Form.useForm();
+
+  const loadCheckoutData = useCallback(async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await getAllCheckoutRequests({
+        status: checkoutStatusFilter === 'all' ? undefined : checkoutStatusFilter,
+        page: 1,
+        limit: 100,
+      });
+      setCheckoutItems(Array.isArray(res.data) ? res.data : []);
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to load checkout requests');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }, [message, checkoutStatusFilter]);
+
+  useEffect(() => {
+    loadCheckoutData();
+  }, [loadCheckoutData]);
+
+  const formatRoomStr = (room?: any) => {
+    if (!room) return '-';
+    const parts = [room.block?.dorm?.dorm_name, room.block?.block_name, room.room_number ? `Room ${room.room_number}` : null].filter(Boolean);
+    return parts.length ? parts.join(' · ') : '-';
+  };
+
+  const loadAllData = useCallback(async () => {
+    setAllLoading(true);
+    try {
+      const [otherRes, mainRes, checkRes] = await Promise.all([
+        getAllOtherRequests({ page: 1, limit: 200 }),
+        getAllMaintenanceRequests({ page: 1, limit: 200 }),
+        getAllCheckoutRequests({ page: 1, limit: 200 }),
+      ]);
+      const unified: UnifiedRequest[] = [
+        ...((Array.isArray(otherRes.data) ? otherRes.data : []) as OtherRequestItem[]).map((r) => ({
+          id: r.id,
+          _type: 'other' as const,
+          request_code: r.request_code,
+          student_name: r.user?.fullname || r.user?.email || '-',
+          student_code: r.user?.student_code || '-',
+          room: '-',
+          status: r.status,
+          created_at: r.createdAt || '',
+          _raw: r,
+        })),
+        ...((Array.isArray(mainRes.data) ? mainRes.data : []) as StudentMaintenanceRequest[]).map((r) => ({
+          id: r.id,
+          _type: 'maintenance' as const,
+          request_code: r.request_code,
+          student_name: r.student?.full_name || r.student?.user?.email || '-',
+          student_code: r.student?.student_code || '-',
+          room: formatRoomStr(r.room),
+          status: String(r.status),
+          created_at: r.requested_at || '',
+          _raw: r,
+        })),
+        ...((Array.isArray(checkRes.data) ? checkRes.data : []) as StudentCheckoutRequest[]).map((r) => ({
+          id: r.id,
+          _type: 'checkout' as const,
+          request_code: r.request_code,
+          student_name: r.student?.full_name || r.student?.user?.email || '-',
+          student_code: r.student?.student_code || '-',
+          room: formatRoomStr(r.room),
+          status: r.status,
+          created_at: r.requested_at || '',
+          _raw: r,
+        })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setAllItems(unified);
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to load requests');
+    } finally {
+      setAllLoading(false);
+    }
+  }, [message]);
+
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
+
+  const allStatusNormalized = (status: string): string => {
+    if (['pending', 'in_review'].includes(status)) return 'pending';
+    if (['resolved', 'completed', 'done'].includes(status)) return 'completed';
+    if (['rejected', 'cancelled'].includes(status)) return 'rejected';
+    return status;
+  };
+
+  const allItemsFiltered = allItems.filter((r) => {
+    const statusMatch = allStatusFilter === 'all' || allStatusNormalized(r.status) === allStatusFilter;
+    const searchLower = allSearch.toLowerCase();
+    const searchMatch = !searchLower || r.request_code?.toLowerCase().includes(searchLower) || r.student_name.toLowerCase().includes(searchLower) || r.student_code.toLowerCase().includes(searchLower);
+    return statusMatch && searchMatch;
+  });
+
+  const typeColor: Record<string, string> = { other: 'purple', maintenance: 'blue', checkout: 'orange' };
+  const typeLabel: Record<string, string> = { other: 'Other', maintenance: 'Maintenance', checkout: 'Checkout' };
+
+  const unifiedStatusColor: Record<string, string> = {
+    pending: 'processing', in_review: 'warning', approved: 'blue', assigned: 'cyan',
+    in_progress: 'geekblue', inspected: 'warning', completed: 'success', resolved: 'success',
+    done: 'success', rejected: 'error', cancelled: 'default',
+  };
+
+  const openUnifiedDetail = (r: UnifiedRequest) => {
+    setMode(r._type);
+    if (r._type === 'other') { openDetailTab(r._raw); }
+    else if (r._type === 'maintenance') { openMaintenanceDetail(r._raw); }
+    else { openCheckoutDetail(r._raw); }
+  };
+
+  // Real-time: checkout events from backend
+  useEffect(() => {
+    const socket = connectSocket(); // ensures socket exists even on first mount
+
+    const handleNewRequest = (req: StudentCheckoutRequest) => {
+      message.info({ content: `New checkout request: ${req.request_code}`, duration: 5 });
+      // Re-fetch from API to keep list in sync with current status filter
+      loadCheckoutData();
+    };
+
+    const handleInspected = (req: StudentCheckoutRequest) => {
+      message.warning({
+        content: `Room inspected: ${req.request_code} — review required`,
+        duration: 6,
+      });
+      setCheckoutItems((prev) =>
+        prev.map((i) => (i.id === req.id ? (req as StudentCheckoutRequest) : i))
+      );
+    };
+
+    const handleStatusUpdated = (req: StudentCheckoutRequest) => {
+      setCheckoutItems((prev) =>
+        prev.map((i) => (i.id === req.id ? (req as StudentCheckoutRequest) : i))
+      );
+      if (checkoutSelected?.id === req.id) {
+        setCheckoutSelected(req as StudentCheckoutRequest);
+      }
+    };
+
+    socket.on('new_checkout_request', handleNewRequest);
+    socket.on('checkout_inspected', handleInspected);
+    socket.on('checkout_status_updated', handleStatusUpdated);
+    return () => {
+      socket.off('new_checkout_request', handleNewRequest);
+      socket.off('checkout_inspected', handleInspected);
+      socket.off('checkout_status_updated', handleStatusUpdated);
+    };
+  }, [message, checkoutSelected?.id, loadCheckoutData]);
+
+  useEffect(() => {
+    if (!checkoutSelected?.id) return;
+    const updated = checkoutItems.find((i) => i.id === checkoutSelected.id);
+    if (updated) setCheckoutSelected(updated);
+  }, [checkoutItems, checkoutSelected?.id]);
+
+  const openCheckoutDetail = (item: StudentCheckoutRequest) => {
+    setCheckoutSelected(item);
+    checkoutRejectForm.resetFields();
+    setCheckoutRejectOpen(false);
+    setCheckoutActiveTab('detail');
+  };
+
+  const backToCheckoutList = () => {
+    setCheckoutActiveTab('list');
+    setCheckoutSelected(null);
+    checkoutRejectForm.resetFields();
+  };
+
+  const submitCheckoutApprove = async () => {
+    if (!checkoutSelected) return;
+    try {
+      setCheckoutReviewLoading(true);
+      await reviewCheckoutRequest(checkoutSelected.id, { status: 'approved' });
+      message.success('Checkout request approved');
+      backToCheckoutList();
+      loadCheckoutData();
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to approve');
+    } finally {
+      setCheckoutReviewLoading(false);
+    }
+  };
+
+  const submitCheckoutReject = async () => {
+    if (!checkoutSelected) return;
+    try {
+      const values = await checkoutRejectForm.validateFields();
+      setCheckoutRejectLoading(true);
+      await reviewCheckoutRequest(checkoutSelected.id, {
+        status: 'rejected',
+        rejection_reason: values.rejection_reason,
+      });
+      message.success('Checkout request rejected');
+      setCheckoutRejectOpen(false);
+      backToCheckoutList();
+      loadCheckoutData();
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.message || 'Failed to reject');
+    } finally {
+      setCheckoutRejectLoading(false);
+    }
+  };
+
+  const submitCheckoutComplete = async () => {
+    if (!checkoutSelected) return;
+    try {
+      setCheckoutReviewLoading(true);
+      await completeCheckoutRequest(checkoutSelected.id);
+      message.success('Checkout completed. Contract terminated and bed freed.');
+      backToCheckoutList();
+      loadCheckoutData();
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to complete checkout');
+    } finally {
+      setCheckoutReviewLoading(false);
+    }
+  };
+
+  const formatCheckoutRoom = (room?: StudentCheckoutRequest['room']) => {
+    if (!room) return '-';
+    const parts = [
+      room.block?.dorm?.dorm_name,
+      room.block?.block_name,
+      room.room_number ? `Room ${room.room_number}` : null,
+    ].filter(Boolean) as string[];
+    return parts.length ? parts.join(' · ') : '-';
+  };
+
+  const checkoutStatusColor: Record<string, string> = {
+    pending: 'processing',
+    approved: 'blue',
+    inspected: 'warning',
+    completed: 'success',
+    rejected: 'error',
+    cancelled: 'default',
+  };
+
+  const checkoutDetailTabLabel = checkoutSelected
+    ? `Detail · ${checkoutSelected.request_code}`
+    : 'Checkout detail';
+
+  const checkoutTabItems = [
+    {
+      key: 'list',
+      label: 'Checkout list',
+      children: (
+        <Table
+          rowKey="id"
+          loading={checkoutLoading}
+          dataSource={checkoutItems}
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: 1000 }}
+          columns={[
+            { title: 'Request Code', dataIndex: 'request_code', width: 170 },
+            {
+              title: 'Student',
+              render: (_: any, r: StudentCheckoutRequest) =>
+                r.student?.full_name || r.student?.user?.email || '-',
+              width: 220,
+            },
+            {
+              title: 'Student Code',
+              render: (_: any, r: StudentCheckoutRequest) => r.student?.student_code || '-',
+              width: 150,
+            },
+            {
+              title: 'Room',
+              render: (_: any, r: StudentCheckoutRequest) => formatCheckoutRoom(r.room),
+              width: 260,
+            },
+            {
+              title: 'Expected Checkout',
+              dataIndex: 'expected_checkout_date',
+              width: 160,
+              render: (v: string) => (v ? dayjs(v).format('DD/MM/YYYY') : '-'),
+            },
+            {
+              title: 'Status',
+              dataIndex: 'status',
+              width: 120,
+              render: (v: string) => (
+                <Tag color={checkoutStatusColor[v] || 'default'}>{v}</Tag>
+              ),
+            },
+            {
+              title: 'Action',
+              width: 100,
+              render: (_: any, r: StudentCheckoutRequest) => (
+                <Button size="small" type="link" onClick={() => openCheckoutDetail(r)} style={{ padding: 0 }}>
+                  Details
+                </Button>
+              ),
+            },
+          ]}
+        />
+      ),
+    },
+    {
+      key: 'detail',
+      label: checkoutDetailTabLabel,
+      disabled: !checkoutSelected,
+      children: checkoutSelected ? (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Button onClick={backToCheckoutList}>← Back to list</Button>
+            <Space>
+              {checkoutSelected.status === 'pending' && (
+                <>
+                  <Button danger onClick={() => { checkoutRejectForm.resetFields(); setCheckoutRejectOpen(true); }}>
+                    Reject
+                  </Button>
+                  <Button type="primary" loading={checkoutReviewLoading} onClick={submitCheckoutApprove}>
+                    Approve
+                  </Button>
+                </>
+              )}
+              {checkoutSelected.status === 'inspected' && (
+                <Button type="primary" loading={checkoutReviewLoading} onClick={submitCheckoutComplete}>
+                  Complete Checkout
+                </Button>
+              )}
+            </Space>
+          </div>
+
+          {/* Inspection result banner */}
+          {checkoutSelected.status === 'inspected' && checkoutSelected.inspection && (() => {
+            const ins = checkoutSelected.inspection;
+            const hasIssue = ins.equipment_status !== 'complete' || ins.cleanliness_status !== 'clean';
+            return (
+              <Alert
+                type={hasIssue ? 'warning' : 'success'}
+                showIcon
+                message={hasIssue ? 'Room inspection found issues' : 'Room inspection passed — no issues found'}
+                description={
+                  <div className="space-y-1 mt-1 text-sm">
+                    <div><span className="font-medium">Cleanliness:</span> {ins.cleanliness_status}</div>
+                    <div><span className="font-medium">Equipment:</span> {ins.equipment_status}</div>
+                    {ins.equipment_notes && <div><span className="font-medium">Equipment notes:</span> {ins.equipment_notes}</div>}
+                    {ins.maintenance_needed && <div><span className="font-medium">Maintenance needed:</span> {ins.maintenance_needed}</div>}
+                    <div className="text-gray-500">
+                      Inspected by {ins.inspected_by?.full_name || 'security'} · {ins.inspected_at ? dayjs(ins.inspected_at).format('DD/MM/YYYY HH:mm') : '-'}
+                    </div>
+                  </div>
+                }
+              />
+            );
+          })()}
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+            <div><Text type="secondary">Request Code:</Text> <Text strong>{checkoutSelected.request_code}</Text></div>
+            <div>
+              <Text type="secondary">Student:</Text>{' '}
+              <Text>{checkoutSelected.student?.full_name || '-'}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Student Code:</Text>{' '}
+              <Text>{checkoutSelected.student?.student_code || '-'}</Text>
+            </div>
+            <div><Text type="secondary">Room:</Text> <Text>{formatCheckoutRoom(checkoutSelected.room)}</Text></div>
+            <div><Text type="secondary">Bed:</Text> <Text>{checkoutSelected.bed?.bed_number || '-'}</Text></div>
+            <div>
+              <Text type="secondary">Expected Checkout Date:</Text>{' '}
+              <Text>{dayjs(checkoutSelected.expected_checkout_date).format('DD/MM/YYYY')}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Reason:</Text>
+              <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[80px]">
+                {checkoutSelected.reason || '-'}
+              </div>
+            </div>
+            <div>
+              <Text type="secondary">Status:</Text>{' '}
+              <Tag color={checkoutStatusColor[checkoutSelected.status] || 'default'}>
+                {checkoutSelected.status}
+              </Tag>
+            </div>
+            {checkoutSelected.status === 'rejected' && checkoutSelected.rejection_reason && (
+              <div>
+                <Text type="secondary">Rejection reason:</Text>
+                <div className="mt-1 rounded border border-red-100 bg-red-50 p-2 text-sm text-red-800">
+                  {checkoutSelected.rejection_reason}
+                </div>
+              </div>
+            )}
+            <div>
+              <Text type="secondary">Submitted:</Text>{' '}
+              <Text>{checkoutSelected.requested_at ? dayjs(checkoutSelected.requested_at).format('DD/MM/YYYY HH:mm') : '-'}</Text>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <Alert type="info" message="Select a checkout request to review." />
+      ),
+    },
+  ];
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -565,10 +998,9 @@ export default function ManagerRequestsPage() {
                 <Text>
                   {maintenanceSelected.equipment_other_selected
                     ? 'Other'
-                    : `${maintenanceSelected.equipment?.template?.equipment_name || 'Equipment'}${
-                      maintenanceSelected.equipment?.template?.brand
-                        ? ` (${maintenanceSelected.equipment.template.brand})`
-                        : ''
+                    : `${maintenanceSelected.equipment?.template?.equipment_name || 'Equipment'}${maintenanceSelected.equipment?.template?.brand
+                      ? ` (${maintenanceSelected.equipment.template.brand})`
+                      : ''
                     }`}
                 </Text>
               </div>
@@ -751,15 +1183,110 @@ export default function ManagerRequestsPage() {
           setRejectOpen(false);
           if (next === 'maintenance') {
             backToMaintenanceList();
+          } else if (next === 'checkout') {
+            backToCheckoutList();
           } else {
             resetAfterAction();
           }
         }}
         items={[
+          { key: 'all', label: 'All Requests' },
           { key: 'other', label: 'Other Requests' },
           { key: 'maintenance', label: 'Maintenance Requests' },
+          { key: 'checkout', label: 'Checkout Requests' },
         ]}
       />
+
+      {mode === 'all' && (
+        <Card className="rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <Title level={3} style={{ marginBottom: 4 }}>All Requests</Title>
+              <Text type="secondary">All student requests across types.</Text>
+            </div>
+            <Space wrap>
+              <Input.Search
+                placeholder="Search by code, name, student ID..."
+                allowClear
+                style={{ width: 260 }}
+                value={allSearch}
+                onChange={(e) => setAllSearch(e.target.value)}
+              />
+              <Select
+                value={allStatusFilter}
+                onChange={setAllStatusFilter}
+                style={{ width: 160 }}
+                options={[
+                  { label: 'All statuses', value: 'all' },
+                  { label: 'Pending', value: 'pending' },
+                  { label: 'Completed', value: 'completed' },
+                  { label: 'Rejected', value: 'rejected' },
+                ]}
+              />
+              <Button onClick={loadAllData} loading={allLoading}>Refresh</Button>
+            </Space>
+          </div>
+          <Table
+            rowKey="id"
+            loading={allLoading}
+            dataSource={allItemsFiltered}
+            pagination={{ pageSize: 15, showTotal: (t) => `${t} requests` }}
+            scroll={{ x: 1000 }}
+            columns={[
+              {
+                title: 'Code',
+                dataIndex: 'request_code',
+                width: 160,
+              },
+              {
+                title: 'Type',
+                dataIndex: '_type',
+                width: 130,
+                render: (v: string) => <Tag color={typeColor[v]}>{typeLabel[v]}</Tag>,
+              },
+              {
+                title: 'Student',
+                dataIndex: 'student_name',
+                width: 200,
+              },
+              {
+                title: 'Student ID',
+                dataIndex: 'student_code',
+                width: 140,
+              },
+              {
+                title: 'Room',
+                dataIndex: 'room',
+                width: 220,
+              },
+              {
+                title: 'Status',
+                dataIndex: 'status',
+                width: 130,
+                render: (v: string) => <Tag color={unifiedStatusColor[v] || 'default'}>{v}</Tag>,
+              },
+              {
+                title: 'Date',
+                dataIndex: 'created_at',
+                width: 130,
+                render: (v: string) => v ? dayjs(v).format('DD/MM/YYYY') : '-',
+                sorter: (a: UnifiedRequest, b: UnifiedRequest) =>
+                  new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+                defaultSortOrder: 'descend',
+              },
+              {
+                title: 'Action',
+                width: 90,
+                render: (_: any, r: UnifiedRequest) => (
+                  <Button size="small" type="link" style={{ padding: 0 }} onClick={() => openUnifiedDetail(r)}>
+                    Details
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      )}
 
       {mode === 'other' && (
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -842,6 +1369,69 @@ export default function ManagerRequestsPage() {
         </Card>
       )}
 
+      {
+        mode === 'checkout' && (
+          <Card className="rounded-2xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+              <div>
+                <Title level={3} style={{ marginBottom: 4 }}>Checkout Request Management</Title>
+                <Text type="secondary">Review and approve or reject student checkout requests.</Text>
+              </div>
+              <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+                <Select
+                  value={checkoutStatusFilter}
+                  onChange={setCheckoutStatusFilter}
+                  style={{ width: isTablet ? 200 : '100%' }}
+                  options={[
+                    { label: 'All statuses', value: 'all' },
+                    { label: 'Pending', value: 'pending' },
+                    { label: 'Approved', value: 'approved' },
+                    { label: 'Inspected', value: 'inspected' },
+                    { label: 'Completed', value: 'completed' },
+                    { label: 'Rejected', value: 'rejected' },
+                    { label: 'Cancelled', value: 'cancelled' },
+                  ]}
+                />
+                <Button onClick={loadCheckoutData} block={!isTablet}>Refresh</Button>
+              </Space>
+            </div>
+            <Tabs
+              activeKey={checkoutActiveTab}
+              onChange={(k) => {
+                const key = k as CheckoutTabKey;
+                if (key === 'detail' && !checkoutSelected) return;
+                setCheckoutActiveTab(key);
+              }}
+              items={checkoutTabItems}
+              destroyInactiveTabPane={false}
+            />
+          </Card>
+        )
+      }
+
+      <Modal
+        open={checkoutRejectOpen}
+        title="Reject checkout request"
+        okText="Confirm reject"
+        okButtonProps={{ danger: true, loading: checkoutRejectLoading }}
+        onCancel={() => setCheckoutRejectOpen(false)}
+        onOk={submitCheckoutReject}
+        destroyOnClose
+        width={isTablet ? 520 : 'calc(100vw - 24px)'}
+      >
+        <p className="mb-3 text-gray-600 text-sm">
+          Please provide a reason for rejection. The student will be notified.
+        </p>
+        <Form form={checkoutRejectForm} layout="vertical">
+          <Form.Item
+            name="rejection_reason"
+            label="Rejection reason"
+            rules={[{ required: true, message: 'Please enter a rejection reason' }]}
+          >
+            <Input.TextArea rows={4} placeholder="e.g. Contract not eligible for early checkout..." />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         open={rejectOpen}
@@ -866,6 +1456,6 @@ export default function ManagerRequestsPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </div >
   );
 }

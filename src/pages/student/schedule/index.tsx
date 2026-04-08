@@ -9,10 +9,9 @@ import { brandPalette } from '@/themes/brandPalette';
 
 const { Title, Text } = Typography;
 
-const parseSemester = (semesterLabel: string): { semester: number; year: number } => {
+const parseSemester = (semesterLabel: string): { semester: string; year: number } => {
   const [name, year] = semesterLabel.split('-');
-  const map: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
-  return { semester: map[name] ?? 0, year: parseInt(year, 10) };
+  return { semester: name || '—', year: parseInt(year, 10) };
 };
 
 const formatCheckout = (endDate: string): string => {

@@ -31,6 +31,7 @@ import {
   PlusOutlined,
   MinusCircleOutlined,
   AppstoreOutlined,
+  LogoutOutlined,
   SwapOutlined,
 } from '@ant-design/icons';
 import {
@@ -43,7 +44,11 @@ import {
   getMyMaintenanceRequests,
   getMyRoomEquipmentForMaintenance,
   getMyMaintenanceContext,
+  createCheckoutRequest,
+  getMyCheckoutRequests,
+  cancelCheckoutRequest as cancelCheckoutRequestAction,
 } from '@/lib/actions';
+import type { StudentCheckoutRequest } from '@/lib/actions/checkoutRequest';
 import type { StudentMaintenanceRequest } from '@/lib/actions/maintenanceRequest';
 import type { MaintenanceContext } from '@/lib/actions/maintenanceRequest';
 import type { RoomEquipment } from '@/lib/actions/admin';
@@ -52,14 +57,17 @@ import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
 import violationActions from '@/lib/actions/violation';
 const { getMyViolationReports, createViolationReport } = violationActions;
 import dayjs from 'dayjs';
+import toast from 'react-hot-toast';
 import BedTransferPage from '@/pages/student/bed-transfer';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { connectSocket } from '@/lib/socket';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-type RequestType = 'visitor' | 'maintenance' | 'report' | 'other' | null;
-type RequestTabKey = 'all' | 'visitor' | 'maintenance' | 'bed-transfer' | 'report' | 'other';
+
+type RequestType = 'visitor' | 'maintenance' | 'report' | 'other' | 'checkout' | null;
+type RequestTabKey = 'all' | 'visitor' | 'maintenance' | 'bed-transfer' | 'report' | 'checkout' | 'other';
 
 type StudentOtherRequest = {
   id: string;
@@ -94,7 +102,7 @@ type InnerListTabKey = 'list' | 'detail';
 
 type UnifiedListItem = {
   id: string;
-  type: 'visitor' | 'report' | 'other' | 'maintenance';
+  type: 'visitor' | 'report' | 'other' | 'maintenance' | 'checkout';
   title: string;
   subtitle: string;
   status: string;
@@ -103,7 +111,7 @@ type UnifiedListItem = {
   rejection_reason?: string | null | undefined;
   manager_response?: string | null | undefined;
   visitors: IVisitor.Visitor[] | undefined;
-  raw: IVisitor.VisitorRequest | IViolation.ViolationReport | StudentOtherRequest | StudentMaintenanceRequest;
+  raw: IVisitor.VisitorRequest | IViolation.ViolationReport | StudentOtherRequest | StudentMaintenanceRequest | StudentCheckoutRequest;
   sortTime: number;
 };
 
@@ -129,22 +137,27 @@ const Requests: React.FC = () => {
   const [maintenanceInnerTab, setMaintenanceInnerTab] = useState<InnerListTabKey>('list');
   const [selectedMaintenance, setSelectedMaintenance] = useState<UnifiedListItem | null>(null);
   const [maintenanceRequests, setMaintenanceRequests] = useState<StudentMaintenanceRequest[]>([]);
+  const [checkoutRequests, setCheckoutRequests] = useState<StudentCheckoutRequest[]>([]);
+  const [checkoutInnerTab, setCheckoutInnerTab] = useState<InnerListTabKey>('list');
+  const [selectedCheckout, setSelectedCheckout] = useState<UnifiedListItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [canCreateRequest, setCanCreateRequest] = useState(true);
 
   const fetchMyRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const [visitorData, reportData, otherData, maintData] = await Promise.all([
+      const [visitorData, reportData, otherData, maintData, checkoutData] = await Promise.all([
         getMyVisitorRequests(),
         getMyViolationReports().catch(() => []),
         getMyOtherRequests().catch(() => []),
         getMyMaintenanceRequests().catch(() => []),
+        getMyCheckoutRequests().catch(() => []),
       ]);
       setVisitorRequests(visitorData);
       setViolationReports(Array.isArray(reportData) ? reportData : []);
       setOtherRequests(Array.isArray(otherData) ? otherData : []);
       setMaintenanceRequests(Array.isArray(maintData) ? maintData : []);
+      setCheckoutRequests(Array.isArray(checkoutData) ? checkoutData : []);
     } catch {
       // silent — API may not be ready
     } finally {
@@ -155,6 +168,30 @@ const Requests: React.FC = () => {
   useEffect(() => {
     fetchMyRequests();
   }, [fetchMyRequests]);
+
+  // Real-time: listen for checkout status changes from manager
+  useEffect(() => {
+    const socket = connectSocket();
+
+    const handleStatusUpdated = (req: StudentCheckoutRequest) => {
+      setCheckoutRequests((prev) =>
+        prev.map((r) => (r.id === req.id ? { ...r, ...req } : r))
+      );
+    };
+
+    const handleCompleted = (req: StudentCheckoutRequest) => {
+      setCheckoutRequests((prev) =>
+        prev.map((r) => (r.id === req.id ? { ...r, ...req, status: 'completed' } : r))
+      );
+    };
+
+    socket.on('checkout_status_updated', handleStatusUpdated);
+    socket.on('checkout_completed', handleCompleted);
+    return () => {
+      socket.off('checkout_status_updated', handleStatusUpdated);
+      socket.off('checkout_completed', handleCompleted);
+    };
+  }, []);
 
   useEffect(() => {
     const t = searchParams.get('tab');
@@ -247,8 +284,22 @@ const Requests: React.FC = () => {
         raw: r,
         sortTime: dayjs(r.requested_at || Date.now()).valueOf(),
       })),
+      ...checkoutRequests.map((r) => ({
+        id: r.id,
+        type: 'checkout' as const,
+        title: 'Checkout Request',
+        subtitle: r.request_code,
+        status: r.status,
+        date: dayjs(r.expected_checkout_date).format('DD/MM/YYYY'),
+        detail: r.reason.slice(0, 60),
+        rejection_reason: r.rejection_reason,
+        manager_response: undefined as string | undefined,
+        visitors: undefined,
+        raw: r,
+        sortTime: dayjs(r.requested_at || Date.now()).valueOf(),
+      })),
     ],
-    [visitorRequests, violationReports, otherRequests, maintenanceRequests]
+    [visitorRequests, violationReports, otherRequests, maintenanceRequests, checkoutRequests]
   );
 
   useEffect(() => {
@@ -274,6 +325,12 @@ const Requests: React.FC = () => {
     const next = allRequests.find((i) => i.id === selectedMaintenance.id && i.type === 'maintenance');
     if (next) setSelectedMaintenance(next);
   }, [allRequests, selectedMaintenance?.id]);
+
+  useEffect(() => {
+    if (!selectedCheckout?.id) return;
+    const next = allRequests.find((i) => i.id === selectedCheckout.id && i.type === 'checkout');
+    if (next) setSelectedCheckout(next);
+  }, [allRequests, selectedCheckout?.id]);
 
   const getStatusTag = (status: string) => {
     switch (status) {
@@ -327,6 +384,8 @@ const Requests: React.FC = () => {
         return <FlagOutlined style={{ fontSize: '24px', color: '#fa541c' }} />;
       case 'other':
         return <FileSearchOutlined style={{ fontSize: '24px', color: '#722ed1' }} />;
+      case 'checkout':
+        return <LogoutOutlined style={{ fontSize: '24px', color: '#f5222d' }} />;
       default:
         return <FileSearchOutlined />;
     }
@@ -346,6 +405,7 @@ const Requests: React.FC = () => {
     'bed-transfer': 'Change Bed',
     report: 'Violation',
     other: 'Other',
+    checkout: 'Checkout',
   };
 
   const filteredRequestsByTab = (tab: RequestTabKey) => {
@@ -385,6 +445,31 @@ const Requests: React.FC = () => {
   const handleMaintenanceCreated = () => {
     handleCloseForm();
     fetchMyRequests();
+  };
+
+  const handleCheckoutCreated = () => {
+    handleCloseForm();
+    fetchMyRequests();
+    toast.success('Checkout request submitted successfully!');
+  };
+
+  const handleCheckoutConflict = () => {
+    handleCloseForm();
+    fetchMyRequests(); // refresh to show the existing active request
+  };
+
+  const handleCancelCheckout = async (id: string) => {
+    try {
+      await cancelCheckoutRequestAction(id);
+      message.success('Checkout request cancelled');
+      fetchMyRequests();
+      if (selectedCheckout?.id === id) {
+        setSelectedCheckout(null);
+        setCheckoutInnerTab('list');
+      }
+    } catch {
+      message.error('Failed to cancel checkout request');
+    }
   };
 
   const handleCancel = async (id: string) => {
@@ -555,9 +640,8 @@ const Requests: React.FC = () => {
       const eq = m.equipment;
       const eqLabel =
         eq && eq.template
-          ? `${eq.template.equipment_name || 'Equipment'}${
-              eq.template.brand ? ` (${eq.template.brand})` : ''
-            }`
+          ? `${eq.template.equipment_name || 'Equipment'}${eq.template.brand ? ` (${eq.template.brand})` : ''
+          }`
           : m.equipment_other_selected
             ? 'Other'
             : null;
@@ -644,6 +728,75 @@ const Requests: React.FC = () => {
                 <div className="mt-1 whitespace-pre-wrap rounded border border-blue-100 bg-blue-50 p-3 text-sm">
                   {m.completion_notes}
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (item.type === 'checkout') {
+      const c = item.raw as StudentCheckoutRequest;
+      return (
+        <div className="space-y-5">
+          <Button onClick={onBack}>← Back to list</Button>
+          {showTypeBadge && <Tag color="red">Checkout request</Tag>}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
+            <div>
+              <Text type="secondary">Request code:</Text> <Text strong>{c.request_code}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Status:</Text> {getStatusTag(c.status)}
+            </div>
+            <div>
+              <Text type="secondary">Expected checkout date:</Text>{' '}
+              <Text>{dayjs(c.expected_checkout_date).format('DD/MM/YYYY')}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Room:</Text>{' '}
+              <Text>
+                {[
+                  c.room?.block?.dorm?.dorm_name,
+                  c.room?.block?.block_name,
+                  c.room?.room_number ? `Room ${c.room.room_number}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ') || '—'}
+              </Text>
+            </div>
+            <div>
+              <Text type="secondary">Bed:</Text> <Text>{c.bed?.bed_number || '—'}</Text>
+            </div>
+            <div>
+              <Text type="secondary">Reason:</Text>
+              <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[80px]">
+                {c.reason || '-'}
+              </div>
+            </div>
+            <div>
+              <Text type="secondary">Submitted:</Text>{' '}
+              <Text>{c.requested_at ? dayjs(c.requested_at).format('DD/MM/YYYY HH:mm') : '-'}</Text>
+            </div>
+            {c.status === 'rejected' && c.rejection_reason && (
+              <div>
+                <Text type="secondary">Rejection reason:</Text>
+                <div className="mt-1 rounded border border-red-100 bg-red-50 p-3 text-sm text-red-800">
+                  {c.rejection_reason}
+                </div>
+              </div>
+            )}
+            {c.status === 'approved' && (
+              <Alert
+                type="success"
+                showIcon
+                message="Your checkout request has been approved. Security will inspect your room before the checkout date."
+              />
+            )}
+            {c.status === 'pending' && (
+              <div className="pt-2">
+                <Button danger onClick={() => handleCancelCheckout(c.id)}>
+                  Cancel Request
+                </Button>
               </div>
             )}
           </div>
@@ -841,6 +994,17 @@ const Requests: React.FC = () => {
                     size="small"
                     icon={<CloseOutlined />}
                     onClick={() => handleCancel(req.id)}
+                    block={!isTablet}
+                  >
+                    Cancel
+                  </Button>
+                )}
+                {req.type === 'checkout' && req.status === 'pending' && (
+                  <Button
+                    danger
+                    size="small"
+                    icon={<CloseOutlined />}
+                    onClick={() => handleCancelCheckout(req.id)}
                     block={!isTablet}
                   >
                     Cancel
@@ -1237,6 +1401,76 @@ const Requests: React.FC = () => {
         </div>
       ),
     },
+    {
+      key: 'checkout',
+      label: (
+        <span className="flex items-center gap-2">
+          <LogoutOutlined /> Checkout
+        </span>
+      ),
+      children: (
+        <div className="space-y-4">
+          {(() => {
+            const activeCheckout = checkoutRequests.find((r) =>
+              r.status === 'pending' || r.status === 'approved' || r.status === 'inspected'
+            );
+            const alertType = activeCheckout?.status === 'approved' || activeCheckout?.status === 'inspected' ? 'success' : 'info';
+            const alertMessage =
+              activeCheckout?.status === 'inspected'
+                ? 'Your room has been inspected. Waiting for manager to complete checkout.'
+                : activeCheckout?.status === 'approved'
+                  ? 'Your checkout request has been approved. Security will inspect your room.'
+                  : 'You have a pending checkout request. Cancel it before submitting a new one.';
+            return activeCheckout ? (
+              <Alert
+                type={alertType}
+                showIcon
+                message={alertMessage}
+                description={`Request: ${activeCheckout.request_code} · Expected: ${dayjs(activeCheckout.expected_checkout_date).format('DD/MM/YYYY')}`}
+              />
+            ) : (
+              <div className="flex justify-end">
+                <Button type="primary" danger onClick={() => handleNewRequest('checkout')} block={!isTablet}>
+                  New Checkout Request
+                </Button>
+              </div>
+            );
+          })()}
+          <Card className="rounded-xl border border-gray-200 shadow-sm">
+            <Tabs
+              activeKey={checkoutInnerTab}
+              onChange={(k) => {
+                const key = k as InnerListTabKey;
+                if (key === 'detail' && !selectedCheckout) return;
+                setCheckoutInnerTab(key);
+              }}
+              destroyInactiveTabPane={false}
+              items={[
+                {
+                  key: 'list',
+                  label: 'My requests',
+                  children: renderRequestList(filteredRequestsByTab('checkout'), {
+                    onViewDetail: (it) => {
+                      setSelectedCheckout(it);
+                      setCheckoutInnerTab('detail');
+                    },
+                  }),
+                },
+                {
+                  key: 'detail',
+                  label: selectedCheckout ? `Detail · ${selectedCheckout.subtitle}` : 'Detail',
+                  disabled: !selectedCheckout,
+                  children: renderStudentRequestDetail(selectedCheckout, () => {
+                    setCheckoutInnerTab('list');
+                    setSelectedCheckout(null);
+                  }),
+                },
+              ]}
+            />
+          </Card>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -1269,24 +1503,24 @@ const Requests: React.FC = () => {
               </Title>
             </div>
           ) : (
-          <Tabs
-            activeKey={activeTab}
-            onChange={(k) => {
-              const key = k as RequestTabKey;
-              setActiveTab(key);
-              setSearchParams((prev) => {
-                const p = new URLSearchParams(prev);
-                if (key === 'bed-transfer') {
-                  p.set('tab', 'bed-transfer');
-                } else {
-                  p.delete('tab');
-                }
-                return p;
-              });
-            }}
-            items={tabItems}
-            className="facility-tabs"
-          />
+            <Tabs
+              activeKey={activeTab}
+              onChange={(k) => {
+                const key = k as RequestTabKey;
+                setActiveTab(key);
+                setSearchParams((prev) => {
+                  const p = new URLSearchParams(prev);
+                  if (key === 'bed-transfer') {
+                    p.set('tab', 'bed-transfer');
+                  } else {
+                    p.delete('tab');
+                  }
+                  return p;
+                });
+              }}
+              items={tabItems}
+              className="facility-tabs"
+            />
           )}
         </div>
 
@@ -1304,6 +1538,7 @@ const Requests: React.FC = () => {
               {selectedType === 'maintenance' && 'New Maintenance Request'}
               {selectedType === 'report' && 'New Violation Report'}
               {selectedType === 'other' && 'New Other Request'}
+              {selectedType === 'checkout' && 'New Checkout Request'}
             </Space>
           }
         >
@@ -1318,6 +1553,7 @@ const Requests: React.FC = () => {
           )}
           {selectedType === 'report' && <ReportForm onSuccess={handleReportCreated} />}
           {selectedType === 'other' && <OtherRequestForm onSuccess={handleOtherCreated} />}
+          {selectedType === 'checkout' && <CheckoutRequestForm onSuccess={handleCheckoutCreated} onClose={handleCheckoutConflict} />}
         </Modal>
       </div>
     </div>
@@ -1912,5 +2148,74 @@ const OtherRequestForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) =
     </Form>
   );
 };
+
+// ─── Checkout Request Form ───
+const CheckoutRequestForm: React.FC<{ onSuccess: () => void; onClose: () => void }> = ({ onSuccess, onClose }) => {
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setSubmitting(true);
+      await createCheckoutRequest({
+        expected_checkout_date: values.expected_checkout_date.format('YYYY-MM-DD'),
+        reason: values.reason,
+      });
+      onSuccess();
+    } catch (err: any) {
+      if (err?.errorFields) return; // antd validation error — form already shows inline errors
+      const msg = Array.isArray(err?.message) ? err.message[0] : err?.message;
+      if (err?.statusCode === 409) {
+        onClose();
+        toast.error(msg || 'You already have an active checkout request.');
+      } else if (msg) {
+        toast.error(msg);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Form form={form} layout="vertical">
+      <Alert
+        message="Your checkout request will be reviewed by the manager. Security staff will inspect your room before the checkout date."
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
+      <Form.Item
+        name="expected_checkout_date"
+        label="Expected Checkout Date"
+        rules={[{ required: true, message: 'Please select a checkout date' }]}
+      >
+        <DatePicker
+          style={{ width: '100%' }}
+          disabledDate={(d) => d.isBefore(dayjs().add(1, 'day').startOf('day'))}
+        />
+      </Form.Item>
+      <Form.Item
+        name="reason"
+        label="Reason for Checkout"
+        rules={[
+          { required: true, message: 'Please enter your reason' },
+          { min: 10, message: 'Reason must be at least 10 characters' },
+        ]}
+      >
+        <TextArea
+          rows={4}
+          placeholder="Explain why you want to check out early (e.g. end of semester, personal reasons...)..."
+          maxLength={1000}
+          showCount
+        />
+      </Form.Item>
+      <Button type="primary" danger size="large" onClick={handleSubmit} loading={submitting}>
+        Submit Checkout Request
+      </Button>
+    </Form>
+  );
+};
+
 
 export default Requests;

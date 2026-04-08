@@ -73,4 +73,5 @@ export * from './accessLog';
 export * from './camera';
 export * from './dateConfig';
 export * from './ewUsage';
+export * from './checkoutRequest';
 export * from './agent';

@@ -289,8 +289,6 @@ const StudentLayout = () => {
       { key: ROUTES.STUDENT_PAYMENT, icon: <CreditCardOutlined />, label: 'Payment' },
       { key: ROUTES.STUDENT_REQUESTS, icon: <FileSearchOutlined />, label: 'Requests' },
       { key: ROUTES.STUDENT_CFD_POINTS, icon: <AlertOutlined />, label: 'CFD Points' },
-      { key: ROUTES.STUDENT_DORM_RULES, icon: <TeamOutlined />, label: 'Dorm Rules' },
-      { key: ROUTES.STUDENT_FAQ, icon: <QuestionCircleOutlined />, label: 'FAQ' },
       { key: ROUTES.STUDENT_CHAT, icon: <MessageOutlined />, label: 'Support Chat' },
       {
         key: ROUTES.STUDENT_NOTIFICATIONS,

@@ -1051,11 +1051,10 @@ const Booking: React.FC = () => {
   const renderHoldBed = () => {
     const { semester: semNum, year } = activeBooking
       ? (() => {
-        const [name, y] = (semester?.semester ?? '').split('-');
-        const map: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
-        return { semester: map[name] ?? 0, year: parseInt(y, 10) };
+        const [name, y] = (activeBooking.semester ?? '').split('-');
+        return { semester: name || '—', year: parseInt(y, 10) || '—' };
       })()
-      : { semester: 0, year: 0 };
+      : { semester: '—', year: '—' };
 
     const columns = [
       {
