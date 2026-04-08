@@ -4,7 +4,7 @@ import React, { forwardRef } from 'react';
 
 const variants = {
   default:
-    'bg-primary text-white border-none  rounded-[4px] focus:!bg-primary hover:bg-primary-darker',
+    'bg-primary text-white border-none  rounded-[4px] focus:!bg-primary  hover:bg-primary/80 disabled:!bg-primary/80',
 
   outline:
     'text-sm rounded-[4px] hover:text-primary  disabled:hover:text-gray-300',

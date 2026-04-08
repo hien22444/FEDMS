@@ -175,6 +175,14 @@ const Booking: React.FC = () => {
     if (activeTab === 'my') loadMyBookings();
   }, [activeTab, myBookingsPage]);
 
+  useEffect(() => {
+    if (windowStatus?.dorm_booking_suspended) {
+      void loadMyBookings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windowStatus?.dorm_booking_suspended]);
+
+  // Countdown chỉ bắt đầu khi người dùng click "Click to pay"
   // The countdown starts only after the user clicks "Click to pay"
   useEffect(() => {
     if (paymentStarted && paymentBooking?.expires_at) {
@@ -1043,11 +1051,10 @@ const Booking: React.FC = () => {
   const renderHoldBed = () => {
     const { semester: semNum, year } = activeBooking
       ? (() => {
-        const [name, y] = (semester?.semester ?? '').split('-');
-        const map: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
-        return { semester: map[name] ?? 0, year: parseInt(y, 10) };
+        const [name, y] = (activeBooking.semester ?? '').split('-');
+        return { semester: name || '—', year: parseInt(y, 10) || '—' };
       })()
-      : { semester: 0, year: 0 };
+      : { semester: '—', year: '—' };
 
     const columns = [
       {
@@ -1158,6 +1165,27 @@ const Booking: React.FC = () => {
     </div>
   );
 
+  const renderDormBookingSuspended = () => (
+    <div style={{ padding: '32px 40px', background: '#fff', minHeight: '100vh' }}>
+      {modalContextHolder}
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 24 }}
+          message="Dormitory booking is not available for your account"
+          description="Because of a prior dormitory rules violation, new bookings and bed renewals are disabled. You can still sign in and use other features. Contact dormitory management if you need help."
+        />
+        <Tabs
+          activeKey="my"
+          items={[
+            { key: 'my', label: 'My booking requests', children: renderMyRequests() },
+          ]}
+        />
+      </div>
+    </div>
+  );
+
   // ─── Main ───
   if (windowLoading) {
     return (
@@ -1165,6 +1193,10 @@ const Booking: React.FC = () => {
         <Spin size="large" />
       </div>
     );
+  }
+
+  if (windowStatus?.dorm_booking_suspended) {
+    return renderDormBookingSuspended();
   }
 
   return (

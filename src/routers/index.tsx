@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import { ROUTES } from '@/constants';
 
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 // Auth pages
 import SignInPage from '@/pages/signin';
@@ -16,6 +17,7 @@ import AuthLayout from '@/layouts/AuthLayout';
 import SecurityLayout from '@/layouts/SecurityLayout';
 import { ManagerLayout } from '@/layouts/manager';
 import PrivateRoute from '@/components/PrivateRoute';
+import { SecurityAdminAccessProvider } from '@/contexts';
 
 // Security pages
 import DashboardPage from '@/pages/security/dashboard';
@@ -46,6 +48,7 @@ import FaceRegistrationPage from '@/pages/manager/face-registration';
 import LoginAsStudentPage from '@/pages/manager/login-student';
 import ElectricityPage from '@/pages/manager/electricity';
 import ManagerCheckoutPage from '@/pages/manager/checkout';
+import ManagerStudentsCfdRiskPage from '@/pages/manager/students-cfd-risk';
 import ManagerDateConfigPage from '@/pages/manager/config';
 
 // Student pages
@@ -63,7 +66,6 @@ import GuidelinesPage from '@/pages/student/guidelines';
 import MaintenancePage from '@/pages/student/maintenance';
 import FAQPage from '@/pages/student/faq';
 import NotificationsPage from '@/pages/student/notifications';
-import DormRulesPage from '@/pages/student/dorm-rules';
 
 // Admin
 import { AdminLayout } from '@/layouts/admin';
@@ -148,6 +150,10 @@ const router = createBrowserRouter([
                 element: <RequestsPage />,
               },
               {
+                path: ROUTES.STUDENT_BED_TRANSFER,
+                element: <Navigate to={`${ROUTES.STUDENT_REQUESTS}?tab=bed-transfer`} replace />,
+              },
+              {
                 path: ROUTES.STUDENT_CFD_POINTS,
                 element: <CFDPage />,
               },
@@ -164,10 +170,6 @@ const router = createBrowserRouter([
                 element: <FAQPage />,
               },
               {
-                path: ROUTES.STUDENT_DORM_RULES,
-                element: <DormRulesPage />,
-              },
-              {
                 path: ROUTES.STUDENT_NOTIFICATIONS,
                 element: <NotificationsPage />,
               },
@@ -180,13 +182,17 @@ const router = createBrowserRouter([
         ],
       },
 
-      // Protected Security routes — only 'security' role
+      // Protected Security routes — security and admin roles
       {
-        element: <PrivateRoute allowedRoles={['security']} />,
+        element: <PrivateRoute allowedRoles={['security', 'admin']} />,
         children: [
           {
             path: 'security',
-            element: <SecurityLayout />,
+            element: (
+              <SecurityAdminAccessProvider>
+                <SecurityLayout />
+              </SecurityAdminAccessProvider>
+            ),
             children: [
               {
                 index: true,
@@ -320,6 +326,10 @@ const router = createBrowserRouter([
               {
                 path: 'checkout',
                 element: <ManagerCheckoutPage />,
+              },
+              {
+                path: 'students-cfd-risk',
+                element: <ManagerStudentsCfdRiskPage />,
               },
               {
                 path: 'login-student',

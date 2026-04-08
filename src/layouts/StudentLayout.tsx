@@ -42,6 +42,7 @@ import { useAuth } from '@/contexts';
 import { connectSocket } from '@/lib/socket';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { brandPalette } from '@/themes/brandPalette';
+import { Agent } from '@/components/agent/Agent';
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -134,15 +135,35 @@ const StudentLayout = () => {
       window.dispatchEvent(new Event('student:booking:cancelled'));
     };
 
+    const handleRoomTransferUpdated = () => {
+      window.dispatchEvent(new Event('student:transfer:updated'));
+    };
+
+    const handleTransferUpgradePaymentCancelled = () => {
+      notification.info({
+        message: 'Bed upgrade payment cancelled',
+        description: 'PayOS payment was cancelled. Your supplement invoice is closed and your previous bed assignment is unchanged.',
+        placement: 'topRight',
+        duration: 6,
+      });
+      window.dispatchEvent(new Event('student:transfer:upgrade-cancelled'));
+    };
+
     socket.on('new_notification', handleNewNotification);
     socket.on('booking_config_updated', handleBookingConfigUpdated);
     socket.on('booking_approved', handleBookingApproved);
     socket.on('booking_cancelled', handleBookingCancelled);
+    socket.on('room_transfer_updated', handleRoomTransferUpdated);
+    socket.on('room_transfer_history_updated', handleRoomTransferUpdated);
+    socket.on('transfer_upgrade_payment_cancelled', handleTransferUpgradePaymentCancelled);
     return () => {
       socket.off('new_notification', handleNewNotification);
       socket.off('booking_config_updated', handleBookingConfigUpdated);
       socket.off('booking_approved', handleBookingApproved);
       socket.off('booking_cancelled', handleBookingCancelled);
+      socket.off('room_transfer_updated', handleRoomTransferUpdated);
+      socket.off('room_transfer_history_updated', handleRoomTransferUpdated);
+      socket.off('transfer_upgrade_payment_cancelled', handleTransferUpgradePaymentCancelled);
     };
   }, []);
 
@@ -252,7 +273,7 @@ const StudentLayout = () => {
           }}
           onClick={() => navigate(ROUTES.STUDENT_NOTIFICATIONS)}
         >
-          View all notifications
+          View all notifications →
         </button>
       </div>
     </div>
@@ -268,8 +289,6 @@ const StudentLayout = () => {
       { key: ROUTES.STUDENT_PAYMENT, icon: <CreditCardOutlined />, label: 'Payment' },
       { key: ROUTES.STUDENT_REQUESTS, icon: <FileSearchOutlined />, label: 'Requests' },
       { key: ROUTES.STUDENT_CFD_POINTS, icon: <AlertOutlined />, label: 'CFD Points' },
-      { key: ROUTES.STUDENT_DORM_RULES, icon: <TeamOutlined />, label: 'Dorm Rules' },
-      { key: ROUTES.STUDENT_FAQ, icon: <QuestionCircleOutlined />, label: 'FAQ' },
       { key: ROUTES.STUDENT_CHAT, icon: <MessageOutlined />, label: 'Support Chat' },
       {
         key: ROUTES.STUDENT_NOTIFICATIONS,
@@ -293,7 +312,11 @@ const StudentLayout = () => {
     logout();
   };
 
-  const displayName = profile?.full_name || profile?.student_code || user?.email?.split('@')[0] || 'Student';
+  const displayName =
+    profile?.full_name ||
+    profile?.student_code ||
+    user?.email?.split('@')[0] ||
+    'Student';
   const studentCode = profile?.student_code || '';
   const behavioralScore = profile?.behavioral_score ?? 'N/A';
   const sidebarWidth = collapsed ? 80 : 240;
@@ -547,6 +570,7 @@ const StudentLayout = () => {
           <Outlet />
         </Content>
       </Layout>
+      <Agent />
     </Layout>
   );
 };

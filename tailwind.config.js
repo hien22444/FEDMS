@@ -38,15 +38,9 @@ module.exports = {
         secondary: '#8B8B8B',
       },
       fontFamily: {
-        sans: ['InterTight-Regular', 'sans-serif'],
-        display: [
-          ['InterTight-Regular', ...defaultTheme.fontFamily.sans],
-          { fontVariationSettings: '"wdth" 125' },
-        ],
-        medium: ['InterTight-Medium', 'sans-serif'],
-        semibold: ['InterTight-SemiBold', 'sans-serif'],
-        bold: ['InterTight-Bold', 'sans-serif'],
-        extrabold: ['InterTight-ExtraBold', 'sans-serif'],
+        sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        display: [['Inter', ...defaultTheme.fontFamily.sans]],
+
         poppins: ['Poppins-Bold', 'sans-serif'],
       },
       maxWidth: {

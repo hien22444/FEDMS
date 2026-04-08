@@ -29,8 +29,12 @@ interface RefreshTokenResponse {
   token: string;
 }
 
+export const loginPreview = async (doc: IUser.SignInDto) => {
+  return api.post<LoginResponse>('auth/login', doc);
+};
+
 export const signIn = async (doc: IUser.SignInDto) => {
-  const res = await api.post<LoginResponse>('auth/login', doc);
+  const res = await loginPreview(doc);
 
   // Store tokens in localStorage
   if (res.token) {

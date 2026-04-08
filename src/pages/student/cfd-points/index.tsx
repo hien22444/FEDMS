@@ -213,6 +213,25 @@ const CFDPoints: React.FC = () => {
           />
         )}
 
+        {cfdData?.student?.dorm_booking_suspended && (
+          <Alert
+            type="error"
+            showIcon
+            message="Dormitory booking is locked"
+            description="Management has suspended booking for your account due to a rules violation. You can still sign in. Contact dormitory management if you have questions."
+          />
+        )}
+
+        {behavioralScore != null && behavioralScore <= 2 && (
+          <Alert
+            type="error"
+            showIcon
+            icon={<WarningOutlined />}
+            message="Warning: risk of removal from the dormitory"
+            description="Your CFD score is 2 or below. Management may require you to vacate your bed and suspend booking if rules violations continue. Follow dormitory rules and contact management if you need support."
+          />
+        )}
+
         {/* Main score */}
         <Card
           className="rounded-2xl border-0 shadow-md overflow-hidden"

@@ -52,9 +52,26 @@ export default function ManagerRequestsPage() {
   const [rejectForm] = Form.useForm();
   const isSelectedFinalized = selected?.status === 'resolved' || selected?.status === 'rejected';
 
-  // Toggle between Other / Maintenance / Checkout Requests
-  type RequestModeKey = 'other' | 'maintenance' | 'checkout';
-  const [mode, setMode] = useState<RequestModeKey>('other');
+  // Toggle between All / Other / Maintenance / Checkout Requests
+  type RequestModeKey = 'all' | 'other' | 'maintenance' | 'checkout';
+  const [mode, setMode] = useState<RequestModeKey>('all');
+
+  // ===== All Requests (unified) =====
+  type UnifiedRequest = {
+    id: string;
+    _type: 'other' | 'maintenance' | 'checkout';
+    request_code: string;
+    student_name: string;
+    student_code: string;
+    room: string;
+    status: string;
+    created_at: string;
+    _raw: any;
+  };
+  const [allItems, setAllItems] = useState<UnifiedRequest[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+  const [allStatusFilter, setAllStatusFilter] = useState<string>('all');
+  const [allSearch, setAllSearch] = useState<string>('');
 
   // ===== Maintenance states (manager) =====
   type MaintenanceTabKey = 'list' | 'detail';
@@ -102,6 +119,97 @@ export default function ManagerRequestsPage() {
   useEffect(() => {
     loadCheckoutData();
   }, [loadCheckoutData]);
+
+  const formatRoomStr = (room?: any) => {
+    if (!room) return '-';
+    const parts = [room.block?.dorm?.dorm_name, room.block?.block_name, room.room_number ? `Room ${room.room_number}` : null].filter(Boolean);
+    return parts.length ? parts.join(' · ') : '-';
+  };
+
+  const loadAllData = useCallback(async () => {
+    setAllLoading(true);
+    try {
+      const [otherRes, mainRes, checkRes] = await Promise.all([
+        getAllOtherRequests({ page: 1, limit: 200 }),
+        getAllMaintenanceRequests({ page: 1, limit: 200 }),
+        getAllCheckoutRequests({ page: 1, limit: 200 }),
+      ]);
+      const unified: UnifiedRequest[] = [
+        ...((Array.isArray(otherRes.data) ? otherRes.data : []) as OtherRequestItem[]).map((r) => ({
+          id: r.id,
+          _type: 'other' as const,
+          request_code: r.request_code,
+          student_name: r.user?.fullname || r.user?.email || '-',
+          student_code: r.user?.student_code || '-',
+          room: '-',
+          status: r.status,
+          created_at: r.createdAt || '',
+          _raw: r,
+        })),
+        ...((Array.isArray(mainRes.data) ? mainRes.data : []) as StudentMaintenanceRequest[]).map((r) => ({
+          id: r.id,
+          _type: 'maintenance' as const,
+          request_code: r.request_code,
+          student_name: r.student?.full_name || r.student?.user?.email || '-',
+          student_code: r.student?.student_code || '-',
+          room: formatRoomStr(r.room),
+          status: String(r.status),
+          created_at: r.requested_at || '',
+          _raw: r,
+        })),
+        ...((Array.isArray(checkRes.data) ? checkRes.data : []) as StudentCheckoutRequest[]).map((r) => ({
+          id: r.id,
+          _type: 'checkout' as const,
+          request_code: r.request_code,
+          student_name: r.student?.full_name || r.student?.user?.email || '-',
+          student_code: r.student?.student_code || '-',
+          room: formatRoomStr(r.room),
+          status: r.status,
+          created_at: r.requested_at || '',
+          _raw: r,
+        })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setAllItems(unified);
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to load requests');
+    } finally {
+      setAllLoading(false);
+    }
+  }, [message]);
+
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
+
+  const allStatusNormalized = (status: string): string => {
+    if (['pending', 'in_review'].includes(status)) return 'pending';
+    if (['resolved', 'completed', 'done'].includes(status)) return 'completed';
+    if (['rejected', 'cancelled'].includes(status)) return 'rejected';
+    return status;
+  };
+
+  const allItemsFiltered = allItems.filter((r) => {
+    const statusMatch = allStatusFilter === 'all' || allStatusNormalized(r.status) === allStatusFilter;
+    const searchLower = allSearch.toLowerCase();
+    const searchMatch = !searchLower || r.request_code?.toLowerCase().includes(searchLower) || r.student_name.toLowerCase().includes(searchLower) || r.student_code.toLowerCase().includes(searchLower);
+    return statusMatch && searchMatch;
+  });
+
+  const typeColor: Record<string, string> = { other: 'purple', maintenance: 'blue', checkout: 'orange' };
+  const typeLabel: Record<string, string> = { other: 'Other', maintenance: 'Maintenance', checkout: 'Checkout' };
+
+  const unifiedStatusColor: Record<string, string> = {
+    pending: 'processing', in_review: 'warning', approved: 'blue', assigned: 'cyan',
+    in_progress: 'geekblue', inspected: 'warning', completed: 'success', resolved: 'success',
+    done: 'success', rejected: 'error', cancelled: 'default',
+  };
+
+  const openUnifiedDetail = (r: UnifiedRequest) => {
+    setMode(r._type);
+    if (r._type === 'other') { openDetailTab(r._raw); }
+    else if (r._type === 'maintenance') { openMaintenanceDetail(r._raw); }
+    else { openCheckoutDetail(r._raw); }
+  };
 
   // Real-time: checkout events from backend
   useEffect(() => {
@@ -430,6 +538,7 @@ export default function ManagerRequestsPage() {
     loadMaintenanceData();
   }, [loadMaintenanceData]);
 
+
   /** Sync selected row after list refresh (same request still open in detail tab) */
   useEffect(() => {
     if (!maintenanceSelected?.id) return;
@@ -443,6 +552,7 @@ export default function ManagerRequestsPage() {
     const updated = items.find((i) => i.id === selected.id);
     if (updated) setSelected(updated);
   }, [items, selected?.id]);
+
 
   const openDetailTab = (item: OtherRequestItem) => {
     setSelected(item);
@@ -516,6 +626,7 @@ export default function ManagerRequestsPage() {
     setMaintenanceSelected(null);
     maintenanceForm.resetFields();
   };
+
 
   const submitMaintenanceUpdate = async () => {
     if (!maintenanceSelected) return;
@@ -878,19 +989,22 @@ export default function ManagerRequestsPage() {
             <div>
               <Text type="secondary">Bed:</Text> <Text>{maintenanceSelected.bed?.bed_number || '-'}</Text>
             </div>
-            {maintenanceSelected.equipment &&
+            {(maintenanceSelected.equipment &&
               typeof maintenanceSelected.equipment.template === 'object' &&
-              maintenanceSelected.equipment.template !== null && (
+              maintenanceSelected.equipment.template !== null) ||
+              maintenanceSelected.equipment_other_selected ? (
               <div>
                 <Text type="secondary">Affected equipment:</Text>{' '}
                 <Text>
-                  {maintenanceSelected.equipment.template.equipment_name || 'Equipment'}
-                  {maintenanceSelected.equipment.template.brand
-                    ? ` (${maintenanceSelected.equipment.template.brand})`
-                    : ''}
+                  {maintenanceSelected.equipment_other_selected
+                    ? 'Other'
+                    : `${maintenanceSelected.equipment?.template?.equipment_name || 'Equipment'}${maintenanceSelected.equipment?.template?.brand
+                      ? ` (${maintenanceSelected.equipment.template.brand})`
+                      : ''
+                    }`}
                 </Text>
               </div>
-            )}
+            ) : null}
             <div>
               <Text type="secondary">Description:</Text>
               <div className="mt-1 whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-sm min-h-[140px]">
@@ -1058,6 +1172,7 @@ export default function ManagerRequestsPage() {
     },
   ];
 
+
   return (
     <div className="space-y-6">
       <Tabs
@@ -1075,11 +1190,103 @@ export default function ManagerRequestsPage() {
           }
         }}
         items={[
+          { key: 'all', label: 'All Requests' },
           { key: 'other', label: 'Other Requests' },
           { key: 'maintenance', label: 'Maintenance Requests' },
           { key: 'checkout', label: 'Checkout Requests' },
         ]}
       />
+
+      {mode === 'all' && (
+        <Card className="rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <Title level={3} style={{ marginBottom: 4 }}>All Requests</Title>
+              <Text type="secondary">All student requests across types.</Text>
+            </div>
+            <Space wrap>
+              <Input.Search
+                placeholder="Search by code, name, student ID..."
+                allowClear
+                style={{ width: 260 }}
+                value={allSearch}
+                onChange={(e) => setAllSearch(e.target.value)}
+              />
+              <Select
+                value={allStatusFilter}
+                onChange={setAllStatusFilter}
+                style={{ width: 160 }}
+                options={[
+                  { label: 'All statuses', value: 'all' },
+                  { label: 'Pending', value: 'pending' },
+                  { label: 'Completed', value: 'completed' },
+                  { label: 'Rejected', value: 'rejected' },
+                ]}
+              />
+              <Button onClick={loadAllData} loading={allLoading}>Refresh</Button>
+            </Space>
+          </div>
+          <Table
+            rowKey="id"
+            loading={allLoading}
+            dataSource={allItemsFiltered}
+            pagination={{ pageSize: 15, showTotal: (t) => `${t} requests` }}
+            scroll={{ x: 1000 }}
+            columns={[
+              {
+                title: 'Code',
+                dataIndex: 'request_code',
+                width: 160,
+              },
+              {
+                title: 'Type',
+                dataIndex: '_type',
+                width: 130,
+                render: (v: string) => <Tag color={typeColor[v]}>{typeLabel[v]}</Tag>,
+              },
+              {
+                title: 'Student',
+                dataIndex: 'student_name',
+                width: 200,
+              },
+              {
+                title: 'Student ID',
+                dataIndex: 'student_code',
+                width: 140,
+              },
+              {
+                title: 'Room',
+                dataIndex: 'room',
+                width: 220,
+              },
+              {
+                title: 'Status',
+                dataIndex: 'status',
+                width: 130,
+                render: (v: string) => <Tag color={unifiedStatusColor[v] || 'default'}>{v}</Tag>,
+              },
+              {
+                title: 'Date',
+                dataIndex: 'created_at',
+                width: 130,
+                render: (v: string) => v ? dayjs(v).format('DD/MM/YYYY') : '-',
+                sorter: (a: UnifiedRequest, b: UnifiedRequest) =>
+                  new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+                defaultSortOrder: 'descend',
+              },
+              {
+                title: 'Action',
+                width: 90,
+                render: (_: any, r: UnifiedRequest) => (
+                  <Button size="small" type="link" style={{ padding: 0 }} onClick={() => openUnifiedDetail(r)}>
+                    Details
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      )}
 
       {mode === 'other' && (
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -1162,43 +1369,45 @@ export default function ManagerRequestsPage() {
         </Card>
       )}
 
-      {mode === 'checkout' && (
-        <Card className="rounded-2xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-            <div>
-              <Title level={3} style={{ marginBottom: 4 }}>Checkout Request Management</Title>
-              <Text type="secondary">Review and approve or reject student checkout requests.</Text>
+      {
+        mode === 'checkout' && (
+          <Card className="rounded-2xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+              <div>
+                <Title level={3} style={{ marginBottom: 4 }}>Checkout Request Management</Title>
+                <Text type="secondary">Review and approve or reject student checkout requests.</Text>
+              </div>
+              <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+                <Select
+                  value={checkoutStatusFilter}
+                  onChange={setCheckoutStatusFilter}
+                  style={{ width: isTablet ? 200 : '100%' }}
+                  options={[
+                    { label: 'All statuses', value: 'all' },
+                    { label: 'Pending', value: 'pending' },
+                    { label: 'Approved', value: 'approved' },
+                    { label: 'Inspected', value: 'inspected' },
+                    { label: 'Completed', value: 'completed' },
+                    { label: 'Rejected', value: 'rejected' },
+                    { label: 'Cancelled', value: 'cancelled' },
+                  ]}
+                />
+                <Button onClick={loadCheckoutData} block={!isTablet}>Refresh</Button>
+              </Space>
             </div>
-            <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
-              <Select
-                value={checkoutStatusFilter}
-                onChange={setCheckoutStatusFilter}
-                style={{ width: isTablet ? 200 : '100%' }}
-                options={[
-                  { label: 'All statuses', value: 'all' },
-                  { label: 'Pending', value: 'pending' },
-                  { label: 'Approved', value: 'approved' },
-                  { label: 'Inspected', value: 'inspected' },
-                  { label: 'Completed', value: 'completed' },
-                  { label: 'Rejected', value: 'rejected' },
-                  { label: 'Cancelled', value: 'cancelled' },
-                ]}
-              />
-              <Button onClick={loadCheckoutData} block={!isTablet}>Refresh</Button>
-            </Space>
-          </div>
-          <Tabs
-            activeKey={checkoutActiveTab}
-            onChange={(k) => {
-              const key = k as CheckoutTabKey;
-              if (key === 'detail' && !checkoutSelected) return;
-              setCheckoutActiveTab(key);
-            }}
-            items={checkoutTabItems}
-            destroyInactiveTabPane={false}
-          />
-        </Card>
-      )}
+            <Tabs
+              activeKey={checkoutActiveTab}
+              onChange={(k) => {
+                const key = k as CheckoutTabKey;
+                if (key === 'detail' && !checkoutSelected) return;
+                setCheckoutActiveTab(key);
+              }}
+              items={checkoutTabItems}
+              destroyInactiveTabPane={false}
+            />
+          </Card>
+        )
+      }
 
       <Modal
         open={checkoutRejectOpen}
@@ -1247,6 +1456,6 @@ export default function ManagerRequestsPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </div >
   );
 }

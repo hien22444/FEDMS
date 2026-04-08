@@ -74,6 +74,12 @@ export const MANAGER_MENU = [
       { key: 'booking-history', label: 'Booking Management', icon: 'history', path: '/manager/bookings' },
       { key: 'face-registration', label: 'Face Registration', icon: 'user', path: '/manager/face-registration' },
       { key: 'checkout', label: 'Checkout', icon: 'checkout', path: '/manager/checkout' },
+      {
+        key: 'students-cfd-risk',
+        label: 'CFD at-risk (≤2)',
+        icon: 'cfdRisk',
+        path: '/manager/students-cfd-risk',
+      },
       { key: 'login-student', label: 'Login as Student', icon: 'user', path: '/manager/login-student' },
     ],
   },
@@ -101,7 +107,6 @@ export const MANAGER_MENU = [
         path: '/manager/electricity',
         children: [
           { key: 'all-records', label: 'All Records', path: '/manager/electricity' },
-          { key: 'import-data', label: 'Import Data', path: '/manager/electricity/import' },
           { key: 'create-record', label: 'Create Record', path: '/manager/electricity/create' },
         ],
       },
@@ -113,7 +118,6 @@ export const MANAGER_MENU = [
     items: [
       { key: 'news', label: 'News Management', icon: 'news', path: '/manager/news' },
       { key: 'chat', label: 'Chat with Students', icon: 'chat', path: '/manager/chat' },
-      { key: 'email', label: 'Send Email', icon: 'email', path: '/manager/email' },
       { key: 'notifications', label: 'Notifications', icon: 'bell', path: '/manager/notifications' },
     ],
   },
@@ -121,7 +125,6 @@ export const MANAGER_MENU = [
     group: 'SYSTEM SETTINGS',
     items: [
       { key: 'config', label: 'Date Config', icon: 'settings', path: '/manager/config' },
-      { key: 'settings', label: 'Settings', icon: 'gear', path: '/manager/settings' },
     ],
   },
 ];
