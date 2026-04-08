@@ -6,7 +6,6 @@ import {
   Space,
   Button,
   Badge,
-  Input,
   Popover,
   Typography,
   notification,
@@ -32,7 +31,6 @@ import {
   UserOutlined,
   MessageOutlined,
   BellOutlined,
-  SearchOutlined,
   CloseOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -323,6 +321,7 @@ const StudentLayout = () => {
 
   const sidebarContent = (mobile = false) => (
     <div
+      className="sidebar-filter"
       style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: studentSidebarBg }}
     >
       <div
@@ -411,9 +410,9 @@ const StudentLayout = () => {
               Menu: {
                 darkItemBg: 'transparent',
                 darkSubMenuItemBg: 'transparent',
-                darkItemSelectedBg: '#ffffff',
-                darkItemSelectedColor: studentSidebarBg,
-                darkItemColor: 'rgba(255, 255, 255, 0.95)',
+                darkItemSelectedBg: 'rgba(255, 255, 255, 0.3)',
+                darkItemSelectedColor: '#ffffff',
+                darkItemColor: '#ffffff',
                 darkItemHoverBg: 'rgba(255, 255, 255, 0.1)',
                 darkItemHoverColor: '#ffffff',
               },
@@ -426,6 +425,7 @@ const StudentLayout = () => {
             onClick={handleMenuClick}
             style={{ backgroundColor: 'transparent', border: 'none', marginTop: '16px' }}
             theme="dark"
+            className="student-sidebar-menu"
             inlineCollapsed={!mobile && collapsed}
             items={menuItems}
           />
@@ -438,7 +438,7 @@ const StudentLayout = () => {
           icon={<LogoutOutlined />}
           onClick={handleLogout}
           block
-          style={{ color: 'rgba(255, 255, 255, 0.8)', textAlign: collapsed && !mobile ? 'center' : 'left' }}
+          style={{ color: 'white', textAlign: collapsed && !mobile ? 'center' : 'left' }}
         >
           {collapsed && !mobile ? null : 'Logout'}
         </Button>
@@ -528,14 +528,6 @@ const StudentLayout = () => {
           </div>
 
           <Space size={isTablet ? 'middle' : 'small'}>
-            {isTablet && (
-              <Input
-                placeholder="Search..."
-                prefix={<SearchOutlined />}
-                style={{ width: width >= 1280 ? 250 : 180 }}
-              />
-            )}
-
             <Popover
               content={notifPopoverContent}
               trigger="click"

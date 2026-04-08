@@ -1472,6 +1472,15 @@ const Requests: React.FC = () => {
       ),
     },
   ];
+  const orderedTabItems = [...tabItems].sort((a, b) => {
+    const order: Record<string, number> = { checkout: 1, other: 2 };
+    const oa = order[a.key as string] ?? 0;
+    const ob = order[b.key as string] ?? 0;
+    if (oa === 0 && ob === 0) return 0;
+    if (oa === 0) return -1;
+    if (ob === 0) return 1;
+    return oa - ob;
+  });
 
   return (
     <div style={{ padding: isTablet ? '32px' : '16px', background: token.colorBgLayout }}>
@@ -1518,7 +1527,7 @@ const Requests: React.FC = () => {
                   return p;
                 });
               }}
-              items={tabItems}
+              items={orderedTabItems}
               className="facility-tabs"
             />
           )}
