@@ -17,6 +17,9 @@ import { ROUTES } from '@/constants';
 import { cn } from '@/utils';
 import { useAuth, useSecurityAdminAccess } from '@/contexts';
 import { connectSocket } from '@/lib/socket';
+import { useDetectionNotifications } from '@/hooks/useDetectionNotifications';
+import DetectionToast from '@/components/DetectionToast';
+import NotificationPanel from '@/components/NotificationPanel';
 
 const SecurityLayout = () => {
   const location = useLocation();
@@ -29,6 +32,14 @@ const SecurityLayout = () => {
   const [adminAccessOpen, setAdminAccessOpen] = useState(false);
   const [adminAccessLoading, setAdminAccessLoading] = useState(false);
   const [adminForm] = Form.useForm();
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const {
+    notifications,
+    activeToast,
+    unreadCount,
+    dismissToast,
+    markAllRead,
+  } = useDetectionNotifications();
 
   // Connect socket so the security user joins the 'security_cameras' room
   // and receives live face_detection_result events from the backend.
@@ -92,10 +103,20 @@ const SecurityLayout = () => {
                     Admin Access
                   </Button>
                 ))}
-              <div className="relative">
-                <Bell className="w-5 h-5 text-gray-600 cursor-pointer" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-              </div>
+              <button
+                onClick={() => {
+                  setNotifPanelOpen(true);
+                  markAllRead();
+                }}
+                className="relative p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <Bell className="w-5 h-5 text-gray-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
               <button
                 onClick={() => {
                   revokeAdminAccess();
@@ -219,6 +240,15 @@ const SecurityLayout = () => {
           </div>
         </Form>
       </Modal>
+
+      {/* Detection notifications */}
+      <DetectionToast notification={activeToast} onDismiss={dismissToast} />
+      <NotificationPanel
+        open={notifPanelOpen}
+        onClose={() => setNotifPanelOpen(false)}
+        notifications={notifications}
+        onMarkAllRead={markAllRead}
+      />
     </div>
   );
 };
