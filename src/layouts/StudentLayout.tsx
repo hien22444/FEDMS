@@ -22,8 +22,6 @@ import {
   CreditCardOutlined,
   FileSearchOutlined,
   AlertOutlined,
-  TeamOutlined,
-  QuestionCircleOutlined,
   LogoutOutlined,
   EnvironmentOutlined,
   MenuFoldOutlined,
