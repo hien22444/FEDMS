@@ -116,12 +116,6 @@ const Schedule: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const isActiveBooking = (record: BookingRequestItem) => {
-    if (record.checkout_date) return false;
-    if (!record.end_date) return true;
-    return new Date(record.end_date) > new Date();
-  };
-
   const renderBedInfo = (
     room?: { room_number?: string; block?: { dorm?: { dorm_code?: string }; block_code?: string; block_name?: string } },
     bedNum?: string | number | null
