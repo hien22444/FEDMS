@@ -311,7 +311,7 @@ const SignInPage = () => {
           style={{
             position: 'absolute',
             inset: 0,
-            background: `linear-gradient(135deg, ${token.colorPrimary} 0%, ${token.colorPrimary}ee 50%, #FF8C40 100%)`,
+            background: `linear-gradient(135deg, ${token.colorPrimary} 0%, ${token.colorPrimary}ee 50%, #F6A15C 100%)`,
           }}
         />
 

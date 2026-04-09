@@ -595,6 +595,31 @@ export interface BedListResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+export interface BedTransferHistoryItem {
+  id: string;
+  student?: { id: string; student_code?: string; full_name?: string } | null;
+  from_room?: {
+    id: string;
+    room_number?: string;
+    block?: { block_name?: string; block_code?: string; dorm?: { dorm_code?: string } };
+  } | null;
+  from_bed?: { id: string; bed_number?: string } | null;
+  to_room?: {
+    id: string;
+    room_number?: string;
+    block?: { block_name?: string; block_code?: string; dorm?: { dorm_code?: string } };
+  } | null;
+  to_bed?: { id: string; bed_number?: string } | null;
+  transfer_source: string;
+  changed_by_staff?: { id: string; full_name?: string; staff_code?: string } | null;
+  changed_at: string;
+}
+
+export interface BedTransferHistoryResponse {
+  items: BedTransferHistoryItem[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
 const buildQuery = (params?: Record<string, string | number | boolean>) => {
   const sp = new URLSearchParams();
   if (params) Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') sp.append(k, String(v)); });
@@ -623,6 +648,11 @@ export const changeBedAssignment = async (sourceBedId: string, targetBedId: stri
     source_bed: sourceBedId,
     target_bed: targetBedId,
   });
+};
+
+export const fetchBedTransferHistory = async (params?: Record<string, string | number | boolean>) => {
+  const q = buildQuery(params);
+  return api.get<BedTransferHistoryResponse>(`beds/assignment/history${q ? `?${q}` : ''}`);
 };
 
 // ===== Dashboard Stats =====
@@ -655,4 +685,34 @@ export const fetchDashboardStats = async (force = false): Promise<DashboardStats
     _dashboardCacheTime = Date.now();
   }
   return result;
+};
+
+// ===== Bed Usage Stats =====
+
+export interface BedUsageBucket {
+  totalBeds: number;
+  usedBeds: number;
+  freeBeds: number;
+  maintenanceBeds: number;
+}
+
+export interface BedUsageRoomType extends BedUsageBucket {
+  roomType: string;
+}
+
+export interface BedUsageDorm {
+  dormName: string;
+  dormCode: string;
+  roomTypes: BedUsageRoomType[];
+  dormTotal: BedUsageBucket;
+}
+
+export interface BedUsageStatsResponse {
+  grandTotal: BedUsageBucket;
+  byDormAndRoomType: BedUsageDorm[];
+  byRoomType: BedUsageRoomType[];
+}
+
+export const fetchBedUsageStats = async (): Promise<BedUsageStatsResponse> => {
+  return api.get<BedUsageStatsResponse>('stats/bed-usage');
 };

@@ -18,7 +18,6 @@ const getCategoryLabel = (value: string) =>
 
 export default function ManagerNewsPage() {
   const [news, setNews] = useState<News[]>([]);
-  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<News | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -28,14 +27,12 @@ export default function ManagerNewsPage() {
 
   const loadNews = async () => {
     try {
-      setLoading(true);
       const res = await fetchNews({ page: 1, limit: 50 });
       setNews(res.items);
     } catch (error: any) {
       console.error(error);
       message.error('Failed to load news list');
     } finally {
-      setLoading(false);
     }
   };
 

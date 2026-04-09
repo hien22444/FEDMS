@@ -10,9 +10,16 @@ import {
   BarChart3,
   Database,
   LogOut,
+  X,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/contexts';
+
+type AdminSidebarProps = {
+  isDesktop?: boolean;
+  mobileOpen?: boolean;
+  onClose?: () => void;
+};
 
 type NavItem = {
   label: string;
@@ -32,7 +39,11 @@ const navItems: NavItem[] = [
   { label: 'Data Management', path: ROUTES.ADMIN_DATA, icon: <Database size={18} /> },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({
+  isDesktop = false,
+  mobileOpen = false,
+  onClose,
+}: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
@@ -42,17 +53,37 @@ export default function AdminSidebar() {
     return location.pathname.startsWith(path);
   };
 
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    if (!isDesktop) onClose?.();
+  };
+
   return (
-    <aside className="w-[280px] bg-orange-600 text-white flex flex-col border-r border-orange-700">
+    <aside
+      className={[
+        'sidebar-filter fixed left-0 top-0 z-40 flex h-screen w-[280px] flex-col border-r border-[#d4621c] bg-[#f37021] text-white transition-transform duration-300 ease-out',
+        isDesktop || mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        'lg:translate-x-0',
+      ].join(' ')}
+    >
       {/* Brand */}
-      <div className="h-20 px-5 flex items-center gap-3 border-b border-orange-700">
+      <div className="flex h-20 items-center gap-3 border-b border-[#d4621c] px-5">
         <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center font-bold">
           D
         </div>
         <div className="leading-tight">
           <div className="font-semibold text-base">Dorm Mgmt</div>
-          <div className="text-xs text-white/80">Admin Panel</div>
+          <div className="text-xs text-white">Admin Panel</div>
         </div>
+        {!isDesktop && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white lg:hidden"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -64,13 +95,15 @@ export default function AdminSidebar() {
               <li key={item.path}>
                 <button
                   type="button"
-                  onClick={() => navigate(item.path)}
+                  onClick={() => handleNavigate(item.path)}
                   className={[
                     'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
-                    active ? 'bg-white text-orange-600 shadow-sm' : 'text-white/95 hover:bg-white/10',
+                    active
+                      ? 'bg-white/30 text-white font-bold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]'
+                      : 'text-white hover:bg-white/10',
                   ].join(' ')}
                 >
-                  <span className={active ? 'text-orange-600' : 'text-white'}>{item.icon}</span>
+                  <span className="text-white">{item.icon}</span>
                   <span className="truncate">{item.label}</span>
                 </button>
               </li>
@@ -80,11 +113,14 @@ export default function AdminSidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-orange-700">
+      <div className="p-4 border-t border-[#d4621c]">
         <button
           type="button"
-          onClick={() => logout()}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/95 hover:bg-white/10 transition-colors"
+          onClick={() => {
+            logout();
+            if (!isDesktop) onClose?.();
+          }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors"
         >
           <LogOut size={18} />
           Logout

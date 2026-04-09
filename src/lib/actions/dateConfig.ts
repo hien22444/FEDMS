@@ -19,6 +19,8 @@ export interface DateConfigResponse {
 export interface BookingWindowStatusResponse {
   allowed: boolean;
   window_type: 'hold' | 'new' | null;
+  /** Backend sets when student.dorm_booking_suspended (CFD expulsion) */
+  dorm_booking_suspended?: boolean;
 }
 
 export const getDateConfig = async (): Promise<DateConfigResponse> => {

@@ -104,7 +104,7 @@ const SecurityReportsPage = () => {
     <div className="space-y-6">
       {/* Page Title */}
       <div className="flex items-center gap-3">
-        <FileSpreadsheet className="w-6 h-6 text-[#FF5C00]" />
+        <FileSpreadsheet className="w-6 h-6 text-[#F36F21]" />
         <h1 className="text-2xl font-bold text-gray-900">Daily Reports</h1>
       </div>
 
@@ -174,7 +174,7 @@ const SecurityReportsPage = () => {
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="flex items-center gap-2 px-4 py-2 bg-[#FF5C00] text-white rounded-lg text-sm font-medium hover:bg-[#e65300] transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-[#F36F21] text-white rounded-lg text-sm font-medium hover:bg-[#D85F19] transition-colors disabled:opacity-50"
             >
               {exporting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -254,6 +254,7 @@ const SecurityReportsPage = () => {
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-2 font-medium text-gray-500">Time</th>
+                <th className="text-left py-3 px-2 font-medium text-gray-500">Snapshot</th>
                 <th className="text-left py-3 px-2 font-medium text-gray-500">Name</th>
                 <th className="text-left py-3 px-2 font-medium text-gray-500">Code / ID</th>
                 <th className="text-left py-3 px-2 font-medium text-gray-500">Type</th>
@@ -265,13 +266,13 @@ const SecurityReportsPage = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12">
+                  <td colSpan={8} className="text-center py-12">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-gray-400">
+                  <td colSpan={8} className="text-center py-12 text-gray-400">
                     No records found for this date
                   </td>
                 </tr>
@@ -286,6 +287,19 @@ const SecurityReportsPage = () => {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
+                    </td>
+                    <td className="py-2 px-2">
+                      {log.face_snapshot_url ? (
+                        <a href={log.face_snapshot_url} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={log.face_snapshot_url}
+                            alt="snapshot"
+                            className="w-12 h-9 object-cover rounded border border-gray-200 hover:opacity-80 transition-opacity"
+                          />
+                        </a>
+                      ) : (
+                        <span className="text-gray-300 text-xs">{'\u2014'}</span>
+                      )}
                     </td>
                     <td className="py-3 px-2 font-medium">
                       {log.student?.full_name || log.visitor_name || 'Unknown'}
@@ -356,7 +370,7 @@ const SecurityReportsPage = () => {
                   className={cn(
                     'px-3 py-1.5 text-sm rounded-lg border',
                     page === pagination.page
-                      ? 'bg-[#FF5C00] text-white border-[#FF5C00]'
+                      ? 'bg-[#F36F21] text-white border-[#F36F21]'
                       : 'border-gray-200 hover:bg-gray-50',
                   )}
                 >

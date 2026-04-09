@@ -15,6 +15,7 @@ import type { ColumnsType } from 'antd/es/table';
 import toast from 'react-hot-toast';
 import { getAllBookings, sendEmailToStudent, sendEmailToAllStudents } from '@/lib/actions';
 import type { BookingRequestItem } from '@/lib/actions';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 const statusConfig: Record<string, { color: string; label: string }> = {
   awaiting_payment: { color: 'warning', label: 'Awaiting Payment' },
@@ -24,6 +25,8 @@ const statusConfig: Record<string, { color: string; label: string }> = {
 };
 
 const ManagerBookings = () => {
+  const { width } = useWindowSize();
+  const isTablet = width >= 768;
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<BookingRequestItem[]>([]);
   const [pagination, setPagination] = useState({
@@ -125,11 +128,24 @@ const ManagerBookings = () => {
         const blockCode = block?.block_code || '';
         const roomNumber = record.room?.room_number || '';
         const bedNumber = record.bed?.bed_number || '';
+        const transferRoom = record.bed_transfer?.room || record.room_transfer || null;
+        const transferBlock = transferRoom?.block;
+        const transferDormCode = transferBlock?.dorm?.dorm_code || '';
+        const transferBlockCode = transferBlock?.block_code || transferBlock?.block_name || '';
+        const transferRoomNumber = transferRoom?.room_number || '';
+        const transferBedNumber = record.bed_transfer?.bed_number || '';
         if (!dormCode && !blockCode && !roomNumber && !bedNumber) return '—';
         return (
-          <span className="font-mono text-sm">
-            {dormCode}{blockCode}-{roomNumber} Bed {bedNumber}
-          </span>
+          <div className="font-mono text-sm leading-5">
+            <div>
+              {dormCode}{blockCode}-{roomNumber} Bed {bedNumber}
+            </div>
+            {transferBedNumber ? (
+              <div className="text-xs text-blue-600 mt-0.5">
+                {transferDormCode}{transferBlockCode}-{transferRoomNumber} Bed {transferBedNumber}
+              </div>
+            ) : null}
+          </div>
         );
       },
     },
@@ -201,27 +217,28 @@ const ManagerBookings = () => {
       </div>
 
       <Card>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-1 flex-wrap gap-4">
           <Input
             placeholder="Search by name, student code or semester..."
             prefix={<Search className="w-4 h-4 text-gray-400" />}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 320 }}
+            style={{ width: isTablet ? 320 : '100%' }}
             onPressEnter={handleSearch}
           />
-          <Space>
-            <Button type="primary" onClick={handleSearch}>
+          <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+            <Button type="primary" onClick={handleSearch} block={!isTablet}>
               Search
             </Button>
-            <Button onClick={handleReset}>Reset</Button>
+            <Button onClick={handleReset} block={!isTablet}>Reset</Button>
           </Space>
           </div>
           <Button
             type="primary"
             icon={<Mail className="w-4 h-4" />}
             onClick={() => setBroadcastOpen(true)}
+            block={!isTablet}
           >
             Send Email to All Students
           </Button>
@@ -256,6 +273,7 @@ const ManagerBookings = () => {
         okText="Send to All"
         confirmLoading={broadcastSending}
         destroyOnClose
+        width={isTablet ? 520 : 'calc(100vw - 24px)'}
       >
         <Form form={broadcastForm} layout="vertical" className="mt-4">
           <Form.Item
@@ -283,6 +301,7 @@ const ManagerBookings = () => {
         okText="Send"
         confirmLoading={emailSending}
         destroyOnClose
+        width={isTablet ? 520 : 'calc(100vw - 24px)'}
       >
         <Form form={emailForm} layout="vertical" className="mt-4">
           <Form.Item

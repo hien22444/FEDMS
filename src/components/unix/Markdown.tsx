@@ -16,7 +16,7 @@ const Markdown = forwardRef<
   return (
     <div
       {...rest}
-      className={`${rest.className}  prose prose-headings:font-bold prose-strong:font-bold font-sans  max-w-none list-disc `}
+      className={`${rest.className}  prose max-w-none text-black `}
       ref={ref}
     >
       <ReactMarkdown

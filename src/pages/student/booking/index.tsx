@@ -25,7 +25,6 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
-  CreditCardOutlined,
   ArrowLeftOutlined,
   HomeOutlined,
 } from '@ant-design/icons';
@@ -57,6 +56,9 @@ import type {
   BookingInvoice,
   SubmitBookingResponse,
 } from '@/lib/actions';
+import { useWindowSize } from '@/hooks/useWindowSize';
+import { connectSocket } from '@/lib/socket';
+import { brandPalette } from '@/themes/brandPalette';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -82,10 +84,14 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 
 const Booking: React.FC = () => {
   const [modalApi, modalContextHolder] = Modal.useModal();
+  const { width } = useWindowSize();
+  const isTablet = width >= 768;
+  const isDesktop = width >= 1024;
 
   // ─── Booking window state ───
   const [windowStatus, setWindowStatus] = useState<BookingWindowStatusResponse | null>(null);
   const [windowLoading, setWindowLoading] = useState(true);
+  const [windowRefreshing, setWindowRefreshing] = useState(false);
 
   // ─── Tab state ───
   const [activeTab, setActiveTab] = useState('new');
@@ -118,6 +124,8 @@ const Booking: React.FC = () => {
 
   const [confirmModal, setConfirmModal] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [confirmKeepModal, setConfirmKeepModal] = useState(false);
+  const [holdSuccess, setHoldSuccess] = useState(false);
 
   // ─── Payment state ───
   const [paymentBooking, setPaymentBooking] = useState<BookingRequestItem | null>(null);
@@ -125,7 +133,6 @@ const Booking: React.FC = () => {
   const [payos, setPayos] = useState<SubmitBookingResponse['payos'] | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
   const [paymentStarted, setPaymentStarted] = useState(false);
-  const [checkingPayment, setCheckingPayment] = useState(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const location = useLocation();
@@ -144,6 +151,15 @@ const Booking: React.FC = () => {
     checkWindow();
   }, []);
 
+  // Listen directly on the socket so the page updates in real-time when
+  // the manager saves a new date config, without relying on a DOM-event chain.
+  useEffect(() => {
+    const socket = connectSocket();
+    const handleConfigUpdated = () => refreshWindow();
+    socket.on('booking_config_updated', handleConfigUpdated);
+    return () => { socket.off('booking_config_updated', handleConfigUpdated); };
+  }, []);
+
   useEffect(() => {
     if (windowStatus?.allowed) {
       loadSemester();
@@ -159,7 +175,15 @@ const Booking: React.FC = () => {
     if (activeTab === 'my') loadMyBookings();
   }, [activeTab, myBookingsPage]);
 
+  useEffect(() => {
+    if (windowStatus?.dorm_booking_suspended) {
+      void loadMyBookings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windowStatus?.dorm_booking_suspended]);
+
   // Countdown chỉ bắt đầu khi người dùng click "Click to pay"
+  // The countdown starts only after the user clicks "Click to pay"
   useEffect(() => {
     if (paymentStarted && paymentBooking?.expires_at) {
       const expiresAt = new Date(paymentBooking.expires_at).getTime();
@@ -174,11 +198,11 @@ const Booking: React.FC = () => {
     }
   }, [paymentStarted, paymentBooking]);
 
-  // Tự động quay về form khi hết giờ (3s sau khi hiện thông báo expired)
+  // Automatically return to the form when time runs out (3s after showing the expired message)
   useEffect(() => {
     if (!paymentStarted || !paymentBooking?.expires_at || countdown !== 0) return;
     const expiresAt = new Date(paymentBooking.expires_at).getTime();
-    if (Date.now() < expiresAt) return; // countdown=0 ban đầu trước tick đầu tiên, chưa thực sự hết
+    if (Date.now() < expiresAt) return; // countdown=0 before the first tick does not mean it is truly expired yet
     const t = setTimeout(() => {
       message.warning('Booking expired. The bed has been released.');
       resetForm();
@@ -189,7 +213,7 @@ const Booking: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown, paymentStarted]);
 
-  // Khi user quay lại tab sau khi thao tác trên PayOS (click Hủy hoặc hoàn tất) → tự check status
+  // When the user returns to the tab after using PayOS (cancel or complete), automatically re-check status
   useEffect(() => {
     if (!paymentStarted || !paymentBooking) return;
     const bookingId = paymentBooking.id;
@@ -212,7 +236,37 @@ const Booking: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentStarted, paymentBooking]);
 
-  // Polling mỗi 5 giây khi đã mở PayOS để detect hủy/thanh toán ngay lập tức
+  // Real-time: listen for socket-pushed payment result events dispatched by StudentLayout
+  useEffect(() => {
+    if (!paymentStarted || !paymentBooking) return;
+
+    const handleApproved = () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      if (windowStatus?.window_type === 'hold') {
+        setHoldSuccess(true);
+        resetForm();
+        setView('form');
+      } else {
+        resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+      }
+    };
+
+    const handleCancelled = () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      resetForm(); setView('form');
+      if (windowStatus?.window_type !== 'hold') loadRoomTypes();
+    };
+
+    window.addEventListener('student:booking:approved', handleApproved);
+    window.addEventListener('student:booking:cancelled', handleCancelled);
+    return () => {
+      window.removeEventListener('student:booking:approved', handleApproved);
+      window.removeEventListener('student:booking:cancelled', handleCancelled);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentStarted, paymentBooking]);
+
+  // Fallback poll every 5 s in case the webhook is delayed or socket is unavailable
   useEffect(() => {
     if (!paymentStarted || !paymentBooking) return;
     const bookingId = paymentBooking.id;
@@ -220,19 +274,24 @@ const Booking: React.FC = () => {
       try {
         const result = await checkPaymentStatus(bookingId);
         if (result.status === 'cancelled' || result.status === 'expired') {
-          message.info('Booking was cancelled. The bed has been released.');
-          resetForm(); setView('form'); loadRoomTypes();
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          resetForm(); setView('form');
+          if (windowStatus?.window_type !== 'hold') loadRoomTypes();
         } else if (result.paid || result.status === 'approved') {
-          message.success('Payment confirmed! Your booking is approved.');
-          resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          if (windowStatus?.window_type === 'hold') {
+            setHoldSuccess(true); resetForm(); setView('form');
+          } else {
+            resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+          }
         }
       } catch { /* ignore */ }
-    }, 1000);
+    }, 5000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentStarted, paymentBooking]);
 
-  // Resume payment nếu được navigate từ payment page
+  // Resume payment if the user navigates here from the payment page
   useEffect(() => {
     const state = location.state as { resumeBookingId?: string } | null;
     if (state?.resumeBookingId) {
@@ -242,7 +301,7 @@ const Booking: React.FC = () => {
           handleResumePayment(booking);
         }
       }).catch(() => { });
-      // Xóa state khỏi history để không resume lại khi F5
+      // Clear the navigation state so refresh does not trigger resume again
       window.history.replaceState({}, '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -253,10 +312,16 @@ const Booking: React.FC = () => {
   const loadActiveBooking = async () => {
     try {
       const data = await getMyBookings({ page: 1, limit: 50 });
+      const now = new Date();
       const active = data.items.find(
-        (b) => b.status === 'approved' && new Date(b.end_date) > new Date()
+        (b) => b.status === 'approved' && new Date(b.end_date) > now
       ) ?? null;
       setActiveBooking(active);
+      // Detect if student already held their bed (approved booking for a future semester)
+      const alreadyKept = active != null && data.items.some(
+        (b) => b.status === 'approved' && b.id !== active.id && new Date(b.start_date) > now
+      );
+      if (alreadyKept) setHoldSuccess(true);
     } catch { /* ignore */ }
   };
 
@@ -289,6 +354,18 @@ const Booking: React.FC = () => {
       setWindowStatus({ allowed: false, window_type: null });
     } finally {
       setWindowLoading(false);
+    }
+  };
+
+  // Silent refresh triggered by real-time socket events — no full-page spinner.
+  const refreshWindow = async () => {
+    setWindowRefreshing(true);
+    try {
+      const status = await getBookingWindowStatus();
+      setWindowStatus(status);
+    } catch { /* ignore — keep current status */ }
+    finally {
+      setWindowRefreshing(false);
     }
   };
 
@@ -417,7 +494,7 @@ const Booking: React.FC = () => {
       setPaymentInvoice(result.invoice);
       setPayos(result.payos || null);
       setView('payment');
-      // Bắt đầu tính giờ ngay khi confirm
+      // Start the countdown immediately after confirmation
       setPaymentStarted(true);
       if (result.payos?.checkoutUrl) {
         window.open(result.payos.checkoutUrl, '_blank', 'noopener,noreferrer');
@@ -430,14 +507,14 @@ const Booking: React.FC = () => {
       if (errMsg.toLowerCase().includes('already have an active booking')) {
         setConfirmModal(false);
         modalApi.warning({
-          title: 'Bạn đã có booking trong kỳ này',
+          title: 'You already have a booking for this term',
           content: (
             <div>
               <p style={{ marginBottom: 8 }}>
-                Bạn đã có một booking đang hoạt động cho kỳ học này.
+                You already have an active booking for this term.
               </p>
               <p style={{ marginBottom: 0, color: '#555' }}>
-                Vui lòng kiểm tra tab <strong>My Requests</strong> để xem hoặc hoàn tất thanh toán cho booking hiện tại.
+                Please check the <strong>My Requests</strong> tab to review or complete payment for your current booking.
               </p>
             </div>
           ),
@@ -453,36 +530,6 @@ const Booking: React.FC = () => {
     } finally {
       setLoading(p => ({ ...p, submit: false }));
     }
-  };
-
-  const handleCheckPayment = async () => {
-    if (!paymentBooking) return;
-    setCheckingPayment(true);
-    try {
-      const result = await checkPaymentStatus(paymentBooking.id);
-      if (result.paid || result.status === 'paid' || result.status === 'approved') {
-        message.success('Payment confirmed! Your booking is approved.');
-        setPaymentBooking(result.booking);
-        setPaymentInvoice(result.invoice);
-        resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
-      } else {
-        // Requirement: if not paid, show "chưa thanh toán"
-        message.error(result.message || 'Chưa thanh toán');
-        if (result.payos) {
-          setPayos({
-            orderCode: result.payos.orderCode || 0,
-            checkoutUrl: result.payos.checkoutUrl || null,
-            qrCode: result.payos.qrCode || null,
-          });
-        }
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error
-        ? err.message
-        : (err as { message?: string })?.message || 'Payment not confirmed yet';
-      message.error(msg);
-      if (msg.toLowerCase().includes('expired')) { resetForm(); setView('form'); loadRoomTypes(); }
-    } finally { setCheckingPayment(false); }
   };
 
   const handleClickToPay = () => {
@@ -505,17 +552,6 @@ const Booking: React.FC = () => {
     }
   };
 
-  const handleCancel = async (bookingId: string) => {
-    try {
-      await cancelBookingRequest(bookingId);
-      message.success('Booking cancelled');
-      loadMyBookings();
-    } catch (err: unknown) {
-      const cancelMsg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Failed to cancel';
-      message.error(cancelMsg);
-    }
-  };
-
   const handleResumePayment = (booking: BookingRequestItem) => {
     setPaymentBooking(booking);
     setPaymentInvoice(booking.invoice || null);
@@ -529,7 +565,7 @@ const Booking: React.FC = () => {
         }
         : null
     );
-    // Khi resume từ payment page, coi như đã bắt đầu thanh toán → hiện countdown
+    // When resumed from the payment page, treat payment as started and show the countdown
     setPaymentStarted(true);
     setView('payment'); setActiveTab('new');
   };
@@ -587,9 +623,9 @@ const Booking: React.FC = () => {
         </Card>
 
         <Card title="Payment Information" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: isTablet ? 40 : 20, flexWrap: 'wrap' }}>
             {/* Left: Booking summary + buttons */}
-            <div style={{ minWidth: 260, maxWidth: 320 }}>
+            <div style={{ minWidth: isTablet ? 260 : '100%', maxWidth: isTablet ? 320 : '100%', flex: '1 1 280px' }}>
               <Title level={5} style={{ marginBottom: 12 }}>Booking Summary</Title>
               <div
                 style={{
@@ -649,23 +685,23 @@ const Booking: React.FC = () => {
               </Popconfirm>
             </div>
 
-            {/* Right: QR + countdown hoặc Payment guide */}
-            <div style={{ flex: 1, minWidth: 260 }}>
+            {/* Right: QR + countdown or payment guide */}
+            <div style={{ flex: 1, minWidth: isTablet ? 260 : '100%' }}>
               {payos?.qrCode ? (
                 <div style={{ textAlign: 'center' }}>
-                  {/* Countdown nổi bật */}
+                  {/* Highlighted countdown */}
                   <div style={{
                     display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
                     background: isExpired ? '#fff1f0' : '#fff9e6',
                     border: `2px solid ${isExpired ? '#ff4d4f' : countdown <= 60 ? '#ff4d4f' : '#fa8c16'}`,
-                    borderRadius: 12, padding: '12px 32px', marginBottom: 20,
+                    borderRadius: 12, padding: isTablet ? '12px 32px' : '12px 20px', marginBottom: 20,
                   }}>
                     <Text style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
                       <ClockCircleOutlined style={{ marginRight: 4 }} />
                       Time remaining to pay
                     </Text>
                     <span style={{
-                      fontSize: 44, fontWeight: 700, fontFamily: 'monospace', letterSpacing: 2,
+                      fontSize: isTablet ? 44 : 32, fontWeight: 700, fontFamily: 'monospace', letterSpacing: 2,
                       color: isExpired ? '#ff4d4f' : countdown <= 60 ? '#ff4d4f' : '#fa8c16',
                     }}>
                       {isExpired ? '00:00' : formatCountdown(countdown)}
@@ -696,13 +732,6 @@ const Booking: React.FC = () => {
             </div>
           </div>
         </Card>
-        {/* 
-        <div style={{ textAlign: 'center' }}>
-          <Button type="primary" size="large" icon={<CreditCardOutlined />}
-            loading={checkingPayment} disabled={isExpired || !paymentStarted} onClick={handleCheckPayment}>
-            Check Payment Status
-          </Button>
-        </div> */}
       </div>
     );
   };
@@ -721,14 +750,14 @@ const Booking: React.FC = () => {
         <Input
           value={semester ? semester.semester.replace('-', ' - ') : ''}
           readOnly
-          style={{ maxWidth: 300, borderRadius: 6 }}
+          style={{ width: '100%', maxWidth: isTablet ? 300 : '100%', borderRadius: 6 }}
         />
       </div>
 
       {/* Filters row */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 24 }}>
         {/* Room Type */}
-        <div style={{ flex: '1 1 200px', minWidth: 180 }}>
+        <div style={{ flex: '1 1 220px', minWidth: isTablet ? 180 : '100%' }}>
           <Text style={{ display: 'block', marginBottom: 6, color: '#555' }}>Room Type</Text>
           <Select
             placeholder="Select room type"
@@ -738,7 +767,7 @@ const Booking: React.FC = () => {
             style={{ width: '100%' }}
             options={roomTypes.map(rt => {
               const beds = parseInt(rt.room_type.split('_')[0], 10);
-              const typeLabel = rt.student_type === 'international' ? 'Quốc tế' : 'SVVN';
+              const typeLabel = rt.student_type === 'international' ? 'International' : 'Domestic';
               const price = rt.price_per_semester
                 ? new Intl.NumberFormat('vi-VN').format(rt.price_per_semester)
                 : '—';
@@ -756,7 +785,7 @@ const Booking: React.FC = () => {
         </div>
 
         {/* Dorm */}
-        <div style={{ flex: '1 1 160px', minWidth: 140 }}>
+        <div style={{ flex: '1 1 180px', minWidth: isTablet ? 140 : '100%' }}>
           <Text style={{ display: 'block', marginBottom: 6, color: '#555' }}>Dorm</Text>
           <Select
             placeholder="Select dorm"
@@ -775,7 +804,7 @@ const Booking: React.FC = () => {
         </div>
 
         {/* Floor */}
-        <div style={{ flex: '1 1 140px', minWidth: 120 }}>
+        <div style={{ flex: '1 1 160px', minWidth: isTablet ? 120 : '100%' }}>
           <Text style={{ display: 'block', marginBottom: 6, color: '#555' }}>Floor</Text>
           <Select
             placeholder="Select floor"
@@ -794,7 +823,7 @@ const Booking: React.FC = () => {
         </div>
 
         {/* Block */}
-        <div style={{ flex: '1 1 140px', minWidth: 120 }}>
+        <div style={{ flex: '1 1 160px', minWidth: isTablet ? 120 : '100%' }}>
           <Text style={{ display: 'block', marginBottom: 6, color: '#555' }}>Block</Text>
           <Select
             placeholder="Select block"
@@ -813,12 +842,13 @@ const Booking: React.FC = () => {
         </div>
 
         {/* Reload */}
-        <div style={{ paddingTop: 28 }}>
+        <div style={{ paddingTop: isTablet ? 28 : 0, width: isTablet ? 'auto' : '100%' }}>
           <Button
             style={{ background: '#1a6ef5', borderColor: '#1a6ef5', color: '#fff', borderRadius: 6, fontWeight: 500 }}
             icon={<ReloadOutlined />}
             onClick={handleReload}
             disabled={!selectedBlock}
+            block={!isTablet}
           >
             Reload
           </Button>
@@ -834,7 +864,7 @@ const Booking: React.FC = () => {
       ) : selectedBlock && allBeds.length === 0 && !loading.beds ? (
         <Empty description="No available beds" />
       ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(140px, 1fr))' : 'repeat(auto-fill, minmax(120px, 1fr))', gap: 16 }}>
           {allBeds.map(bed => {
             const isSelected = selectedBed?.id === bed.id;
             return (
@@ -843,7 +873,7 @@ const Booking: React.FC = () => {
                 onClick={() => handleBedClick(bed)}
                 style={{
                   position: 'relative',
-                  width: 140,
+                  width: '100%',
                   border: `2px solid ${isSelected ? '#1a6ef5' : '#e8e8e8'}`,
                   borderRadius: 8,
                   padding: '16px 12px 12px',
@@ -884,7 +914,7 @@ const Booking: React.FC = () => {
           <Button key="cancel" onClick={() => { setConfirmModal(false); setNote(''); setAgreedToTerms(false); }}>Cancel</Button>,
           <Button key="confirm" type="primary" loading={loading.submit} disabled={!agreedToTerms} onClick={handleSubmitBooking}>Confirm</Button>,
         ]}
-        width={560}
+        width={isTablet ? 560 : 'calc(100vw - 24px)'}
         destroyOnClose
       >
         {selectedBed && semester && (
@@ -895,7 +925,7 @@ const Booking: React.FC = () => {
               [['Room', selectedBed.room_number], ['Bed Number', String(selectedBed.bed_number)]],
               [['Room Type', selectedBed.room_type], ['Semester', semester.semester.replace('-', ' - ')]],
             ].map((row, ri) => (
-              <div key={ri} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div key={ri} style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
                 {row.map(([label, value]) => (
                   <div key={label}>
                     <Text strong style={{ color: '#1a6ef5', display: 'block', marginBottom: 4, fontSize: 13 }}>{label}</Text>
@@ -940,7 +970,7 @@ const Booking: React.FC = () => {
               >
                 <Text style={{ fontSize: 13 }}>
                   Agree to Dormitory Regulations.{' '}
-                  <Text style={{ fontSize: 13, color: '#fa8c16' }}>(Đồng ý với quy định ký túc xá).</Text>
+                  <Text style={{ fontSize: 13, color: '#fa8c16' }}>(I agree to the dormitory regulations.)</Text>
                 </Text>
               </Checkbox>
             </div>
@@ -963,9 +993,9 @@ const Booking: React.FC = () => {
             const cfg = statusConfig[booking.status] || statusConfig.cancelled;
             return (
               <Card key={booking.id} size="small">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                       <Tag color={cfg.color} icon={cfg.icon}>{cfg.label}</Tag>
                       <Text type="secondary">{booking.semester?.replace('-', ' - ')}</Text>
                     </div>
@@ -994,18 +1024,6 @@ const Booking: React.FC = () => {
                       </Text>
                     )}
                   </div>
-                  {/* <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 16 }}>
-                    {booking.status === 'awaiting_payment' && (
-                      <>
-                        <Button type="primary" size="small" icon={<CreditCardOutlined />} onClick={() => handleResumePayment(booking)}>
-                          Complete Payment
-                        </Button>
-                        <Popconfirm title="Cancel this booking?" description="The bed will be released." onConfirm={() => handleCancel(booking.id)}>
-                          <Button size="small" danger>Cancel</Button>
-                        </Popconfirm>
-                      </>
-                    )}
-                  </div> */}
                 </div>
                 <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
                   Requested: {new Date(booking.requested_at).toLocaleString('vi-VN')}
@@ -1033,11 +1051,10 @@ const Booking: React.FC = () => {
   const renderHoldBed = () => {
     const { semester: semNum, year } = activeBooking
       ? (() => {
-        const [name, y] = (semester?.semester ?? '').split('-');
-        const map: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
-        return { semester: map[name] ?? 0, year: parseInt(y, 10) };
+        const [name, y] = (activeBooking.semester ?? '').split('-');
+        return { semester: name || '—', year: parseInt(y, 10) || '—' };
       })()
-      : { semester: 0, year: 0 };
+      : { semester: '—', year: '—' };
 
     const columns = [
       {
@@ -1085,12 +1102,16 @@ const Booking: React.FC = () => {
       {
         title: 'Action',
         key: 'action',
-        render: () => (
+        render: () => holdSuccess ? (
+          <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontSize: 13, padding: '4px 10px' }}>
+            Bed Held Successfully
+          </Tag>
+        ) : (
           <Button
             type="primary"
             loading={loadingKeep}
-            onClick={handleKeepBed}
-            style={{ background: '#ea580c', borderColor: '#ea580c', borderRadius: 6 }}
+            onClick={() => setConfirmKeepModal(true)}
+            style={{ background: brandPalette.primary, borderColor: brandPalette.primary, borderRadius: 6 }}
           >
             Keep Bed
           </Button>
@@ -1112,6 +1133,7 @@ const Booking: React.FC = () => {
           rowKey="id"
           pagination={false}
           bordered
+          scroll={{ x: 820 }}
           locale={{ emptyText: 'No active bed found' }}
         />
       </div>
@@ -1132,7 +1154,7 @@ const Booking: React.FC = () => {
       <img
         src="/images/booking-not-started.png"
         alt="Booking not started"
-        style={{ width: 220, marginBottom: 32, opacity: 0.92 }}
+        style={{ width: isTablet ? 220 : 180, maxWidth: '100%', marginBottom: 32, opacity: 0.92 }}
       />
       <Title level={3} style={{ color: '#1a3c6e', marginBottom: 8 }}>
         Dormitory booking has not started yet.
@@ -1140,6 +1162,27 @@ const Booking: React.FC = () => {
       <Text type="secondary" style={{ fontSize: 15 }}>
         Please wait for the booking period to be opened by the manager.
       </Text>
+    </div>
+  );
+
+  const renderDormBookingSuspended = () => (
+    <div style={{ padding: '32px 40px', background: '#fff', minHeight: '100vh' }}>
+      {modalContextHolder}
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 24 }}
+          message="Dormitory booking is not available for your account"
+          description="Because of a prior dormitory rules violation, new bookings and bed renewals are disabled. You can still sign in and use other features. Contact dormitory management if you need help."
+        />
+        <Tabs
+          activeKey="my"
+          items={[
+            { key: 'my', label: 'My booking requests', children: renderMyRequests() },
+          ]}
+        />
+      </div>
     </div>
   );
 
@@ -1152,9 +1195,77 @@ const Booking: React.FC = () => {
     );
   }
 
+  if (windowStatus?.dorm_booking_suspended) {
+    return renderDormBookingSuspended();
+  }
+
   return (
-    <div style={{ padding: '32px 40px', background: '#fff', minHeight: '100vh' }}>
+    <div style={{ padding: isTablet ? '32px 40px' : '16px', background: '#fff', minHeight: '100vh' }}>
       {modalContextHolder}
+
+      {/* Keep Bed Confirm Modal — lives at top level so it renders regardless of active tab */}
+      <Modal
+        open={confirmKeepModal}
+        onCancel={() => { setConfirmKeepModal(false); setAgreedToTerms(false); }}
+        title={<Text strong style={{ fontSize: 16 }}>Confirm Bed Hold</Text>}
+        footer={[
+          <Button key="cancel" onClick={() => { setConfirmKeepModal(false); setAgreedToTerms(false); }}>Cancel</Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            loading={loadingKeep}
+            disabled={!agreedToTerms}
+            onClick={() => { setConfirmKeepModal(false); setAgreedToTerms(false); handleKeepBed(); }}
+          >
+            Confirm
+          </Button>,
+        ]}
+        width={isTablet ? 560 : 'calc(100vw - 24px)'}
+        destroyOnClose
+      >
+        {activeBooking && semester && (
+          <div style={{ paddingTop: 8 }}>
+            {[
+              [['Dorm', activeBooking.room?.block?.dorm?.dorm_name ?? '—'], ['Floor', `Floor ${activeBooking.room?.floor ?? '—'}`]],
+              [['Room', activeBooking.room?.room_number ?? '—'], ['Bed Number', String(activeBooking.bed?.bed_number ?? '—')]],
+              [['Room Type', activeBooking.room?.room_type ?? '—'], ['Next Semester', semester.semester.replace('-', ' - ')]],
+            ].map((row, ri) => (
+              <div key={ri} style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
+                {row.map(([label, value]) => (
+                  <div key={label}>
+                    <Text strong style={{ color: '#1a6ef5', display: 'block', marginBottom: 4, fontSize: 13 }}>{label}</Text>
+                    <Input value={value} readOnly style={{ background: '#f0f5ff', borderColor: '#d6e4ff', color: '#333' }} />
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div style={{ marginBottom: 20 }}>
+              <Text style={{ color: '#555', fontSize: 13 }}>Room Price in VND:</Text>
+              <div>
+                <Text strong style={{ color: '#1a6ef5', fontSize: 22 }}>
+                  {formatCurrency(activeBooking.room?.price_per_semester ?? 0)}
+                </Text>
+              </div>
+            </div>
+            <div style={{ borderTop: '1px solid #e8e8e8', paddingTop: 16 }}>
+              <Checkbox checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)}>
+                <Text style={{ fontSize: 13 }}>
+                  Agree to Dormitory Regulations.{' '}
+                  <Text style={{ fontSize: 13, color: '#fa8c16' }}>(I agree to the dormitory regulations.)</Text>
+                </Text>
+              </Checkbox>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {windowRefreshing && (
+        <div style={{ position: 'fixed', top: 64, right: 24, zIndex: 1000 }}>
+          <Spin size="small" />
+          <Text style={{ marginLeft: 8, fontSize: 12, color: '#888' }}>Updating booking window…</Text>
+        </div>
+      )}
+
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {!windowStatus?.allowed ? renderNotStarted() : (
           view === 'payment' ? renderPaymentPage() :
@@ -1162,6 +1273,7 @@ const Booking: React.FC = () => {
               <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
+                centered={!isTablet}
                 items={[
                   { key: 'new', label: 'New Booking', children: renderBookingForm() },
                   { key: 'my', label: 'My Requests', children: renderMyRequests() },

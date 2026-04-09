@@ -5,10 +5,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        orange: {
+          50: '#FFF4EC',
+          100: '#FFE2CF',
+          200: '#FFC7A4',
+          400: '#F6A15C',
+          500: '#F36F21',
+          600: '#D85F19',
+          700: '#B84C12',
+        },
         //frequently
-        primary: '#146EF5',
-        'primary-lighter': '#E6F0F9',
-        'primary-darker': '#4386D9',
+        primary: '#F36F21',
+        'primary-lighter': '#FFF1E8',
+        'primary-darker': '#D85F19',
         // primary: '#5C98F2',
         'gray-primary': '#696969',
         'gray-surface': '#F5F5F7',
@@ -29,15 +38,9 @@ module.exports = {
         secondary: '#8B8B8B',
       },
       fontFamily: {
-        sans: ['InterTight-Regular', 'sans-serif'],
-        display: [
-          ['InterTight-Regular', ...defaultTheme.fontFamily.sans],
-          { fontVariationSettings: '"wdth" 125' },
-        ],
-        medium: ['InterTight-Medium', 'sans-serif'],
-        semibold: ['InterTight-SemiBold', 'sans-serif'],
-        bold: ['InterTight-Bold', 'sans-serif'],
-        extrabold: ['InterTight-ExtraBold', 'sans-serif'],
+        sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        display: [['Inter', ...defaultTheme.fontFamily.sans]],
+
         poppins: ['Poppins-Bold', 'sans-serif'],
       },
       maxWidth: {

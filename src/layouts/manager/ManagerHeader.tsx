@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Input, Button, Avatar, Badge, Dropdown, Popover } from 'antd';
-import { RiSearchLine, RiNotification3Line, RiArrowDownSLine } from 'react-icons/ri';
+import { Button, Badge, Popover, Avatar, Dropdown } from 'antd';
+import { RiNotification3Line, RiMenuLine, RiArrowDownSLine } from 'react-icons/ri';
 import type { MenuProps } from 'antd';
-import { useAuth } from '@/contexts';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts';
 import { ROUTES } from '@/constants';
 import { getMyNotifications, markAllNotificationsRead, type INotification } from '@/lib/actions/notification';
 import { connectSocket } from '@/lib/socket';
+import { brandPalette } from '@/themes/brandPalette';
 
-export default function ManagerHeader() {
+type ManagerHeaderProps = {
+  isDesktop?: boolean;
+  onToggleSidebar?: () => void;
+};
+
+export default function ManagerHeader({
+  isDesktop = false,
+  onToggleSidebar,
+}: ManagerHeaderProps) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -62,7 +71,7 @@ export default function ManagerHeader() {
     <div style={{ width: 320 }}>
       <div style={{ fontWeight: 600, borderBottom: '1px solid #f0f0f0', paddingBottom: 8, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Notifications</span>
-        {unreadCount > 0 && <span style={{ fontSize: 12, color: '#f97316', fontWeight: 400 }}>({unreadCount} unread)</span>}
+        {unreadCount > 0 && <span style={{ fontSize: 12, color: brandPalette.primary, fontWeight: 400 }}>({unreadCount} unread)</span>}
       </div>
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
         {notifications.length === 0 ? (
@@ -83,7 +92,7 @@ export default function ManagerHeader() {
               }}
             >
               {!n.is_read && (
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f97316', flexShrink: 0, marginTop: 5 }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: brandPalette.primary, flexShrink: 0, marginTop: 5 }} />
               )}
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: n.is_read ? 400 : 600, fontSize: 13 }}>{n.title}</div>
@@ -95,7 +104,7 @@ export default function ManagerHeader() {
       </div>
       <div style={{ textAlign: 'center', paddingTop: 10, borderTop: '1px solid #f0f0f0', marginTop: 4 }}>
         <button
-          style={{ color: '#f97316', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}
+          style={{ color: brandPalette.primary, fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}
           onClick={() => { navigate('/manager/notifications'); setBellOpen(false); }}
         >
           View all notifications →
@@ -108,11 +117,10 @@ export default function ManagerHeader() {
     if (key === 'logout') {
       logout();
       navigate(ROUTES.LANDING);
-    } else if (key === 'profile') {
-      navigate('/manager/settings');
-    } else if (key === 'settings') {
-      navigate('/manager/settings');
+      return;
     }
+
+    navigate('/manager/settings');
   };
 
   const userMenuItems: MenuProps['items'] = [
@@ -121,18 +129,21 @@ export default function ManagerHeader() {
     { type: 'divider' },
     { key: 'logout', label: 'Logout', danger: true },
   ];
+
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 left-[280px] right-0 z-10">
-      <div className="flex items-center gap-4">
-        <Input
-          placeholder="Search rooms, students, invoices..."
-          prefix={<RiSearchLine className="w-4 h-4 text-gray-400" />}
-          className="w-80"
-          size="middle"
-        />
+    <header className="fixed left-0 right-0 top-0 z-20 flex h-16 items-center justify-between bg-white px-4 sm:px-6 lg:left-[280px]">
+      <div className="flex min-w-0 items-center">
+        {!isDesktop && (
+          <Button
+            type="text"
+            icon={<RiMenuLine size={20} className="text-gray-700" />}
+            onClick={onToggleSidebar}
+            className="flex items-center justify-center lg:hidden"
+          />
+        )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
         <Popover content={notifPopoverContent} trigger="click" placement="bottomRight" open={bellOpen} onOpenChange={handleBellOpenChange}>
           <Badge count={unreadCount} size="small">
             <Button
@@ -143,19 +154,14 @@ export default function ManagerHeader() {
           </Badge>
         </Popover>
 
-        <Button type="default">View Reports</Button>
-        <Button type="primary" className="bg-orange-500 hover:bg-orange-600 border-orange-500">
-          Create Invoice
-        </Button>
-
         <Dropdown menu={{ items: userMenuItems, onClick: handleMenuClick }} trigger={['click']}>
-          <div className="flex items-center gap-2 cursor-pointer ml-2">
+          <div className="ml-1 flex cursor-pointer items-center gap-2 rounded-xl px-1 py-1 transition hover:bg-gray-50 sm:ml-2">
             <Avatar src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin" size={36} />
             <div className="hidden md:block">
-              <p className="text-sm font-medium text-gray-900 leading-tight">{user?.fullname || 'Admin User'}</p>
-              <p className="text-xs text-gray-500 capitalize">{user?.role || 'Manager'}</p>
+              <p className="text-sm font-medium leading-tight text-gray-900">{user?.fullname || 'Admin User'}</p>
+              <p className="text-xs capitalize text-gray-500">{user?.role || 'Manager'}</p>
             </div>
-            <RiArrowDownSLine className="w-4 h-4 text-gray-400" />
+            <RiArrowDownSLine className="h-4 w-4 text-gray-400" />
           </div>
         </Dropdown>
       </div>

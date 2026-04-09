@@ -81,7 +81,7 @@ const GoogleCallbackPage = () => {
           title="Sign-in Failed"
           subTitle={error}
           extra={
-            <a href={ROUTES.SIGN_IN} style={{ color: '#FF6C00' }}>
+            <a href={ROUTES.SIGN_IN} style={{ color: '#F36F21' }}>
               Back to sign-in page
             </a>
           }
@@ -101,7 +101,7 @@ const GoogleCallbackPage = () => {
         gap: '16px',
       }}
     >
-      <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#FF6C00' }} spin />} />
+      <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#F36F21' }} spin />} />
       <p style={{ color: '#666', fontSize: '16px' }}>Processing Google sign-in...</p>
     </div>
   );

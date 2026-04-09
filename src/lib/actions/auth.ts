@@ -29,8 +29,12 @@ interface RefreshTokenResponse {
   token: string;
 }
 
+export const loginPreview = async (doc: IUser.SignInDto) => {
+  return api.post<LoginResponse>('auth/login', doc);
+};
+
 export const signIn = async (doc: IUser.SignInDto) => {
-  const res = await api.post<LoginResponse>('auth/login', doc);
+  const res = await loginPreview(doc);
 
   // Store tokens in localStorage
   if (res.token) {
@@ -61,6 +65,11 @@ export const logout = async () => {
 
 export const getProfile = async () => {
   const res = await api.get<LoginResponse>('auth/profile');
+  return res;
+};
+
+export const loginAsStudent = async (studentCode: string) => {
+  const res = await api.post<LoginResponse>('auth/login-as-student', { student_code: studentCode });
   return res;
 };
 
