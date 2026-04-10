@@ -50,6 +50,7 @@ import ElectricityPage from '@/pages/manager/electricity';
 import ManagerCheckoutPage from '@/pages/manager/checkout';
 import ManagerStudentsCfdRiskPage from '@/pages/manager/students-cfd-risk';
 import ManagerDateConfigPage from '@/pages/manager/config';
+import ManagerInvoicesPage from '@/pages/manager/invoices';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -357,7 +358,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'invoices',
-                element: <ComingSoon label="Invoice List" />,
+                element: <ManagerInvoicesPage />,
               },
               {
                 path: 'news',

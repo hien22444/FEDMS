@@ -25,7 +25,7 @@ const quickActions: QuickAction[] = [
     title: 'Create Invoice',
     description: 'Generate new invoice',
     icon: <FileText size={20} className="text-orange-500" />,
-    path: '/manager/invoices/create',
+    path: '/manager/invoices',
   },
   {
     title: 'View Requests',
