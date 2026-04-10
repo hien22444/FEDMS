@@ -675,6 +675,48 @@ let _dashboardCache: DashboardStatsResponse | null = null;
 let _dashboardCacheTime = 0;
 const DASHBOARD_CACHE_TTL = 60_000; // 1 minute
 
+// ===== Dorm Rules Knowledge Base =====
+
+export interface DormRulesPenalty {
+  fine_vnd?: number;
+  description?: string;
+  repeat_penalty?: string;
+}
+
+export interface DormRule {
+  id: string;
+  category: string;
+  title: string;
+  rule: string;
+  details?: string;
+  keywords?: string[];
+  example_questions?: string[];
+  allowed_devices?: string[];
+  penalty?: DormRulesPenalty;
+}
+
+export interface DormRulesKB {
+  knowledge_base?: {
+    source?: string;
+    issued_date?: string;
+    language?: string;
+    version?: string;
+  };
+  rules: DormRule[];
+  system_instructions?: {
+    assistant_role?: string;
+    response_rules?: string[];
+  };
+}
+
+export const fetchDormRules = async (): Promise<DormRulesKB | null> => {
+  return api.get<DormRulesKB | null>('agents/dorm-rules');
+};
+
+export const updateDormRules = async (kb: DormRulesKB): Promise<{ message: string }> => {
+  return api.put<{ message: string }>('agents/dorm-rules', kb);
+};
+
 export const fetchDashboardStats = async (force = false): Promise<DashboardStatsResponse> => {
   if (!force && _dashboardCache && Date.now() - _dashboardCacheTime < DASHBOARD_CACHE_TTL) {
     return _dashboardCache;

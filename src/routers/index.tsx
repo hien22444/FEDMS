@@ -77,6 +77,7 @@ import AdminRoomsPage from '@/pages/admin/rooms';
 import AdminRoomTypesPage from '@/pages/admin/room-types';
 import AdminUsersPage from '@/pages/admin/users';
 import AdminFacilitiesPage from '@/pages/admin/facilities';
+import AdminDormRulesPage from '@/pages/admin/dorm-rules';
 
 const ComingSoon = ({ label }: { label: string }) => (
   <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
@@ -259,6 +260,10 @@ const router = createBrowserRouter([
               {
                 path: 'facilities',
                 element: <AdminFacilitiesPage />,
+              },
+              {
+                path: 'dorm-rules',
+                element: <AdminDormRulesPage />,
               },
               {
                 path: 'reports',

@@ -43,6 +43,7 @@ export const ROUTES = {
   ADMIN_USERS: '/admin/users',
   ADMIN_REPORTS: '/admin/reports',
   ADMIN_DATA: '/admin/data',
+  ADMIN_DORM_RULES: '/admin/dorm-rules',
   // Manager routes
   MANAGER: '/manager',
   MANAGER_DORMS: '/manager/dorms',
