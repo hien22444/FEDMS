@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button, Card, Col, Descriptions, Empty, Modal, Popconfirm, Row, Space, Statistic,
-  Table, Tag, Typography, message, theme, Divider, Badge,
+  Table, Tag, Typography, message, theme, Divider, Badge, Tooltip,
 } from 'antd';
 import {
   ReloadOutlined, ClockCircleOutlined, CheckCircleOutlined,
   CloseCircleOutlined, FileTextOutlined, CreditCardOutlined,
   HomeOutlined, CalendarOutlined, DollarOutlined, ExclamationCircleOutlined,
+  BankOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,6 +19,12 @@ import {
   checkTransferPaymentStatus,
 } from '@/lib/actions';
 import type { BookingRequestItem, RoomTransferRequest } from '@/lib/actions';
+import {
+  getMyInvoices,
+  createInvoicePayosLink,
+  getInvoicePaymentStatus,
+  type StudentInvoice,
+} from '@/lib/actions/invoice';
 import { ROUTES } from '@/constants';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -666,6 +673,289 @@ const InvoiceModal: React.FC<{
   );
 };
 
+// ─── Monthly Invoice Detail Modal ─────────────────────────────────────────────
+const MonthlyInvoiceDetailModal: React.FC<{
+  invoice: StudentInvoice | null;
+  open: boolean;
+  onClose: () => void;
+}> = ({ invoice, open, onClose }) => {
+  if (!invoice) return null;
+
+  const statusMeta: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
+    unpaid:    { color: 'warning', label: 'Unpaid',    icon: <ClockCircleOutlined /> },
+    overdue:   { color: 'error',   label: 'Overdue',   icon: <ExclamationCircleOutlined /> },
+    paid:      { color: 'success', label: 'Paid',      icon: <CheckCircleOutlined /> },
+    cancelled: { color: 'default', label: 'Cancelled', icon: <CloseCircleOutlined /> },
+  };
+  const meta = statusMeta[invoice.payment_status] ?? statusMeta.unpaid;
+
+  const feeRows = [
+    { label: 'Room fee',       value: invoice.room_fee },
+    { label: 'Electricity',    value: invoice.electricity_fee },
+    { label: 'Fine',           value: invoice.water_fee },
+    { label: 'Service fee',    value: invoice.service_fee },
+  ].filter((r) => r.value > 0);
+
+  return (
+    <Modal
+      open={open}
+      onCancel={onClose}
+      footer={<Button onClick={onClose}>Close</Button>}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 8,
+            background: '#fff7e6', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <BankOutlined style={{ color: '#f37021', fontSize: 18 }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>Invoice Details</div>
+            <div style={{ fontWeight: 400, fontSize: 12, color: '#888', fontFamily: 'monospace' }}>
+              {invoice.invoice_code}
+            </div>
+          </div>
+        </div>
+      }
+      width={520}
+      centered
+    >
+      {/* Status banner */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '10px 14px', borderRadius: 8, marginBottom: 20,
+        background: invoice.payment_status === 'paid' ? '#f6ffed'
+          : invoice.payment_status === 'unpaid' || invoice.payment_status === 'overdue' ? '#fffbe6'
+          : '#fafafa',
+        border: `1px solid ${invoice.payment_status === 'paid' ? '#b7eb8f'
+          : invoice.payment_status === 'unpaid' || invoice.payment_status === 'overdue' ? '#ffe58f'
+          : '#f0f0f0'}`,
+      }}>
+        {meta.icon}
+        <Typography.Text strong style={{ fontSize: 13 }}>Status: {meta.label}</Typography.Text>
+      </div>
+
+      <Descriptions column={2} size="small" bordered labelStyle={{ width: 130, fontWeight: 500 }}>
+        <Descriptions.Item label="Invoice Code" span={2}>
+          <Typography.Text strong style={{ fontFamily: 'monospace' }}>{invoice.invoice_code}</Typography.Text>
+        </Descriptions.Item>
+        <Descriptions.Item label="Month">{invoice.invoice_month}</Descriptions.Item>
+        <Descriptions.Item label="Room">{invoice.room?.room_number ?? '—'}</Descriptions.Item>
+        <Descriptions.Item label="Due Date">
+          {new Date(invoice.due_date).toLocaleDateString('vi-VN')}
+        </Descriptions.Item>
+        <Descriptions.Item label="Created">
+          {new Date(invoice.createdAt).toLocaleDateString('vi-VN')}
+        </Descriptions.Item>
+        {invoice.paid_at && (
+          <Descriptions.Item label="Paid At" span={2}>
+            {new Date(invoice.paid_at).toLocaleString('vi-VN')}
+          </Descriptions.Item>
+        )}
+      </Descriptions>
+
+      <Divider style={{ margin: '16px 0' }}>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>Fee Breakdown</Typography.Text>
+      </Divider>
+
+      <div style={{ background: '#fafafa', borderRadius: 10, padding: '12px 16px', border: '1px solid #f0f0f0' }}>
+        {feeRows.map((r) => (
+          <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px dashed #f0f0f0' }}>
+            <Typography.Text type="secondary">{r.label}</Typography.Text>
+            <Typography.Text>{formatCurrency(r.value)}</Typography.Text>
+          </div>
+        ))}
+        {invoice.line_items?.filter((li) => li.item_type === 'other').map((li, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px dashed #f0f0f0' }}>
+            <Typography.Text type="secondary">{li.description || 'Other fees'}</Typography.Text>
+            <Typography.Text>{formatCurrency(li.amount)}</Typography.Text>
+          </div>
+        ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, marginTop: 4 }}>
+          <Typography.Text strong style={{ fontSize: 15 }}>Total</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 18, color: '#f37021' }}>
+            {formatCurrency(invoice.total_amount)}
+          </Typography.Text>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// ─── Monthly Bill Card (manager-created invoices) ─────────────────────────────
+const MonthlyBillCard: React.FC<{ invoice: StudentInvoice; onPaid: () => void }> = ({
+  invoice,
+  onPaid,
+}) => {
+  const { token } = theme.useToken();
+  const [paying, setPaying] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const isOverdue =
+    invoice.payment_status === 'overdue' ||
+    (invoice.payment_status === 'unpaid' && new Date(invoice.due_date) < new Date());
+
+  const handlePay = async () => {
+    setPaying(true);
+    try {
+      const res = await createInvoicePayosLink(invoice.id);
+      const url = res.payos?.checkoutUrl ?? null;
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        message.warning('Payment link is not ready yet. Please try again.');
+      }
+    } catch (e: unknown) {
+      message.error((e as { message?: string })?.message || 'Could not create payment link');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handleCheckStatus = async () => {
+    setChecking(true);
+    try {
+      const res = await getInvoicePaymentStatus(invoice.id);
+      if (res.paid) {
+        message.success('Payment confirmed!');
+        onPaid();
+      } else {
+        message.info('Payment not yet received.');
+      }
+    } catch {
+      message.error('Could not check payment status');
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const feeRows = [
+    { label: 'Room fee', value: invoice.room_fee },
+    { label: 'Electricity', value: invoice.electricity_fee },
+    { label: 'Fine', value: invoice.water_fee },
+    { label: 'Service fee', value: invoice.service_fee },
+  ].filter((r) => r.value > 0);
+
+  return (
+    <>
+    <Card
+      style={{
+        borderRadius: 12,
+        overflow: 'hidden',
+        border: `1px solid ${isOverdue ? token.colorError : token.colorBorderSecondary}`,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+      }}
+      styles={{ body: { padding: 0 } }}
+    >
+      <div
+        style={{
+          height: 4,
+          background: isOverdue
+            ? token.colorError
+            : `linear-gradient(90deg, #f37021, #fa8c16)`,
+        }}
+      />
+      <div style={{ padding: '20px 24px' }}>
+        <Row gutter={[24, 16]} align="middle">
+          {/* Left: info */}
+          <Col xs={24} md={14}>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div
+                style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  background: '#fff7e6',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}
+              >
+                <BankOutlined style={{ fontSize: 22, color: '#f37021' }} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                  <Typography.Text strong style={{ fontSize: 15, fontFamily: 'monospace' }}>
+                    {invoice.invoice_code}
+                  </Typography.Text>
+                  <Tag color={isOverdue ? 'error' : 'warning'} icon={isOverdue ? <ExclamationCircleOutlined /> : <ClockCircleOutlined />} style={{ margin: 0 }}>
+                    {isOverdue ? 'Overdue' : 'Unpaid'}
+                  </Tag>
+                </div>
+                <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block' }}>
+                  <HomeOutlined style={{ marginRight: 4 }} />
+                  {invoice.room?.room_number ? `Room ${invoice.room.room_number}` : '—'}
+                  {' · '}Month: {invoice.invoice_month}
+                </Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>
+                  Due: {new Date(invoice.due_date).toLocaleDateString('vi-VN')}
+                </Typography.Text>
+                {feeRows.length > 0 && (
+                  <div style={{ marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {feeRows.map((r) => (
+                      <Tag key={r.label} style={{ margin: 0, fontSize: 11 }}>
+                        {r.label}: {new Intl.NumberFormat('vi-VN').format(r.value)}₫
+                      </Tag>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Col>
+
+          {/* Center: amount */}
+          <Col xs={24} md={6}>
+            <div style={{ textAlign: 'center' }}>
+              <Typography.Text style={{ fontSize: 22, fontWeight: 700, color: '#f37021', display: 'block' }}>
+                {formatCurrency(invoice.total_amount)}
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>Total due</Typography.Text>
+            </div>
+          </Col>
+
+          {/* Right: actions */}
+          <Col xs={24} md={4}>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Button
+                type="primary"
+                icon={<CreditCardOutlined />}
+                block
+                loading={paying}
+                onClick={handlePay}
+                style={{ borderRadius: 8, background: '#f37021', borderColor: '#f37021' }}
+              >
+                Pay Now
+              </Button>
+              <Button
+                block
+                icon={<FileTextOutlined />}
+                onClick={() => setDetailOpen(true)}
+                style={{ borderRadius: 8 }}
+              >
+                Details
+              </Button>
+              <Tooltip title="Check if payment has been received">
+                <Button
+                  block
+                  icon={<ReloadOutlined />}
+                  loading={checking}
+                  onClick={handleCheckStatus}
+                  style={{ borderRadius: 8 }}
+                >
+                  Check status
+                </Button>
+              </Tooltip>
+            </Space>
+          </Col>
+        </Row>
+      </div>
+    </Card>
+
+    <MonthlyInvoiceDetailModal
+      invoice={invoice}
+      open={detailOpen}
+      onClose={() => setDetailOpen(false)}
+    />
+  </>
+  );
+};
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 const Payment: React.FC = () => {
   const { token } = theme.useToken();
@@ -674,11 +964,23 @@ const Payment: React.FC = () => {
   const [items, setItems] = useState<BookingRequestItem[]>([]);
   const [transferRequests, setTransferRequests] = useState<RoomTransferRequest[]>([]);
   const [transferPending, setTransferPending] = useState<RoomTransferRequest[]>([]);
+  const [myInvoices, setMyInvoices] = useState<StudentInvoice[]>([]);
+  const [detailInvoice, setDetailInvoice] = useState<StudentInvoice | null>(null);
   const [detailBooking, setDetailBooking] = useState<BookingRequestItem | null>(null);
   const [detailTransfer, setDetailTransfer] = useState<RoomTransferRequest | null>(null);
 
   const pending = useMemo(() => items.filter((b) => b.status === 'awaiting_payment'), [items]);
   const history = useMemo(() => items.filter((b) => b.status !== 'awaiting_payment'), [items]);
+
+  // Manager-created invoices split by status
+  const managerPending = useMemo(
+    () => myInvoices.filter((inv) => inv.payment_status === 'unpaid' || inv.payment_status === 'overdue'),
+    [myInvoices]
+  );
+  const managerPaid = useMemo(
+    () => myInvoices.filter((inv) => inv.payment_status === 'paid' || inv.payment_status === 'cancelled'),
+    [myInvoices]
+  );
   const transferHistory = useMemo(
     () => transferRequests.filter(isTransferPaymentHistoryRow),
     [transferRequests]
@@ -694,8 +996,12 @@ const Payment: React.FC = () => {
     () => pending.reduce((s, b) => s + (b.invoice?.total_amount ?? 0), 0),
     [pending]
   );
-  const totalPendingCombined = totalPending + upgradeSupplementTotal;
-  const pendingCountCombined = pending.length + transferPending.length;
+  const managerPendingTotal = useMemo(
+    () => managerPending.reduce((s, inv) => s + inv.total_amount, 0),
+    [managerPending]
+  );
+  const totalPendingCombined = totalPending + upgradeSupplementTotal + managerPendingTotal;
+  const pendingCountCombined = pending.length + transferPending.length + managerPending.length;
   const totalPaid = useMemo(() => {
     const bookingPaid = history
       .filter((b) => b.status === 'approved')
@@ -703,8 +1009,11 @@ const Payment: React.FC = () => {
     const transferPaid = transferHistory
       .filter((t) => t.status === 'approved')
       .reduce((s, t) => s + transferSupplementAmount(t), 0);
-    return bookingPaid + transferPaid;
-  }, [history, transferHistory]);
+    const managerInvPaid = managerPaid
+      .filter((inv) => inv.payment_status === 'paid')
+      .reduce((s, inv) => s + inv.total_amount, 0);
+    return bookingPaid + transferPaid + managerInvPaid;
+  }, [history, transferHistory, managerPaid]);
 
   const mergedHistoryRows = useMemo((): PaymentHistoryRow[] => {
     const bookingRows: PaymentHistoryRow[] = history.map((b) => ({ kind: 'booking', item: b }));
@@ -721,14 +1030,18 @@ const Payment: React.FC = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [data, transfers] = await Promise.all([
+      const [data, transfers, invoices] = await Promise.all([
         getMyBookings({ page: 1, limit: 50 }),
         getMyTransferRequests().catch(() => [] as RoomTransferRequest[]),
+        getMyInvoices().catch(() => [] as StudentInvoice[]),
       ]);
       setItems(data.items);
       const list = Array.isArray(transfers) ? transfers : [];
       setTransferRequests(list);
       setTransferPending(list.filter((t) => t.status === 'pending_payment_upgrade'));
+      // Manager-created invoices: exclude EW (handled in Utilities page)
+      const invList = Array.isArray(invoices) ? invoices : [];
+      setMyInvoices(invList.filter((inv) => !inv.invoice_code.startsWith('EW-')));
     } catch {
       message.error('Failed to load payment data');
     } finally {
@@ -1032,6 +1345,107 @@ const Payment: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* ── Monthly Bills (manager-created invoices) ── */}
+        {(managerPending.length > 0 || managerPaid.length > 0) && (
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <Title level={4} style={{ margin: 0 }}>Monthly Bills</Title>
+              {managerPending.length > 0 && (
+                <Badge count={managerPending.length} color="#f37021" />
+              )}
+            </div>
+
+            {/* Unpaid */}
+            {managerPending.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                {managerPending.map((inv) => (
+                  <MonthlyBillCard key={inv.id} invoice={inv} onPaid={load} />
+                ))}
+              </div>
+            )}
+
+            {/* Paid / Cancelled history */}
+            {managerPaid.length > 0 && (
+              <Card
+                style={{ borderRadius: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}
+                styles={{ body: { padding: 0 } }}
+              >
+                <Table<StudentInvoice>
+                  dataSource={managerPaid}
+                  rowKey="id"
+                  size="middle"
+                  pagination={false}
+                  style={{ borderRadius: 12, overflow: 'hidden' }}
+                  columns={[
+                    {
+                      title: 'Invoice',
+                      dataIndex: 'invoice_code',
+                      render: (code: string) => (
+                        <Typography.Text strong style={{ fontFamily: 'monospace' }}>{code}</Typography.Text>
+                      ),
+                    },
+                    {
+                      title: 'Month',
+                      dataIndex: 'invoice_month',
+                    },
+                    {
+                      title: 'Room',
+                      render: (_: unknown, inv: StudentInvoice) => inv.room?.room_number ?? '—',
+                    },
+                    {
+                      title: 'Amount',
+                      dataIndex: 'total_amount',
+                      align: 'right' as const,
+                      render: (amt: number) => (
+                        <Typography.Text strong>{formatCurrency(amt)}</Typography.Text>
+                      ),
+                    },
+                    {
+                      title: 'Status',
+                      dataIndex: 'payment_status',
+                      align: 'center' as const,
+                      render: (s: string) => (
+                        <Tag
+                          color={s === 'paid' ? 'success' : 'default'}
+                          icon={s === 'paid' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+                        >
+                          {s === 'paid' ? 'Paid' : 'Cancelled'}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      title: 'Paid At',
+                      dataIndex: 'paid_at',
+                      render: (d: string | null) =>
+                        d ? new Date(d).toLocaleDateString('vi-VN') : '—',
+                    },
+                    {
+                      title: '',
+                      align: 'center' as const,
+                      render: (_: unknown, inv: StudentInvoice) => (
+                        <Button
+                          size="small"
+                          icon={<FileTextOutlined />}
+                          onClick={() => setDetailInvoice(inv)}
+                          style={{ borderRadius: 6 }}
+                        >
+                          Details
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
+              </Card>
+            )}
+          </div>
+        )}
+
+        <MonthlyInvoiceDetailModal
+          invoice={detailInvoice}
+          open={!!detailInvoice}
+          onClose={() => setDetailInvoice(null)}
+        />
 
         {/* ── History ── */}
         <div>
