@@ -357,8 +357,8 @@ const Booking: React.FC = () => {
       // Restore "Awaiting Payment" state if there's already a pending keepBed booking for the target semester
       const pendingKeep = active != null && !!targetSem
         ? data.items.find(
-            (b) => b.status === 'awaiting_payment' && b.semester === targetSem && !b.checkout_date
-          ) ?? null
+          (b) => b.status === 'awaiting_payment' && b.semester === targetSem && !b.checkout_date
+        ) ?? null
         : null;
       if (pendingKeep) {
         setPaymentBooking(pendingKeep);
@@ -366,11 +366,11 @@ const Booking: React.FC = () => {
         setPayos(
           pendingKeep.payos
             ? {
-                orderCode: pendingKeep.payos.orderCode ? Number(pendingKeep.payos.orderCode) : 0,
-                paymentLinkId: pendingKeep.payos.paymentLinkId || null,
-                checkoutUrl: pendingKeep.payos.checkoutUrl || null,
-                qrCode: pendingKeep.payos.qrCode || null,
-              }
+              orderCode: pendingKeep.payos.orderCode ? Number(pendingKeep.payos.orderCode) : 0,
+              paymentLinkId: pendingKeep.payos.paymentLinkId || null,
+              checkoutUrl: pendingKeep.payos.checkoutUrl || null,
+              qrCode: pendingKeep.payos.qrCode || null,
+            }
             : null
         );
         setPaymentStarted(true);
@@ -392,7 +392,7 @@ const Booking: React.FC = () => {
       }
       message.success('Bed reserved! Please complete payment.');
     } catch (err: unknown) {
-      message.error((err as { message?: string })?.message || 'Failed to keep bed');
+      message.error((err as { message?: string })?.message || 'Failed to hold bed');
     } finally {
       setLoadingKeep(false);
     }
@@ -1240,7 +1240,7 @@ const Booking: React.FC = () => {
               onClick={() => setConfirmKeepModal(true)}
               style={{ background: brandPalette.primary, borderColor: brandPalette.primary, borderRadius: 6 }}
             >
-              Keep Bed
+              Hold Bed
             </Button>
           );
         },
