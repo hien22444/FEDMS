@@ -9,7 +9,6 @@ import {
   HomeOutlined, CalendarOutlined, DollarOutlined, ExclamationCircleOutlined,
   BankOutlined,
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import {
   cancelBookingRequest,
   cancelTransferRequest,
@@ -25,7 +24,6 @@ import {
   getInvoicePaymentStatus,
   type StudentInvoice,
 } from '@/lib/actions/invoice';
-import { ROUTES } from '@/constants';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text } = Typography;
@@ -960,7 +958,6 @@ const MonthlyBillCard: React.FC<{ invoice: StudentInvoice; onPaid: () => void }>
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 const Payment: React.FC = () => {
   const { token } = theme.useToken();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<BookingRequestItem[]>([]);
   const [transferRequests, setTransferRequests] = useState<RoomTransferRequest[]>([]);
@@ -1022,8 +1019,8 @@ const Payment: React.FC = () => {
     const invoiceRows: PaymentHistoryRow[] = managerPaid.map((inv) => ({ kind: 'invoice', item: inv }));
     const merged = [...bookingRows, ...transferRows, ...invoiceRows];
     merged.sort((a, b) => {
-      const ta = a.kind === 'booking' ? a.item.requested_at : a.item.requested_at;
-      const tb = b.kind === 'booking' ? b.item.requested_at : b.item.requested_at;
+      const ta = a.kind === 'invoice' ? a.item.createdAt : a.item.requested_at;
+      const tb = b.kind === 'invoice' ? b.item.createdAt : b.item.requested_at;
       return new Date(tb).getTime() - new Date(ta).getTime();
     });
     return merged;

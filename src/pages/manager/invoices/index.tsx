@@ -42,7 +42,6 @@ import {
   createInvoicesForRoom,
   createInvoicesForBlock,
   cancelManagerInvoice,
-  deleteManagerInvoice,
   type ManagerInvoice,
   type ManagerInvoiceFilter,
   type CreateInvoiceDto,
@@ -435,20 +434,6 @@ export default function ManagerInvoicesPage() {
       message.error(
         (err as { message?: string })?.message ||
           'Failed to cancel invoice',
-      );
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteManagerInvoice(id);
-      message.success('Invoice deleted');
-      fetchData(page);
-      refreshStats();
-    } catch (err: unknown) {
-      message.error(
-        (err as { message?: string })?.message ||
-          'Failed to delete invoice',
       );
     }
   };
