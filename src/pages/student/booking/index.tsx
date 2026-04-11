@@ -135,6 +135,8 @@ const Booking: React.FC = () => {
   const [paymentStarted, setPaymentStarted] = useState(false);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const payosWindowRef = useRef<Window | null>(null);
+  const payosClosedCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const location = useLocation();
 
   // ─── My Requests state ───
@@ -224,12 +226,27 @@ const Booking: React.FC = () => {
           message.info('Booking was cancelled. The bed has been released.');
           resetForm();
           setView('form');
-          loadRoomTypes();
+          if (windowStatus?.window_type === 'hold') loadActiveBooking();
+          else loadRoomTypes();
         } else if (result.paid || result.status === 'approved') {
-          message.success('Payment confirmed! Your booking is approved.');
-          resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+          if (windowStatus?.window_type === 'hold') {
+            setHoldSuccess(true);
+            resetForm();
+            setView('form');
+          } else {
+            message.success('Payment confirmed! Your booking is approved.');
+            resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+          }
         }
-      } catch { /* ignore */ }
+      } catch (err: unknown) {
+        // Booking deleted (cancelled via webhook) → reset to Keep Bed
+        if ((err as { statusCode?: number })?.statusCode === 404) {
+          resetForm();
+          setView('form');
+          if (windowStatus?.window_type === 'hold') loadActiveBooking();
+          else loadRoomTypes();
+        }
+      }
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
@@ -285,8 +302,16 @@ const Booking: React.FC = () => {
             resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
           }
         }
-      } catch { /* ignore */ }
-    }, 5000);
+      } catch (err: unknown) {
+        // Booking was deleted (cancelled via webhook) → reset to Keep Bed
+        if ((err as { statusCode?: number })?.statusCode === 404) {
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          resetForm(); setView('form');
+          if (windowStatus?.window_type === 'hold') loadActiveBooking();
+          else loadRoomTypes();
+        }
+      }
+    }, 1000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentStarted, paymentBooking]);
@@ -311,17 +336,45 @@ const Booking: React.FC = () => {
 
   const loadActiveBooking = async () => {
     try {
-      const data = await getMyBookings({ page: 1, limit: 50 });
+      const [data, targetSemInfo] = await Promise.all([
+        getMyBookings({ page: 1, limit: 50 }),
+        getNextSemester(),
+      ]);
+      const targetSem = targetSemInfo?.semester;
       const now = new Date();
       const active = data.items.find(
         (b) => b.status === 'approved' && new Date(b.end_date) > now
       ) ?? null;
       setActiveBooking(active);
-      // Detect if student already held their bed (approved booking for a future semester)
-      const alreadyKept = active != null && data.items.some(
-        (b) => b.status === 'approved' && b.id !== active.id && new Date(b.start_date) > now
+      // Only flag as already kept if there's an approved, non-checked-out booking for the exact target semester
+      const alreadyKept = active != null && !!targetSem && data.items.some(
+        (b) => b.status === 'approved' && b.id !== active.id && b.semester === targetSem && !b.checkout_date
       );
-      if (alreadyKept) setHoldSuccess(true);
+      if (alreadyKept) {
+        setHoldSuccess(true);
+        return;
+      }
+      // Restore "Awaiting Payment" state if there's already a pending keepBed booking for the target semester
+      const pendingKeep = active != null && !!targetSem
+        ? data.items.find(
+            (b) => b.status === 'awaiting_payment' && b.semester === targetSem && !b.checkout_date
+          ) ?? null
+        : null;
+      if (pendingKeep) {
+        setPaymentBooking(pendingKeep);
+        setPaymentInvoice(pendingKeep.invoice || null);
+        setPayos(
+          pendingKeep.payos
+            ? {
+                orderCode: pendingKeep.payos.orderCode ? Number(pendingKeep.payos.orderCode) : 0,
+                paymentLinkId: pendingKeep.payos.paymentLinkId || null,
+                checkoutUrl: pendingKeep.payos.checkoutUrl || null,
+                qrCode: pendingKeep.payos.qrCode || null,
+              }
+            : null
+        );
+        setPaymentStarted(true);
+      }
     } catch { /* ignore */ }
   };
 
@@ -335,7 +388,7 @@ const Booking: React.FC = () => {
       setView('payment');
       setPaymentStarted(true);
       if (result.payos?.checkoutUrl) {
-        window.open(result.payos.checkoutUrl, '_blank', 'noopener,noreferrer');
+        openPayosWindow(result.payos.checkoutUrl, result.booking.id);
       }
       message.success('Bed reserved! Please complete payment.');
     } catch (err: unknown) {
@@ -533,8 +586,8 @@ const Booking: React.FC = () => {
   };
 
   const handleClickToPay = () => {
-    if (!payos?.checkoutUrl) return;
-    window.open(payos.checkoutUrl, '_blank', 'noopener,noreferrer');
+    if (!payos?.checkoutUrl || !paymentBooking) return;
+    openPayosWindow(payos.checkoutUrl, paymentBooking.id);
     setPaymentStarted(true);
   };
 
@@ -545,7 +598,11 @@ const Booking: React.FC = () => {
       message.success('Booking cancelled');
       resetForm();
       setView('form');
-      loadRoomTypes();
+      if (windowStatus?.window_type === 'hold') {
+        loadActiveBooking();
+      } else {
+        loadRoomTypes();
+      }
     } catch (err: unknown) {
       const cancelMsg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Failed to cancel';
       message.error(cancelMsg);
@@ -579,6 +636,37 @@ const Booking: React.FC = () => {
     setPaymentStarted(false);
     setCountdown(0);
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    if (payosClosedCheckRef.current) { clearInterval(payosClosedCheckRef.current); payosClosedCheckRef.current = null; }
+    payosWindowRef.current = null;
+  };
+
+  // Open PayOS in a new tab and immediately detect when it closes (cancel or complete)
+  const openPayosWindow = (url: string, bookingId: string) => {
+    if (payosClosedCheckRef.current) { clearInterval(payosClosedCheckRef.current); payosClosedCheckRef.current = null; }
+    const win = window.open(url, '_blank');
+    payosWindowRef.current = win;
+    if (!win) return; // popup blocked — fallback already happened via link
+
+    payosClosedCheckRef.current = setInterval(async () => {
+      if (!win.closed) return; // still open
+      clearInterval(payosClosedCheckRef.current!);
+      payosClosedCheckRef.current = null;
+      try {
+        const result = await checkPaymentStatus(bookingId);
+        if (result.status === 'cancelled' || result.status === 'expired') {
+          resetForm(); setView('form');
+          if (windowStatus?.window_type === 'hold') loadActiveBooking(); else loadRoomTypes();
+        } else if (result.paid || result.status === 'approved') {
+          if (windowStatus?.window_type === 'hold') { setHoldSuccess(true); resetForm(); setView('form'); }
+          else { resetForm(); setView('form'); setActiveTab('my'); loadMyBookings(); }
+        }
+      } catch (err: unknown) {
+        if ((err as { statusCode?: number })?.statusCode === 404) {
+          resetForm(); setView('form');
+          if (windowStatus?.window_type === 'hold') loadActiveBooking(); else loadRoomTypes();
+        }
+      }
+    }, 500);
   };
 
   const formatCountdown = (s: number) =>
@@ -599,7 +687,15 @@ const Booking: React.FC = () => {
       <div>
         <Button
           type="text" icon={<ArrowLeftOutlined />}
-          onClick={() => { resetForm(); setView('form'); loadRoomTypes(); }}
+          onClick={() => {
+            resetForm();
+            setView('form');
+            if (windowStatus?.window_type === 'hold') {
+              loadActiveBooking();
+            } else {
+              loadRoomTypes();
+            }
+          }}
           style={{ marginBottom: 16 }}
         >Back to Booking</Button>
 
@@ -1049,12 +1145,23 @@ const Booking: React.FC = () => {
 
   // ─── Render: Hold Bed ───
   const renderHoldBed = () => {
-    const { semester: semNum, year } = activeBooking
+    // Use the manager-configured target semester (from date config), not the student's current semester
+    const { semester: semNum, year } = semester
       ? (() => {
-        const [name, y] = (activeBooking.semester ?? '').split('-');
+        const [name, y] = (semester.semester ?? '').split('-');
         return { semester: name || '—', year: parseInt(y, 10) || '—' };
       })()
       : { semester: '—', year: '—' };
+
+    // Hide Keep Bed button if target semester is the same semester+year as student's current contract
+    const semesterRank = (s: string) => {
+      const [name, y] = String(s || '').split('-');
+      const order: Record<string, number> = { Spring: 1, Summer: 2, Fall: 3 };
+      return (parseInt(y, 10) || 0) * 10 + (order[name] ?? 0);
+    };
+    const targetRank = semester ? semesterRank(semester.semester) : 0;
+    const currentRank = activeBooking ? semesterRank(activeBooking.semester ?? '') : 0;
+    const canKeepBed = targetRank > currentRank;
 
     const columns = [
       {
@@ -1102,20 +1209,41 @@ const Booking: React.FC = () => {
       {
         title: 'Action',
         key: 'action',
-        render: () => holdSuccess ? (
-          <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontSize: 13, padding: '4px 10px' }}>
-            Bed Held Successfully
-          </Tag>
-        ) : (
-          <Button
-            type="primary"
-            loading={loadingKeep}
-            onClick={() => setConfirmKeepModal(true)}
-            style={{ background: brandPalette.primary, borderColor: brandPalette.primary, borderRadius: 6 }}
-          >
-            Keep Bed
-          </Button>
-        ),
+        render: () => {
+          if (!canKeepBed) return null;
+          if (holdSuccess) return (
+            <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontSize: 13, padding: '4px 10px' }}>
+              Bed Held Successfully
+            </Tag>
+          );
+          if (paymentStarted && paymentBooking) return (
+            <Space size={8}>
+              <Tag color="processing" icon={<ClockCircleOutlined />} style={{ fontSize: 13, padding: '4px 10px', margin: 0 }}>
+                Awaiting Payment
+              </Tag>
+              {payos?.checkoutUrl && (
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => openPayosWindow(payos!.checkoutUrl!, paymentBooking!.id)}
+                  style={{ background: brandPalette.primary, borderColor: brandPalette.primary }}
+                >
+                  Pay Now
+                </Button>
+              )}
+            </Space>
+          );
+          return (
+            <Button
+              type="primary"
+              loading={loadingKeep}
+              onClick={() => setConfirmKeepModal(true)}
+              style={{ background: brandPalette.primary, borderColor: brandPalette.primary, borderRadius: 6 }}
+            >
+              Keep Bed
+            </Button>
+          );
+        },
       },
     ];
 
@@ -1268,8 +1396,8 @@ const Booking: React.FC = () => {
 
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {!windowStatus?.allowed ? renderNotStarted() : (
-          view === 'payment' ? renderPaymentPage() :
-            windowStatus.window_type === 'hold' ? renderHoldBed() : (
+          windowStatus.window_type === 'hold' ? renderHoldBed() :
+            view === 'payment' ? renderPaymentPage() : (
               <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
