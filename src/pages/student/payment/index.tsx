@@ -117,7 +117,8 @@ const transferHistoryInvoiceCode = (t: RoomTransferRequest) => {
 
 type PaymentHistoryRow =
   | { kind: 'booking'; item: BookingRequestItem }
-  | { kind: 'transfer'; item: RoomTransferRequest };
+  | { kind: 'transfer'; item: RoomTransferRequest }
+  | { kind: 'invoice'; item: StudentInvoice };
 
 const transferHistoryStatusDisplay = (t: RoomTransferRequest) => {
   if (t.status === 'approved') return { color: 'success', icon: <CheckCircleOutlined />, label: 'Paid' };
@@ -1018,7 +1019,8 @@ const Payment: React.FC = () => {
   const mergedHistoryRows = useMemo((): PaymentHistoryRow[] => {
     const bookingRows: PaymentHistoryRow[] = history.map((b) => ({ kind: 'booking', item: b }));
     const transferRows: PaymentHistoryRow[] = transferHistory.map((t) => ({ kind: 'transfer', item: t }));
-    const merged = [...bookingRows, ...transferRows];
+    const invoiceRows: PaymentHistoryRow[] = managerPaid.map((inv) => ({ kind: 'invoice', item: inv }));
+    const merged = [...bookingRows, ...transferRows, ...invoiceRows];
     merged.sort((a, b) => {
       const ta = a.kind === 'booking' ? a.item.requested_at : a.item.requested_at;
       const tb = b.kind === 'booking' ? b.item.requested_at : b.item.requested_at;
@@ -1144,7 +1146,7 @@ const Payment: React.FC = () => {
     }
   };
 
-  // ─── History table columns (booking + change-bed supplement) ───────────────
+  // ─── History table columns (booking + change-bed supplement + monthly invoice) ───
   const historyColumns: ColumnsType<PaymentHistoryRow> = [
     {
       title: 'Invoice',
@@ -1152,6 +1154,14 @@ const Payment: React.FC = () => {
         if (row.kind === 'booking') {
           const code = row.item.invoice?.invoice_code;
           return <Text strong style={{ fontFamily: 'monospace' }}>{code ?? '—'}</Text>;
+        }
+        if (row.kind === 'invoice') {
+          return (
+            <Space direction="vertical" size={2}>
+              <Text strong style={{ fontFamily: 'monospace' }}>{row.item.invoice_code}</Text>
+              <Tag color="cyan" style={{ margin: 0 }}>Monthly Bill</Tag>
+            </Space>
+          );
         }
         return (
           <Space direction="vertical" size={2}>
@@ -1177,6 +1187,14 @@ const Payment: React.FC = () => {
             </Space>
           );
         }
+        if (row.kind === 'invoice') {
+          return (
+            <Space direction="vertical" size={0}>
+              <Text style={{ fontSize: 13 }}>Room {row.item.room?.room_number ?? '—'}</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{row.item.invoice_month ?? '—'}</Text>
+            </Space>
+          );
+        }
         const t = row.item;
         return (
           <Space direction="vertical" size={0}>
@@ -1195,6 +1213,9 @@ const Payment: React.FC = () => {
         if (row.kind === 'booking') {
           return <Text strong>{formatCurrency(row.item.invoice?.total_amount ?? 0)}</Text>;
         }
+        if (row.kind === 'invoice') {
+          return <Text strong>{formatCurrency(row.item.total_amount)}</Text>;
+        }
         const amt = transferSupplementAmount(row.item);
         if (amt > 0) return <Text strong>{formatCurrency(amt)}</Text>;
         return <Text type="secondary">—</Text>;
@@ -1209,6 +1230,17 @@ const Payment: React.FC = () => {
           const m = statusMeta[s] ?? statusMeta.cancelled;
           return <Tag color={m.color} icon={m.icon}>{m.label}</Tag>;
         }
+        if (row.kind === 'invoice') {
+          const s = row.item.payment_status;
+          return (
+            <Tag
+              color={s === 'paid' ? 'success' : 'default'}
+              icon={s === 'paid' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+            >
+              {s === 'paid' ? 'Paid' : 'Cancelled'}
+            </Tag>
+          );
+        }
         const m = transferHistoryStatusDisplay(row.item);
         return <Tag color={m.color} icon={m.icon}>{m.label}</Tag>;
       },
@@ -1220,9 +1252,11 @@ const Payment: React.FC = () => {
         <Button
           size="small"
           icon={<FileTextOutlined />}
-          onClick={() =>
-            row.kind === 'booking' ? setDetailBooking(row.item) : setDetailTransfer(row.item)
-          }
+          onClick={() => {
+            if (row.kind === 'booking') setDetailBooking(row.item);
+            else if (row.kind === 'invoice') setDetailInvoice(row.item);
+            else setDetailTransfer(row.item);
+          }}
           style={{ borderRadius: 6 }}
         >
           Details
@@ -1337,7 +1371,11 @@ const Payment: React.FC = () => {
                 <PendingCard
                   key={b.id}
                   booking={b}
-                  onPay={() => navigate(ROUTES.STUDENT_BOOKING, { state: { resumeBookingId: b.id } })}
+                  onPay={() => {
+                    const url = b.payos?.checkoutUrl;
+                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                    else message.warning('Payment link not available. Please try again.');
+                  }}
                   onCancel={() => handleCancel(b.id)}
                   onDetails={() => setDetailBooking(b)}
                 />
@@ -1346,98 +1384,18 @@ const Payment: React.FC = () => {
           )}
         </div>
 
-        {/* ── Monthly Bills (manager-created invoices) ── */}
-        {(managerPending.length > 0 || managerPaid.length > 0) && (
+        {/* ── Monthly Bills (manager-created invoices, pending only) ── */}
+        {managerPending.length > 0 && (
           <div style={{ marginBottom: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <Title level={4} style={{ margin: 0 }}>Monthly Bills</Title>
-              {managerPending.length > 0 && (
-                <Badge count={managerPending.length} color="#f37021" />
-              )}
+              <Badge count={managerPending.length} color="#f37021" />
             </div>
-
-            {/* Unpaid */}
-            {managerPending.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-                {managerPending.map((inv) => (
-                  <MonthlyBillCard key={inv.id} invoice={inv} onPaid={load} />
-                ))}
-              </div>
-            )}
-
-            {/* Paid / Cancelled history */}
-            {managerPaid.length > 0 && (
-              <Card
-                style={{ borderRadius: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}
-                styles={{ body: { padding: 0 } }}
-              >
-                <Table<StudentInvoice>
-                  dataSource={managerPaid}
-                  rowKey="id"
-                  size="middle"
-                  pagination={false}
-                  style={{ borderRadius: 12, overflow: 'hidden' }}
-                  columns={[
-                    {
-                      title: 'Invoice',
-                      dataIndex: 'invoice_code',
-                      render: (code: string) => (
-                        <Typography.Text strong style={{ fontFamily: 'monospace' }}>{code}</Typography.Text>
-                      ),
-                    },
-                    {
-                      title: 'Month',
-                      dataIndex: 'invoice_month',
-                    },
-                    {
-                      title: 'Room',
-                      render: (_: unknown, inv: StudentInvoice) => inv.room?.room_number ?? '—',
-                    },
-                    {
-                      title: 'Amount',
-                      dataIndex: 'total_amount',
-                      align: 'right' as const,
-                      render: (amt: number) => (
-                        <Typography.Text strong>{formatCurrency(amt)}</Typography.Text>
-                      ),
-                    },
-                    {
-                      title: 'Status',
-                      dataIndex: 'payment_status',
-                      align: 'center' as const,
-                      render: (s: string) => (
-                        <Tag
-                          color={s === 'paid' ? 'success' : 'default'}
-                          icon={s === 'paid' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-                        >
-                          {s === 'paid' ? 'Paid' : 'Cancelled'}
-                        </Tag>
-                      ),
-                    },
-                    {
-                      title: 'Paid At',
-                      dataIndex: 'paid_at',
-                      render: (d: string | null) =>
-                        d ? new Date(d).toLocaleDateString('vi-VN') : '—',
-                    },
-                    {
-                      title: '',
-                      align: 'center' as const,
-                      render: (_: unknown, inv: StudentInvoice) => (
-                        <Button
-                          size="small"
-                          icon={<FileTextOutlined />}
-                          onClick={() => setDetailInvoice(inv)}
-                          style={{ borderRadius: 6 }}
-                        >
-                          Details
-                        </Button>
-                      ),
-                    },
-                  ]}
-                />
-              </Card>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {managerPending.map((inv) => (
+                <MonthlyBillCard key={inv.id} invoice={inv} onPaid={load} />
+              ))}
+            </div>
           </div>
         )}
 
