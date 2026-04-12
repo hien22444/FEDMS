@@ -62,7 +62,6 @@ export const MANAGER_MENU = [
         path: '/manager/beds',
         children: [
           { key: 'all-beds', label: 'All Beds', path: '/manager/beds' },
-          { key: 'update-status', label: 'Update Status', path: '/manager/beds/status' },
           { key: 'change-assignment', label: 'Change Assignment', path: '/manager/beds/assignment' },
         ],
       },
@@ -100,16 +99,7 @@ export const MANAGER_MENU = [
   {
     group: 'ELECTRICITY & BILLING',
     items: [
-      {
-        key: 'electricity',
-        label: 'Electricity Management',
-        icon: 'electricity',
-        path: '/manager/electricity',
-        children: [
-          { key: 'all-records', label: 'All Records', path: '/manager/electricity' },
-          { key: 'create-record', label: 'Create Record', path: '/manager/electricity/create' },
-        ],
-      },
+      { key: 'electricity', label: 'Electricity Management', icon: 'electricity', path: '/manager/electricity' },
       { key: 'invoices', label: 'Invoice List', icon: 'invoice', path: '/manager/invoices' },
     ],
   },

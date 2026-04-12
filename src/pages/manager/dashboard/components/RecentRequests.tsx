@@ -1,19 +1,26 @@
 import { Table, Tag, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ArrowRight } from 'lucide-react';
-import { RequestStatus } from '@/constants/manager.constant';
+import { useNavigate } from 'react-router-dom';
 import type { IRecentRequest } from '@/interfaces/manager.interface';
 
 interface RecentRequestsProps {
   data: IRecentRequest[];
 }
 
-const statusColors: Record<RequestStatus, { color: string; bg: string }> = {
-  [RequestStatus.PENDING]: { color: '#F59E0B', bg: '#FEF3C7' },
-  [RequestStatus.IN_PROGRESS]: { color: '#3B82F6', bg: '#DBEAFE' },
-  [RequestStatus.COMPLETED]: { color: '#10B981', bg: '#D1FAE5' },
-  [RequestStatus.REJECTED]: { color: '#EF4444', bg: '#FEE2E2' },
+const STATUS_STYLE_MAP: Record<string, { color: string; bg: string }> = {
+  pending: { color: '#F59E0B', bg: '#FEF3C7' },
+  in_progress: { color: '#3B82F6', bg: '#DBEAFE' },
+  in_review: { color: '#3B82F6', bg: '#DBEAFE' },
+  approved: { color: '#3B82F6', bg: '#DBEAFE' },
+  assigned: { color: '#6366F1', bg: '#EDE9FE' },
+  completed: { color: '#10B981', bg: '#D1FAE5' },
+  done: { color: '#10B981', bg: '#D1FAE5' },
+  resolved: { color: '#10B981', bg: '#D1FAE5' },
+  rejected: { color: '#EF4444', bg: '#FEE2E2' },
+  cancelled: { color: '#6B7280', bg: '#F3F4F6' },
 };
+const DEFAULT_STYLE = { color: '#6B7280', bg: '#F3F4F6' };
 
 const columns: ColumnsType<IRecentRequest> = [
   {
@@ -42,8 +49,8 @@ const columns: ColumnsType<IRecentRequest> = [
     dataIndex: 'status',
     key: 'status',
     width: 120,
-    render: (status: RequestStatus) => {
-      const style = statusColors[status];
+    render: (status: string) => {
+      const style = STATUS_STYLE_MAP[status?.toLowerCase()] ?? DEFAULT_STYLE;
       return (
         <Tag
           style={{
@@ -53,7 +60,7 @@ const columns: ColumnsType<IRecentRequest> = [
             borderRadius: '4px',
           }}
         >
-          {status.replace('_', ' ')}
+          {status?.replace(/_/g, ' ') ?? '—'}
         </Tag>
       );
     },
@@ -67,6 +74,7 @@ const columns: ColumnsType<IRecentRequest> = [
 ];
 
 export default function RecentRequests({ data }: RecentRequestsProps) {
+  const navigate = useNavigate();
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">
@@ -74,7 +82,7 @@ export default function RecentRequests({ data }: RecentRequestsProps) {
           <h3 className="font-semibold text-gray-900">Recent Requests</h3>
           <p className="text-xs text-gray-500">Latest facility requests from students</p>
         </div>
-        <Button type="link" className="text-gray-600 hover:text-orange-500 p-0 flex items-center gap-1">
+        <Button type="link" onClick={() => navigate('/manager/requests')} className="text-gray-600 hover:text-orange-500 p-0 flex items-center gap-1">
           View all <ArrowRight size={16} />
         </Button>
       </div>
