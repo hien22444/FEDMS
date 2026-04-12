@@ -13,6 +13,7 @@ import {
   cancelBookingRequest,
   cancelTransferRequest,
   checkPaymentStatus,
+  createPayosLink,
   getMyBookings,
   getMyTransferRequests,
   checkTransferPaymentStatus,
@@ -1368,10 +1369,20 @@ const Payment: React.FC = () => {
                 <PendingCard
                   key={b.id}
                   booking={b}
-                  onPay={() => {
+                  onPay={async () => {
                     const url = b.payos?.checkoutUrl;
-                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
-                    else message.warning('Payment link not available. Please try again.');
+                    if (url) {
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                      return;
+                    }
+                    // No checkout URL yet — create one on demand
+                    try {
+                      const res = await createPayosLink(b.id);
+                      if (res.checkoutUrl) window.open(res.checkoutUrl, '_blank', 'noopener,noreferrer');
+                      else message.warning('Could not generate payment link. Please try again.');
+                    } catch (e: unknown) {
+                      message.error((e as { message?: string })?.message || 'Could not create payment link.');
+                    }
                   }}
                   onCancel={() => handleCancel(b.id)}
                   onDetails={() => setDetailBooking(b)}

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Table, Button, Tag, Tooltip, Spin, Empty } from 'antd';
+import { useEffect, useState, useCallback } from 'react';
+import { Table, Button, Tag, Tooltip, Spin, Empty, Tabs, Input, Select, DatePicker } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   BedDouble,
@@ -10,13 +10,22 @@ import {
   RefreshCw,
   ExternalLink,
   TrendingUp,
+  Search,
+  X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 import {
   fetchBedUsageStats,
   type BedUsageStatsResponse,
   type BedUsageRoomType,
 } from '@/lib/actions/admin';
+import {
+  getAllBookings,
+  type BookingRequestItem,
+} from '@/lib/actions/booking';
+
+const { RangePicker } = DatePicker;
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -76,6 +85,9 @@ const exportToCSV = (rows: Record<string, string | number>[], filename: string) 
   a.click();
   URL.revokeObjectURL(url);
 };
+
+const fmtDate = (d?: string | null) =>
+  d ? dayjs(d).format('DD/MM/YYYY') : '—';
 
 // ─────────────────────────────────────────────
 // Summary stat card
@@ -178,6 +190,269 @@ const buildDormRows = (data: BedUsageStatsResponse): DormRow[] => {
 };
 
 // ─────────────────────────────────────────────
+// Bed Usage Management tab
+// ─────────────────────────────────────────────
+
+const TERM_OPTIONS = [
+  { label: 'Spring', value: 'Spring' },
+  { label: 'Summer', value: 'Summer' },
+  { label: 'Fall', value: 'Fall' },
+];
+
+const YEAR_OPTIONS = Array.from({ length: 6 }, (_, i) => {
+  const y = new Date().getFullYear() - 2 + i;
+  return { label: String(y), value: String(y) };
+});
+
+function BedUsageManagementTab() {
+  const [bookings, setBookings] = useState<BookingRequestItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 20;
+
+  // Filter state
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [termFilter, setTermFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
+
+  const buildSemester = (term: string, year: string) =>
+    term && year ? `${term}-${year}` : '';
+
+  const load = useCallback(
+    async (p = 1, q = search, term = termFilter, year = yearFilter) => {
+      try {
+        setLoading(true);
+        const params: Parameters<typeof getAllBookings>[0] = { page: p, limit: PAGE_SIZE };
+        if (q) params.search = q;
+        const sem = buildSemester(term, year);
+        if (sem) params.semester = sem;
+        const res = await getAllBookings(params);
+        setBookings(res.items);
+        setTotal(res.pagination.total);
+        setPage(p);
+      } catch {
+        setBookings([]);
+        setTotal(0);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search, termFilter, yearFilter]
+  );
+
+  useEffect(() => {
+    load(1, search, termFilter, yearFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, termFilter, yearFilter]);
+
+  const handleSearch = () => {
+    setSearch(searchInput);
+  };
+
+  const handleClear = () => {
+    setSearchInput('');
+    setSearch('');
+    setTermFilter('');
+    setYearFilter('');
+    setDateRange(null);
+  };
+
+  // Client-side date filter on top of server results
+  const filtered = dateRange
+    ? bookings.filter((b) => {
+        const start = dateRange[0] ? dateRange[0].startOf('day') : null;
+        const end = dateRange[1] ? dateRange[1].endOf('day') : null;
+        const checkIn = b.start_date ? dayjs(b.start_date) : null;
+        if (!checkIn) return true;
+        if (start && checkIn.isBefore(start)) return false;
+        if (end && checkIn.isAfter(end)) return false;
+        return true;
+      })
+    : bookings;
+
+  const exportManagement = () => {
+    const rows = filtered.map((b) => {
+      const room = b.room;
+      const block = room?.block;
+      const dormCode = (block?.dorm as any)?.dorm_code ?? '';
+      const blockCode = block?.block_code ?? block?.block_name ?? '';
+      const roomLabel = `${dormCode}${blockCode}-${room?.room_number ?? ''}`;
+      return {
+        'Student ID': b.student?.student_code ?? '—',
+        'Student Name': b.student?.full_name ?? '—',
+        'Phone': b.student?.phone ?? '—',
+        'Room': roomLabel,
+        'Bed': b.bed?.bed_number ?? '—',
+        'Semester': b.semester ?? '—',
+        'Check In Date': fmtDate(b.start_date),
+        'Check Out Date': fmtDate(b.checkout_date),
+      };
+    });
+    exportToCSV(rows, `bed-usage-management-${dayjs().format('YYYY-MM-DD')}.csv`);
+  };
+
+  const columns: ColumnsType<BookingRequestItem> = [
+    {
+      title: 'Student ID',
+      key: 'student_code',
+      width: 130,
+      render: (_, r) => (
+        <span className="font-mono text-sm text-gray-700">{r.student?.student_code ?? '—'}</span>
+      ),
+    },
+    {
+      title: 'Student Name',
+      key: 'full_name',
+      width: 180,
+      render: (_, r) => (
+        <span className="font-medium text-gray-800">{r.student?.full_name ?? '—'}</span>
+      ),
+    },
+    {
+      title: 'Phone',
+      key: 'phone',
+      width: 130,
+      render: (_, r) => (
+        <span className="text-sm text-gray-700">{r.student?.phone ?? '—'}</span>
+      ),
+    },
+    {
+      title: 'Room - Bed',
+      key: 'room',
+      width: 150,
+      render: (_, r) => {
+        const room = r.room;
+        const block = room?.block;
+        const dormCode = (block?.dorm as any)?.dorm_code ?? '';
+        const blockCode = block?.block_code ?? block?.block_name ?? '';
+        const roomLabel = `${dormCode}${blockCode}-${room?.room_number ?? '—'}`;
+        const bedNumber = r.bed?.bed_number ?? '—';
+        return (
+          <div>
+            <div className="font-mono text-sm font-medium text-gray-800">{roomLabel}</div>
+            <div className="text-xs text-gray-400 mt-0.5">Bed: {bedNumber}</div>
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Semester',
+      key: 'semester',
+      width: 130,
+      render: (_, r) => (
+        <span className="text-sm text-gray-700">{r.semester ?? '—'}</span>
+      ),
+    },
+    {
+      title: 'Check In Date',
+      key: 'start_date',
+      width: 120,
+      render: (_, r) => <span className="text-sm">{fmtDate(r.start_date)}</span>,
+    },
+    {
+      title: 'Check Out Date',
+      key: 'checkout_date',
+      width: 130,
+      render: (_, r) => (
+        <span className="text-sm">{r.checkout_date ? fmtDate(r.checkout_date) : '—'}</span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Filter bar */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Filters</p>
+        <div className="flex flex-wrap gap-3 items-end">
+          <Input
+            placeholder="Student name / ID"
+            prefix={<Search size={14} className="text-gray-400" />}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onPressEnter={handleSearch}
+            style={{ width: 220 }}
+          />
+          <Select
+            placeholder="Term"
+            value={termFilter || undefined}
+            onChange={(v) => setTermFilter(v ?? '')}
+            allowClear
+            options={TERM_OPTIONS}
+            style={{ width: 120 }}
+          />
+          <Select
+            placeholder="Year"
+            value={yearFilter || undefined}
+            onChange={(v) => setYearFilter(v ?? '')}
+            allowClear
+            options={YEAR_OPTIONS}
+            style={{ width: 100 }}
+          />
+          <RangePicker
+            placeholder={['From date', 'To date']}
+            value={dateRange ?? undefined}
+            onChange={(val) => setDateRange(val as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null)}
+            format="DD/MM/YYYY"
+            style={{ width: 240 }}
+          />
+          <Button
+            type="primary"
+            icon={<Search size={14} />}
+            onClick={handleSearch}
+            className="bg-orange-500 border-orange-500 hover:bg-orange-600"
+          >
+            Search
+          </Button>
+          <Button icon={<X size={14} />} onClick={handleClear}>
+            Clear
+          </Button>
+          <Button
+            icon={<Download size={14} />}
+            onClick={exportManagement}
+            disabled={filtered.length === 0}
+          >
+            Export Excel
+          </Button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-700">
+            Results: <span className="text-orange-500">{total}</span> records
+          </span>
+          <Button size="small" icon={<RefreshCw size={13} />} onClick={() => load(1)}>
+            Refresh
+          </Button>
+        </div>
+        <Table<BookingRequestItem>
+          rowKey="id"
+          loading={loading}
+          dataSource={filtered}
+          columns={columns}
+          size="small"
+          scroll={{ x: 1200 }}
+          pagination={{
+            current: page,
+            pageSize: PAGE_SIZE,
+            total,
+            showSizeChanger: false,
+            showTotal: (t) => `Total ${t} records`,
+            onChange: (p) => load(p),
+          }}
+          locale={{ emptyText: <Empty description="No data" /> }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Page component
 // ─────────────────────────────────────────────
 
@@ -186,6 +461,7 @@ export default function BedStatisticsPage() {
   const [data, setData] = useState<BedUsageStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('statistics');
 
   const load = () => {
     setLoading(true);
@@ -472,44 +748,12 @@ export default function BedStatisticsPage() {
     },
   ];
 
-  // ── Render ──────────────────────────────────
+  // ── Statistics tab content ──────────────────
 
   const gt = data?.grandTotal;
 
-  return (
-    <div className="space-y-6">
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <BedDouble size={26} className="text-orange-500" />
-            Bed Usage Statistics
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Real-time occupancy breakdown by dormitory and room type
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            icon={<RefreshCw size={15} />}
-            onClick={load}
-            loading={loading}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-          <Button
-            type="primary"
-            icon={<Download size={15} />}
-            onClick={exportAll}
-            disabled={!data}
-            className="bg-orange-500 border-orange-500 hover:bg-orange-600"
-          >
-            Export All
-          </Button>
-        </div>
-      </div>
-
+  const statisticsContent = (
+    <div className="space-y-6 pt-4">
       {/* ── Summary cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
@@ -714,6 +958,64 @@ export default function BedStatisticsPage() {
           />
         )}
       </div>
+    </div>
+  );
+
+  // ── Render ──────────────────────────────────
+
+  return (
+    <div className="space-y-4">
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BedDouble size={26} className="text-orange-500" />
+            Bed Usage Statistics
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Real-time occupancy breakdown by dormitory and room type
+          </p>
+        </div>
+        {activeTab === 'statistics' && (
+          <div className="flex items-center gap-2">
+            <Button
+              icon={<RefreshCw size={15} />}
+              onClick={load}
+              loading={loading}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
+            <Button
+              type="primary"
+              icon={<Download size={15} />}
+              onClick={exportAll}
+              disabled={!data}
+              className="bg-orange-500 border-orange-500 hover:bg-orange-600"
+            >
+              Export All
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Tabs ── */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'statistics',
+            label: 'Bed Usage Statistics',
+            children: statisticsContent,
+          },
+          {
+            key: 'management',
+            label: 'Bed Usage Management',
+            children: <BedUsageManagementTab />,
+          },
+        ]}
+      />
     </div>
   );
 }

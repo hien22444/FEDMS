@@ -70,6 +70,7 @@ export interface BookingRequestItem {
   student?: {
     full_name: string;
     student_code: string;
+    phone?: string;
     user?: { email: string };
   };
   room: BookingRoom;
@@ -290,10 +291,11 @@ export const getRoommates = async (bookingId: string) => {
   return api.get<RoommateItem[]>(`bookings/${bookingId}/roommates`);
 };
 
-export const getAllBookings = async (params?: { status?: string; search?: string; page?: number; limit?: number }) => {
+export const getAllBookings = async (params?: { status?: string; search?: string; semester?: string; page?: number; limit?: number }) => {
   const query = new URLSearchParams();
   if (params?.status) query.set('status', params.status);
   if (params?.search) query.set('search', params.search);
+  if (params?.semester) query.set('semester', params.semester);
   if (params?.page) query.set('page', params.page.toString());
   if (params?.limit) query.set('limit', params.limit.toString());
   const qs = query.toString();
@@ -307,3 +309,18 @@ export const sendEmailToStudent = async (bookingId: string, payload: { subject: 
 export const sendEmailToAllStudents = async (payload: { subject: string; body: string }) => {
   return api.post<{ sent: boolean; count: number }>(`bookings/send-email-all`, payload);
 };
+
+export const createPayosLink = async (bookingId: string) =>
+  api.post<{ orderCode: number; paymentLinkId: string | null; checkoutUrl: string | null; qrCode: string | null }>(
+    `bookings/${bookingId}/payos-link`,
+    {}
+  );
+
+export const softLockBed = async (bedId: string) =>
+  api.post<{ bedId: string; locked_until: string }>('bookings/beds/soft-lock', { bed_id: bedId });
+
+export const softUnlockBed = async (bedId: string) =>
+  api.delete<{ message: string }>(`bookings/beds/soft-lock/${bedId}`);
+
+export const getSoftLockedBeds = async () =>
+  api.get<{ locked_bed_ids: string[] }>('bookings/beds/soft-locks');
