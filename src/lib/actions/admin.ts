@@ -585,7 +585,8 @@ export interface Bed {
       dorm: { id: string; dorm_name: string; dorm_code: string };
     };
   };
-  contract: BedContract | null;
+  active_contract: BedContract | null;
+  upcoming_contract: BedContract | null;
   createdAt: string;
   updatedAt: string;
 }

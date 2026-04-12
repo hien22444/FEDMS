@@ -116,7 +116,7 @@ const BOOKING_STATE_TERMS = [
   'book',
   'booking',
   'bed',
-  'keep bed',
+  'hold bed',
   'reservation',
 ];
 

@@ -38,10 +38,14 @@ import {
   getBedsForBooking,
   submitBooking,
   checkPaymentStatus,
+  createPayosLink,
   getMyBookings,
   cancelBookingRequest,
   getBookingWindowStatus,
   keepBed,
+  softLockBed,
+  softUnlockBed,
+  getSoftLockedBeds,
 } from '@/lib/actions';
 import type { BookingWindowStatusResponse } from '@/lib/actions';
 import type {
@@ -149,6 +153,10 @@ const Booking: React.FC = () => {
   const [activeBooking, setActiveBooking] = useState<BookingRequestItem | null>(null);
   const [loadingKeep, setLoadingKeep] = useState(false);
 
+  // ─── Soft lock state ───
+  const [softLockedBeds, setSoftLockedBeds] = useState<Set<string>>(new Set());
+  const softLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     checkWindow();
   }, []);
@@ -158,8 +166,24 @@ const Booking: React.FC = () => {
   useEffect(() => {
     const socket = connectSocket();
     const handleConfigUpdated = () => refreshWindow();
+    const handleBedLocked = ({ bedId }: { bedId: string }) =>
+      setSoftLockedBeds(prev => new Set(prev).add(bedId));
+    const handleBedUnlocked = ({ bedId }: { bedId: string }) =>
+      setSoftLockedBeds(prev => { const s = new Set(prev); s.delete(bedId); return s; });
+    const handleBedReserved = ({ bedId }: { bedId: string }) => {
+      setSoftLockedBeds(prev => { const s = new Set(prev); s.delete(bedId); return s; });
+      setAllBeds(prev => prev.filter(b => b.id !== bedId));
+    };
     socket.on('booking_config_updated', handleConfigUpdated);
-    return () => { socket.off('booking_config_updated', handleConfigUpdated); };
+    socket.on('bed_soft_locked', handleBedLocked);
+    socket.on('bed_soft_unlocked', handleBedUnlocked);
+    socket.on('bed_reserved', handleBedReserved);
+    return () => {
+      socket.off('booking_config_updated', handleConfigUpdated);
+      socket.off('bed_soft_locked', handleBedLocked);
+      socket.off('bed_soft_unlocked', handleBedUnlocked);
+      socket.off('bed_reserved', handleBedReserved);
+    };
   }, []);
 
   useEffect(() => {
@@ -168,7 +192,7 @@ const Booking: React.FC = () => {
       if (windowStatus.window_type === 'hold') {
         loadActiveBooking();
       } else {
-        loadRoomTypes();
+        loadNewBookingState();
       }
     }
   }, [windowStatus]);
@@ -183,6 +207,15 @@ const Booking: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowStatus?.dorm_booking_suspended]);
+
+  // Release soft lock when navigating away
+  useEffect(() => {
+    return () => {
+      if (selectedBed) softUnlockBed(selectedBed.id).catch(() => {});
+      if (softLockTimerRef.current) clearTimeout(softLockTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBed]);
 
   // Countdown chỉ bắt đầu khi người dùng click "Click to pay"
   // The countdown starts only after the user clicks "Click to pay"
@@ -357,8 +390,8 @@ const Booking: React.FC = () => {
       // Restore "Awaiting Payment" state if there's already a pending keepBed booking for the target semester
       const pendingKeep = active != null && !!targetSem
         ? data.items.find(
-            (b) => b.status === 'awaiting_payment' && b.semester === targetSem && !b.checkout_date
-          ) ?? null
+          (b) => b.status === 'awaiting_payment' && b.semester === targetSem && !b.checkout_date
+        ) ?? null
         : null;
       if (pendingKeep) {
         setPaymentBooking(pendingKeep);
@@ -366,16 +399,42 @@ const Booking: React.FC = () => {
         setPayos(
           pendingKeep.payos
             ? {
-                orderCode: pendingKeep.payos.orderCode ? Number(pendingKeep.payos.orderCode) : 0,
-                paymentLinkId: pendingKeep.payos.paymentLinkId || null,
-                checkoutUrl: pendingKeep.payos.checkoutUrl || null,
-                qrCode: pendingKeep.payos.qrCode || null,
-              }
+              orderCode: pendingKeep.payos.orderCode ? Number(pendingKeep.payos.orderCode) : 0,
+              paymentLinkId: pendingKeep.payos.paymentLinkId || null,
+              checkoutUrl: pendingKeep.payos.checkoutUrl || null,
+              qrCode: pendingKeep.payos.qrCode || null,
+            }
             : null
         );
         setPaymentStarted(true);
       }
     } catch { /* ignore */ }
+  };
+
+  // For new-booking window: detect a pending booking when returning from PayOS cancel/success
+  const loadNewBookingState = async () => {
+    try {
+      const data = await getMyBookings({ page: 1, limit: 50 });
+      const pending = data.items.find(b => b.status === 'awaiting_payment');
+      if (pending) {
+        setPaymentBooking(pending);
+        setPaymentInvoice(pending.invoice || null);
+        setPayos(
+          pending.payos
+            ? {
+              orderCode: pending.payos.orderCode ? Number(pending.payos.orderCode) : 0,
+              paymentLinkId: pending.payos.paymentLinkId || null,
+              checkoutUrl: pending.payos.checkoutUrl || null,
+              qrCode: pending.payos.qrCode || null,
+            }
+            : null
+        );
+        setPaymentStarted(true);
+        setView('payment');
+        return;
+      }
+    } catch { /* ignore */ }
+    loadRoomTypes();
   };
 
   const handleKeepBed = async () => {
@@ -385,14 +444,13 @@ const Booking: React.FC = () => {
       setPaymentBooking(result.booking);
       setPaymentInvoice(result.invoice);
       setPayos(result.payos ?? null);
-      setView('payment');
       setPaymentStarted(true);
       if (result.payos?.checkoutUrl) {
-        openPayosWindow(result.payos.checkoutUrl, result.booking.id);
+        window.location.href = result.payos.checkoutUrl;
       }
       message.success('Bed reserved! Please complete payment.');
     } catch (err: unknown) {
-      message.error((err as { message?: string })?.message || 'Failed to keep bed');
+      message.error((err as { message?: string })?.message || 'Failed to hold bed');
     } finally {
       setLoadingKeep(false);
     }
@@ -475,6 +533,8 @@ const Booking: React.FC = () => {
         })
       );
       setAllBeds(bedArrays.flat());
+      // Fetch current soft locks for initial state
+      getSoftLockedBeds().then(data => setSoftLockedBeds(new Set(data.locked_bed_ids))).catch(() => {});
     } catch {
       message.error('Failed to load beds');
     } finally {
@@ -531,9 +591,37 @@ const Booking: React.FC = () => {
 
   // ─── Submit ───
 
-  const handleBedClick = (bed: BedCard) => {
-    setSelectedBed(bed);
-    setConfirmModal(true);
+  const handleBedClick = async (bed: BedCard) => {
+    if (softLockedBeds.has(bed.id)) return;
+    try {
+      await softLockBed(bed.id);
+      setSelectedBed(bed);
+      setConfirmModal(true);
+      // Auto-release after 5 min: reload beds + clear selection
+      if (softLockTimerRef.current) clearTimeout(softLockTimerRef.current);
+      softLockTimerRef.current = setTimeout(() => {
+        setConfirmModal(false);
+        setSelectedBed(null);
+        setNote('');
+        setAgreedToTerms(false);
+        softLockTimerRef.current = null;
+        if (selectedBlock && selectedRoomType) loadAllBeds(selectedBlock, selectedRoomType);
+      }, 5 * 60 * 1000);
+    } catch (err: unknown) {
+      const msg = (err as { message?: string })?.message || 'Bed is no longer available';
+      message.error(msg);
+    }
+  };
+
+  // Helper: lấy PayOS checkout URL của booking (tạo mới nếu chưa có)
+  const getOrCreateCheckoutUrl = async (bookingId: string, existingUrl?: string | null): Promise<string | null> => {
+    if (existingUrl) return existingUrl;
+    try {
+      const res = await createPayosLink(bookingId);
+      return res.checkoutUrl ?? null;
+    } catch {
+      return null;
+    }
   };
 
   const handleSubmitBooking = async () => {
@@ -543,40 +631,39 @@ const Booking: React.FC = () => {
       const result: SubmitBookingResponse = await submitBooking({ bed_id: selectedBed.id, note: note || undefined });
       setConfirmModal(false);
       setAgreedToTerms(false);
-      setPaymentBooking(result.booking);
-      setPaymentInvoice(result.invoice);
-      setPayos(result.payos || null);
-      setView('payment');
-      // Start the countdown immediately after confirmation
-      setPaymentStarted(true);
-      if (result.payos?.checkoutUrl) {
-        window.open(result.payos.checkoutUrl, '_blank', 'noopener,noreferrer');
+      if (softLockTimerRef.current) { clearTimeout(softLockTimerRef.current); softLockTimerRef.current = null; }
+
+      const checkoutUrl = await getOrCreateCheckoutUrl(result.booking.id, result.payos?.checkoutUrl);
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        message.warning('Booking confirmed! Please go to Payment page to complete payment.');
+        setActiveTab('my');
+        loadMyBookings();
       }
-      message.success('Booking submitted! Please complete payment.');
     } catch (err: unknown) {
       const errMsg = err instanceof Error
         ? err.message
         : (err as { message?: string })?.message || 'Failed to submit booking';
+
       if (errMsg.toLowerCase().includes('already have an active booking')) {
+        // Học sinh đã có booking awaiting_payment → lấy URL và redirect thẳng sang PayOS
         setConfirmModal(false);
-        modalApi.warning({
-          title: 'You already have a booking for this term',
-          content: (
-            <div>
-              <p style={{ marginBottom: 8 }}>
-                You already have an active booking for this term.
-              </p>
-              <p style={{ marginBottom: 0, color: '#555' }}>
-                Please check the <strong>My Requests</strong> tab to review or complete payment for your current booking.
-              </p>
-            </div>
-          ),
-          okText: 'Xem My Requests',
-          onOk: () => {
-            setActiveTab('my');
-            loadMyBookings();
-          },
-        });
+        setAgreedToTerms(false);
+        try {
+          const data = await getMyBookings({ limit: 10 });
+          const existing = data.items.find(b => b.status === 'awaiting_payment');
+          if (existing) {
+            const checkoutUrl = await getOrCreateCheckoutUrl(existing.id, existing.payos?.checkoutUrl);
+            if (checkoutUrl) {
+              window.location.href = checkoutUrl;
+              return;
+            }
+          }
+        } catch { /* fallback below */ }
+        // Không lấy được link → về My Requests
+        setActiveTab('my');
+        loadMyBookings();
       } else {
         message.error(errMsg);
       }
@@ -587,8 +674,7 @@ const Booking: React.FC = () => {
 
   const handleClickToPay = () => {
     if (!payos?.checkoutUrl || !paymentBooking) return;
-    openPayosWindow(payos.checkoutUrl, paymentBooking.id);
-    setPaymentStarted(true);
+    window.location.href = payos.checkoutUrl;
   };
 
   const handleCancelFromPayment = async () => {
@@ -963,26 +1049,28 @@ const Booking: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(140px, 1fr))' : 'repeat(auto-fill, minmax(120px, 1fr))', gap: 16 }}>
           {allBeds.map(bed => {
             const isSelected = selectedBed?.id === bed.id;
+            const isSoftLocked = !isSelected && softLockedBeds.has(bed.id);
             return (
               <div
                 key={bed.id}
-                onClick={() => handleBedClick(bed)}
+                onClick={() => !isSoftLocked && handleBedClick(bed)}
                 style={{
                   position: 'relative',
                   width: '100%',
-                  border: `2px solid ${isSelected ? '#1a6ef5' : '#e8e8e8'}`,
+                  border: `2px solid ${isSelected ? '#1a6ef5' : isSoftLocked ? '#d9d9d9' : '#e8e8e8'}`,
                   borderRadius: 8,
                   padding: '16px 12px 12px',
                   textAlign: 'center',
-                  cursor: 'pointer',
-                  background: '#fff',
-                  transition: 'border-color 0.2s',
+                  cursor: isSoftLocked ? 'not-allowed' : 'pointer',
+                  background: isSoftLocked ? '#fafafa' : '#fff',
+                  opacity: isSoftLocked ? 0.6 : 1,
+                  transition: 'border-color 0.2s, opacity 0.2s',
                 }}
               >
                 {/* Orange badge */}
                 <div style={{
                   position: 'absolute', top: 8, right: 8,
-                  background: '#fa8c16', color: '#fff',
+                  background: isSoftLocked ? '#d9d9d9' : '#fa8c16', color: '#fff',
                   width: 26, height: 26, borderRadius: 4,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontWeight: 700, fontSize: 13,
@@ -991,10 +1079,15 @@ const Booking: React.FC = () => {
                 </div>
 
                 {/* Bed emoji */}
-                <div style={{ fontSize: 44, lineHeight: 1, margin: '4px 0 10px' }}>🛏️</div>
+                <div style={{ fontSize: 44, lineHeight: 1, margin: '4px 0 6px' }}>🛏️</div>
 
                 {/* Room label */}
                 <Text style={{ fontSize: 12, color: '#555' }}>Room : {bed.room_number}</Text>
+
+                {/* Soft lock indicator */}
+                {isSoftLocked && (
+                  <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>Being selected</div>
+                )}
               </div>
             );
           })}
@@ -1004,10 +1097,24 @@ const Booking: React.FC = () => {
       {/* Confirm Modal */}
       <Modal
         open={confirmModal}
-        onCancel={() => { setConfirmModal(false); setNote(''); setAgreedToTerms(false); }}
+        onCancel={() => {
+          if (selectedBed) softUnlockBed(selectedBed.id).catch(() => {});
+          if (softLockTimerRef.current) { clearTimeout(softLockTimerRef.current); softLockTimerRef.current = null; }
+          setConfirmModal(false);
+          setSelectedBed(null);
+          setNote('');
+          setAgreedToTerms(false);
+        }}
         title={<Text strong style={{ fontSize: 16 }}>Confirm Booking</Text>}
         footer={[
-          <Button key="cancel" onClick={() => { setConfirmModal(false); setNote(''); setAgreedToTerms(false); }}>Cancel</Button>,
+          <Button key="cancel" onClick={() => {
+            if (selectedBed) softUnlockBed(selectedBed.id).catch(() => {});
+            if (softLockTimerRef.current) { clearTimeout(softLockTimerRef.current); softLockTimerRef.current = null; }
+            setConfirmModal(false);
+            setSelectedBed(null);
+            setNote('');
+            setAgreedToTerms(false);
+          }}>Cancel</Button>,
           <Button key="confirm" type="primary" loading={loading.submit} disabled={!agreedToTerms} onClick={handleSubmitBooking}>Confirm</Button>,
         ]}
         width={isTablet ? 560 : 'calc(100vw - 24px)'}
@@ -1115,9 +1222,16 @@ const Booking: React.FC = () => {
                       </Text>
                     )}
                     {booking.status === 'approved' && booking.bed && !booking.checkout_date && (
-                      <Text type="success" style={{ display: 'block', marginTop: 8 }}>
-                        <CheckCircleOutlined /> Bed {booking.bed.bed_number} · Contract active
-                      </Text>
+                      new Date(booking.start_date) > new Date() ? (
+                        <Text style={{ display: 'block', marginTop: 8, color: '#1677ff' }}>
+                          <ClockCircleOutlined style={{ marginRight: 4 }} />
+                          Bed {booking.bed.bed_number} · Upcoming — starts {new Date(booking.start_date).toLocaleDateString('vi-VN')}
+                        </Text>
+                      ) : (
+                        <Text type="success" style={{ display: 'block', marginTop: 8 }}>
+                          <CheckCircleOutlined style={{ marginRight: 4 }} /> Bed {booking.bed.bed_number} · Contract active
+                        </Text>
+                      )
                     )}
                   </div>
                 </div>
@@ -1240,7 +1354,7 @@ const Booking: React.FC = () => {
               onClick={() => setConfirmKeepModal(true)}
               style={{ background: brandPalette.primary, borderColor: brandPalette.primary, borderRadius: 6 }}
             >
-              Keep Bed
+              Hold Bed
             </Button>
           );
         },
@@ -1396,18 +1510,17 @@ const Booking: React.FC = () => {
 
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {!windowStatus?.allowed ? renderNotStarted() : (
-          windowStatus.window_type === 'hold' ? renderHoldBed() :
-            view === 'payment' ? renderPaymentPage() : (
-              <Tabs
-                activeKey={activeTab}
-                onChange={setActiveTab}
-                centered={!isTablet}
-                items={[
-                  { key: 'new', label: 'New Booking', children: renderBookingForm() },
-                  { key: 'my', label: 'My Requests', children: renderMyRequests() },
-                ]}
-              />
-            )
+          windowStatus.window_type === 'hold' ? renderHoldBed() : (
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              centered={!isTablet}
+              items={[
+                { key: 'new', label: 'New Booking', children: renderBookingForm() },
+                { key: 'my', label: 'My Requests', children: renderMyRequests() },
+              ]}
+            />
+          )
         )}
       </div>
     </div>

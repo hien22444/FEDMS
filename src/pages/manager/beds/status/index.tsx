@@ -202,16 +202,23 @@ export default function UpdateBedStatusPage() {
                 </div>
 
                 {/* Occupant */}
-                {bed.contract ? (
+                {bed.active_contract ? (
                   <div className="flex items-start gap-1 text-xs text-gray-600">
                     <User size={12} className="mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="font-medium leading-tight">{bed.contract.student.full_name}</div>
-                      <div className="text-gray-400">{bed.contract.student.student_code}</div>
+                      <div className="font-medium leading-tight">{bed.active_contract.student.full_name}</div>
+                      <div className="text-gray-400">{bed.active_contract.student.student_code}</div>
                     </div>
                   </div>
                 ) : (
                   <div className="text-xs text-gray-400">Empty</div>
+                )}
+
+                {/* Upcoming reservation badge */}
+                {bed.upcoming_contract && (
+                  <div className="text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded px-1.5 py-0.5 leading-tight">
+                    Reserved · {bed.upcoming_contract.semester}
+                  </div>
                 )}
 
                 {/* Status changer */}

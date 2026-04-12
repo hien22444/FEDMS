@@ -73,6 +73,9 @@ const ManagerCheckout = () => {
   const contract = studentInfo?.active_contract;
   const room = contract?.room;
   const block = room?.block;
+  const upcomingContract = studentInfo?.upcoming_contract;
+  const upcomingRoom = upcomingContract?.room;
+  const upcomingBlock = upcomingRoom?.block;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -209,6 +212,42 @@ const ManagerCheckout = () => {
               />
             )}
           </div>
+
+          {upcomingContract && (
+            <div className="mt-4">
+              <div className="font-semibold mb-2">
+                Upcoming Reservation
+                <Tag color="blue" className="ml-2">Next Semester</Tag>
+              </div>
+              <Descriptions column={1} bordered size="small">
+                <Descriptions.Item label="Semester">{upcomingContract.semester}</Descriptions.Item>
+                <Descriptions.Item label="Dorm">
+                  {upcomingBlock?.dorm?.dorm_name || '—'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Block">
+                  {upcomingBlock?.block_name || '—'} ({upcomingBlock?.block_code || '—'})
+                </Descriptions.Item>
+                <Descriptions.Item label="Room">
+                  {upcomingRoom?.room_number || '—'} — {upcomingRoom?.room_type || '—'}, Floor {upcomingRoom?.floor ?? '—'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Bed">
+                  {upcomingContract.bed?.bed_number || '—'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Room Price">
+                  {formatCurrency(upcomingContract.room_price)}
+                </Descriptions.Item>
+                <Descriptions.Item label="Starts">
+                  {new Date(upcomingContract.start_date).toLocaleDateString('vi-VN')}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ends">
+                  {new Date(upcomingContract.end_date).toLocaleDateString('vi-VN')}
+                </Descriptions.Item>
+                <Descriptions.Item label="Status">
+                  <Tag color="blue">{upcomingContract.status}</Tag>
+                </Descriptions.Item>
+              </Descriptions>
+            </div>
+          )}
         </Card>
       )}
     </div>

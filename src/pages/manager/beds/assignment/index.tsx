@@ -25,8 +25,8 @@ const BED_LABEL = (b: Bed) => {
 };
 
 const OCCUPIED_BED_STUDENT_LABEL = (b?: Bed) => {
-  const name = b?.contract?.student?.full_name || 'Unknown student';
-  const code = b?.contract?.student?.student_code || 'N/A';
+  const name = b?.active_contract?.student?.full_name || 'Unknown student';
+  const code = b?.active_contract?.student?.student_code || 'N/A';
   return `${name} (${code})`;
 };
 
@@ -244,7 +244,7 @@ export default function ChangeBedAssignmentPage() {
       setSuccessMsg(null);
       await changeBedAssignment(sourceBedId, targetBedId);
       setSuccessMsg(
-        `Successfully moved ${sourceBed?.contract?.student?.full_name || 'student'} from Bed #${sourceBed?.bed_number} to Bed #${targetBed?.bed_number}`
+        `Successfully moved ${sourceBed?.active_contract?.student?.full_name || 'student'} from Bed #${sourceBed?.bed_number} to Bed #${targetBed?.bed_number}`
       );
       setSourceBedId(undefined);
       setTargetBedId(undefined);
@@ -289,14 +289,14 @@ export default function ChangeBedAssignmentPage() {
               <div className="font-medium text-blue-800 mb-2">
                 {sourceBed.room?.block?.block_name}-{sourceBed.room?.room_number} · Bed #{sourceBed.bed_number}
               </div>
-              {sourceBed.contract && (
+              {sourceBed.active_contract && (
                 <div className="space-y-1 text-gray-700">
-                  <div><span className="text-gray-500">Name:</span> {sourceBed.contract.student.full_name}</div>
-                  <div><span className="text-gray-500">Code:</span> {sourceBed.contract.student.student_code}</div>
-                  {sourceBed.contract.student.phone && (
-                    <div><span className="text-gray-500">Phone:</span> {sourceBed.contract.student.phone}</div>
+                  <div><span className="text-gray-500">Name:</span> {sourceBed.active_contract.student.full_name}</div>
+                  <div><span className="text-gray-500">Code:</span> {sourceBed.active_contract.student.student_code}</div>
+                  {sourceBed.active_contract.student.phone && (
+                    <div><span className="text-gray-500">Phone:</span> {sourceBed.active_contract.student.phone}</div>
                   )}
-                  <div><span className="text-gray-500">Semester:</span> {sourceBed.contract.semester}</div>
+                  <div><span className="text-gray-500">Semester:</span> {sourceBed.active_contract.semester}</div>
                 </div>
               )}
             </div>
