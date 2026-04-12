@@ -1115,9 +1115,16 @@ const Booking: React.FC = () => {
                       </Text>
                     )}
                     {booking.status === 'approved' && booking.bed && !booking.checkout_date && (
-                      <Text type="success" style={{ display: 'block', marginTop: 8 }}>
-                        <CheckCircleOutlined /> Bed {booking.bed.bed_number} · Contract active
-                      </Text>
+                      new Date(booking.start_date) > new Date() ? (
+                        <Text style={{ display: 'block', marginTop: 8, color: '#1677ff' }}>
+                          <ClockCircleOutlined style={{ marginRight: 4 }} />
+                          Bed {booking.bed.bed_number} · Upcoming — starts {new Date(booking.start_date).toLocaleDateString('vi-VN')}
+                        </Text>
+                      ) : (
+                        <Text type="success" style={{ display: 'block', marginTop: 8 }}>
+                          <CheckCircleOutlined style={{ marginRight: 4 }} /> Bed {booking.bed.bed_number} · Contract active
+                        </Text>
+                      )
                     )}
                   </div>
                 </div>

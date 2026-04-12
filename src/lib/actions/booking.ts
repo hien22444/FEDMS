@@ -199,6 +199,22 @@ export const keepBed = async (): Promise<SubmitBookingResponse> => {
   return api.post<SubmitBookingResponse>('bookings/keep-bed', {});
 };
 
+interface ContractInfo {
+  id: string;
+  semester: string;
+  start_date: string;
+  end_date: string;
+  room_price: number;
+  status: string;
+  room: {
+    room_number: string;
+    room_type: string;
+    floor: number;
+    block?: { block_name: string; block_code: string; dorm?: { dorm_name: string; dorm_code: string } };
+  };
+  bed: { bed_number: string };
+}
+
 export interface CheckoutStudentInfo {
   student: {
     id: string;
@@ -208,21 +224,8 @@ export interface CheckoutStudentInfo {
     student_type: string;
     email?: string;
   };
-  active_contract: {
-    id: string;
-    semester: string;
-    start_date: string;
-    end_date: string;
-    room_price: number;
-    status: string;
-    room: {
-      room_number: string;
-      room_type: string;
-      floor: number;
-      block?: { block_name: string; block_code: string; dorm?: { dorm_name: string; dorm_code: string } };
-    };
-    bed: { bed_number: string };
-  } | null;
+  active_contract: ContractInfo | null;
+  upcoming_contract: ContractInfo | null;
 }
 
 export interface CheckoutResult {
