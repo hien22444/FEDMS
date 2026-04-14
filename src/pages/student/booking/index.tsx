@@ -18,6 +18,7 @@ import {
   Card,
   Checkbox,
   Table,
+  Tooltip,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -154,35 +155,84 @@ const Booking: React.FC = () => {
   const [loadingKeep, setLoadingKeep] = useState(false);
 
   // ─── Soft lock state ───
-  const [softLockedBeds, setSoftLockedBeds] = useState<Set<string>>(new Set());
   const softLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Beds removed from the grid due to a soft lock — restored on unlock
+  const removedByLockRef = useRef<Map<string, BedCard>>(new Map());
+  // Timer for the 5-min hold-bed soft lock TTL (matches backend LOCK_TTL_MS)
+  const holdLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref so socket handlers always read the latest windowStatus.bed_id without stale closure
+  const windowBedIdRef = useRef<string | null>(null);
+  // True while A has the Confirm Bed Hold modal open — prevents A's own soft-lock from showing "Cannot Hold Bed"
+  const isHoldingOwnBedRef = useRef(false);
+  // True only when another student locked A's hold-bed (so we know to reload when their lock expires)
+  const bedTakenByOtherRef = useRef(false);
 
   useEffect(() => {
     checkWindow();
   }, []);
+
+  // Keep windowBedIdRef in sync so socket handlers always read the latest value
+  useEffect(() => {
+    windowBedIdRef.current = windowStatus?.bed_id ?? null;
+  }, [windowStatus]);
 
   // Listen directly on the socket so the page updates in real-time when
   // the manager saves a new date config, without relying on a DOM-event chain.
   useEffect(() => {
     const socket = connectSocket();
     const handleConfigUpdated = () => refreshWindow();
-    const handleBedLocked = ({ bedId }: { bedId: string }) =>
-      setSoftLockedBeds(prev => new Set(prev).add(bedId));
-    const handleBedUnlocked = ({ bedId }: { bedId: string }) =>
-      setSoftLockedBeds(prev => { const s = new Set(prev); s.delete(bedId); return s; });
+    const handleBedLocked = ({ bedId }: { bedId: string }) => {
+      // B selected A's hold-bed → show Cannot Hold Bed on A's side immediately
+      // Skip if A locked it themselves (modal is open)
+      if (windowBedIdRef.current === bedId) {
+        if (!isHoldingOwnBedRef.current) {
+          bedTakenByOtherRef.current = true;
+          setWindowStatus(prev =>
+            prev ? { ...prev, bed_taken: true, bed_taken_reason: 'Another student is currently selecting your bed.' } : prev
+          );
+        }
+        return;
+      }
+      setAllBeds(prev => {
+        const bed = prev.find(b => b.id === bedId);
+        if (bed) removedByLockRef.current.set(bedId, bed);
+        return prev.filter(b => b.id !== bedId);
+      });
+    };
+    const handleBedUnlocked = ({ bedId }: { bedId: string }) => {
+      // B's soft lock on A's hold-bed expired → reload so A can hold again
+      // Only reload if it was actually B who locked it (not A unlocking their own hold)
+      if (windowBedIdRef.current === bedId) {
+        if (bedTakenByOtherRef.current) {
+          bedTakenByOtherRef.current = false;
+          window.location.reload();
+        }
+        return;
+      }
+      const bed = removedByLockRef.current.get(bedId);
+      if (bed) {
+        removedByLockRef.current.delete(bedId);
+        setAllBeds(prev => {
+          if (prev.some(b => b.id === bedId)) return prev;
+          return [...prev, bed].sort((a, b) => Number(a.bed_number) - Number(b.bed_number));
+        });
+      }
+    };
     const handleBedReserved = ({ bedId }: { bedId: string }) => {
-      setSoftLockedBeds(prev => { const s = new Set(prev); s.delete(bedId); return s; });
+      removedByLockRef.current.delete(bedId);
       setAllBeds(prev => prev.filter(b => b.id !== bedId));
     };
     socket.on('booking_config_updated', handleConfigUpdated);
     socket.on('bed_soft_locked', handleBedLocked);
     socket.on('bed_soft_unlocked', handleBedUnlocked);
     socket.on('bed_reserved', handleBedReserved);
+    socket.on('booking_window_status_changed', handleConfigUpdated);
     return () => {
       socket.off('booking_config_updated', handleConfigUpdated);
       socket.off('bed_soft_locked', handleBedLocked);
       socket.off('bed_soft_unlocked', handleBedUnlocked);
       socket.off('bed_reserved', handleBedReserved);
+      socket.off('booking_window_status_changed', handleConfigUpdated);
     };
   }, []);
 
@@ -532,9 +582,13 @@ const Booking: React.FC = () => {
           }));
         })
       );
-      setAllBeds(bedArrays.flat());
-      // Fetch current soft locks for initial state
-      getSoftLockedBeds().then(data => setSoftLockedBeds(new Set(data.locked_bed_ids))).catch(() => {});
+      const allFlatBeds = bedArrays.flat();
+      // Filter out already-locked beds on initial load; store them so they can be restored on unlock
+      getSoftLockedBeds().then(data => {
+        const lockedSet = new Set(data.locked_bed_ids);
+        allFlatBeds.forEach(b => { if (lockedSet.has(b.id)) removedByLockRef.current.set(b.id, b); });
+        setAllBeds(allFlatBeds.filter(b => !lockedSet.has(b.id)));
+      }).catch(() => { setAllBeds(allFlatBeds); });
     } catch {
       message.error('Failed to load beds');
     } finally {
@@ -592,7 +646,6 @@ const Booking: React.FC = () => {
   // ─── Submit ───
 
   const handleBedClick = async (bed: BedCard) => {
-    if (softLockedBeds.has(bed.id)) return;
     try {
       await softLockBed(bed.id);
       setSelectedBed(bed);
@@ -1044,33 +1097,31 @@ const Booking: React.FC = () => {
       {loading.beds ? (
         <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
       ) : selectedBlock && allBeds.length === 0 && !loading.beds ? (
-        <Empty description="No available beds" />
+        <Empty description="No bookable beds" />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(140px, 1fr))' : 'repeat(auto-fill, minmax(120px, 1fr))', gap: 16 }}>
           {allBeds.map(bed => {
             const isSelected = selectedBed?.id === bed.id;
-            const isSoftLocked = !isSelected && softLockedBeds.has(bed.id);
             return (
               <div
                 key={bed.id}
-                onClick={() => !isSoftLocked && handleBedClick(bed)}
+                onClick={() => handleBedClick(bed)}
                 style={{
                   position: 'relative',
                   width: '100%',
-                  border: `2px solid ${isSelected ? '#1a6ef5' : isSoftLocked ? '#d9d9d9' : '#e8e8e8'}`,
+                  border: `2px solid ${isSelected ? '#1a6ef5' : '#e8e8e8'}`,
                   borderRadius: 8,
                   padding: '16px 12px 12px',
                   textAlign: 'center',
-                  cursor: isSoftLocked ? 'not-allowed' : 'pointer',
-                  background: isSoftLocked ? '#fafafa' : '#fff',
-                  opacity: isSoftLocked ? 0.6 : 1,
-                  transition: 'border-color 0.2s, opacity 0.2s',
+                  cursor: 'pointer',
+                  background: '#fff',
+                  transition: 'border-color 0.2s',
                 }}
               >
                 {/* Orange badge */}
                 <div style={{
                   position: 'absolute', top: 8, right: 8,
-                  background: isSoftLocked ? '#d9d9d9' : '#fa8c16', color: '#fff',
+                  background: '#fa8c16', color: '#fff',
                   width: 26, height: 26, borderRadius: 4,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontWeight: 700, fontSize: 13,
@@ -1083,11 +1134,6 @@ const Booking: React.FC = () => {
 
                 {/* Room label */}
                 <Text style={{ fontSize: 12, color: '#555' }}>Room : {bed.room_number}</Text>
-
-                {/* Soft lock indicator */}
-                {isSoftLocked && (
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>Being selected</div>
-                )}
               </div>
             );
           })}
@@ -1339,7 +1385,7 @@ const Booking: React.FC = () => {
                 <Button
                   type="primary"
                   size="small"
-                  onClick={() => openPayosWindow(payos!.checkoutUrl!, paymentBooking!.id)}
+                  onClick={() => { window.location.href = payos!.checkoutUrl!; }}
                   style={{ background: brandPalette.primary, borderColor: brandPalette.primary }}
                 >
                   Pay Now
@@ -1347,11 +1393,31 @@ const Booking: React.FC = () => {
               )}
             </Space>
           );
+          if (windowStatus?.bed_taken) return (
+            <Tooltip title={windowStatus.bed_taken_reason}>
+              <Tag color="error" icon={<CloseCircleOutlined />} style={{ fontSize: 13, padding: '4px 10px' }}>
+                Cannot Hold Bed
+              </Tag>
+            </Tooltip>
+          );
           return (
             <Button
               type="primary"
               loading={loadingKeep}
-              onClick={() => setConfirmKeepModal(true)}
+              onClick={() => {
+                isHoldingOwnBedRef.current = true;
+                if (windowStatus?.bed_id) softLockBed(windowStatus.bed_id).catch(() => {});
+                setConfirmKeepModal(true);
+                if (holdLockTimerRef.current) clearTimeout(holdLockTimerRef.current);
+                holdLockTimerRef.current = setTimeout(() => {
+                  holdLockTimerRef.current = null;
+                  isHoldingOwnBedRef.current = false;
+                  setConfirmKeepModal(false);
+                  setAgreedToTerms(false);
+                  message.warning('Bed hold expired. Please try again.');
+                  window.location.reload();
+                }, 5 * 60 * 1000);
+              }}
               style={{ background: brandPalette.primary, borderColor: brandPalette.primary, borderRadius: 6 }}
             >
               Hold Bed
@@ -1448,16 +1514,34 @@ const Booking: React.FC = () => {
       {/* Keep Bed Confirm Modal — lives at top level so it renders regardless of active tab */}
       <Modal
         open={confirmKeepModal}
-        onCancel={() => { setConfirmKeepModal(false); setAgreedToTerms(false); }}
+        onCancel={() => {
+          if (holdLockTimerRef.current) { clearTimeout(holdLockTimerRef.current); holdLockTimerRef.current = null; }
+          isHoldingOwnBedRef.current = false;
+          if (windowStatus?.bed_id) softUnlockBed(windowStatus.bed_id).catch(() => {});
+          setConfirmKeepModal(false);
+          setAgreedToTerms(false);
+        }}
         title={<Text strong style={{ fontSize: 16 }}>Confirm Bed Hold</Text>}
         footer={[
-          <Button key="cancel" onClick={() => { setConfirmKeepModal(false); setAgreedToTerms(false); }}>Cancel</Button>,
+          <Button key="cancel" onClick={() => {
+            if (holdLockTimerRef.current) { clearTimeout(holdLockTimerRef.current); holdLockTimerRef.current = null; }
+            isHoldingOwnBedRef.current = false;
+            if (windowStatus?.bed_id) softUnlockBed(windowStatus.bed_id).catch(() => {});
+            setConfirmKeepModal(false);
+            setAgreedToTerms(false);
+          }}>Cancel</Button>,
           <Button
             key="confirm"
             type="primary"
             loading={loadingKeep}
             disabled={!agreedToTerms}
-            onClick={() => { setConfirmKeepModal(false); setAgreedToTerms(false); handleKeepBed(); }}
+            onClick={() => {
+              if (holdLockTimerRef.current) { clearTimeout(holdLockTimerRef.current); holdLockTimerRef.current = null; }
+              isHoldingOwnBedRef.current = false;
+              setConfirmKeepModal(false);
+              setAgreedToTerms(false);
+              handleKeepBed();
+            }}
           >
             Confirm
           </Button>,
