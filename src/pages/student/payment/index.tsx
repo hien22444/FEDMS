@@ -370,7 +370,7 @@ const TransferUpgradePendingCard: React.FC<{ transfer: RoomTransferRequest; onPa
                       return;
                     }
                     const url = res.payos?.checkoutUrl ?? null;
-                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                    if (url) window.location.href = url;
                     else message.warning('No payment link available yet. Try again shortly.');
                   } catch (e: unknown) {
                     message.error((e as { message?: string })?.message || 'Could not open payment');
@@ -801,7 +801,7 @@ const MonthlyBillCard: React.FC<{ invoice: StudentInvoice; onPaid: () => void }>
       const res = await createInvoicePayosLink(invoice.id);
       const url = res.payos?.checkoutUrl ?? null;
       if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        window.location.href = url;
       } else {
         message.warning('Payment link is not ready yet. Please try again.');
       }
@@ -1039,9 +1039,8 @@ const Payment: React.FC = () => {
       const list = Array.isArray(transfers) ? transfers : [];
       setTransferRequests(list);
       setTransferPending(list.filter((t) => t.status === 'pending_payment_upgrade'));
-      // Manager-created invoices: exclude EW (handled in Utilities page)
       const invList = Array.isArray(invoices) ? invoices : [];
-      setMyInvoices(invList.filter((inv) => !inv.invoice_code.startsWith('EW-')));
+      setMyInvoices(invList);
     } catch {
       message.error('Failed to load payment data');
     } finally {
@@ -1372,13 +1371,13 @@ const Payment: React.FC = () => {
                   onPay={async () => {
                     const url = b.payos?.checkoutUrl;
                     if (url) {
-                      window.open(url, '_blank', 'noopener,noreferrer');
+                      window.location.href = url;
                       return;
                     }
                     // No checkout URL yet — create one on demand
                     try {
                       const res = await createPayosLink(b.id);
-                      if (res.checkoutUrl) window.open(res.checkoutUrl, '_blank', 'noopener,noreferrer');
+                      if (res.checkoutUrl) window.location.href = res.checkoutUrl;
                       else message.warning('Could not generate payment link. Please try again.');
                     } catch (e: unknown) {
                       message.error((e as { message?: string })?.message || 'Could not create payment link.');
