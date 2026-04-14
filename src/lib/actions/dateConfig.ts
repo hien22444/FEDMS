@@ -21,6 +21,11 @@ export interface BookingWindowStatusResponse {
   window_type: 'hold' | 'new' | null;
   /** Backend sets when student.dorm_booking_suspended (CFD expulsion) */
   dorm_booking_suspended?: boolean;
+  /** Bed ID of the student's current bed (hold window only) */
+  bed_id?: string;
+  /** True when another student has already booked/contracted this bed for next semester */
+  bed_taken?: boolean;
+  bed_taken_reason?: string;
 }
 
 export const getDateConfig = async (): Promise<DateConfigResponse> => {
