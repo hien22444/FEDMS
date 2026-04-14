@@ -176,9 +176,12 @@ export default function ManagerBedsPage() {
       title: 'Status',
       key: 'status',
       width: 120,
-      render: (_, r) => (
-        <Tag color={BED_STATUS_COLOR[r.status]} className="capitalize">{r.status}</Tag>
-      ),
+      render: (_, r) => {
+        const displayStatus = (r.status === 'occupied' && r.upcoming_contract)
+          ? 'reserved'
+          : r.status;
+        return <Tag color={BED_STATUS_COLOR[displayStatus]} className="capitalize">{displayStatus}</Tag>;
+      },
     },
     {
       title: 'Update Status',

@@ -93,7 +93,7 @@ const Utilities = () => {
         return;
       }
 
-      window.open(payosLink.payos.checkoutUrl, '_blank', 'noopener,noreferrer');
+      window.location.href = payosLink.payos.checkoutUrl;
     } catch (err) {
       message.error((err as { message?: string })?.message || 'Failed to open payment link');
     } finally {
