@@ -5,34 +5,82 @@ import {
   BarChart3,
   ShieldCheck,
   Clock,
+  ChevronLeft,
   ChevronRight,
   Facebook,
   Twitter,
   Linkedin
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ROUTES } from '@/constants';
+import { fetchDashboardStats } from '@/lib/actions/admin';
 
 const LandingPage = () => {
+  const heroImages = ['/images/building.jpg', '/images/building%201.jpg', '/images/building%202.jpg'];
+  const [currentImage, setCurrentImage] = useState(0);
+  const [heroStats, setHeroStats] = useState([
+    { label: 'Dorms', value: '10+' },
+    { label: 'Rooms', value: '1000+' },
+    { label: 'Beds', value: '5000+' },
+  ]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentImage((prev) => (prev + 1) % heroImages.length);
+    }, 4000);
+
+    return () => window.clearInterval(intervalId);
+  }, [heroImages.length]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    fetchDashboardStats()
+      .then((stats) => {
+        setHeroStats([
+          { label: 'Dorms', value: `${stats.totalDorms}+` },
+          { label: 'Rooms', value: `${stats.totalRooms}+` },
+          { label: 'Beds', value: `${stats.totalBeds}+` },
+        ]);
+      })
+      .catch(() => {
+        // Keep fallback values for public users when stats endpoint is unavailable.
+      });
+  }, []);
+
+  const goToPrevImage = () => {
+    setCurrentImage((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+  };
+
+  const goToNextImage = () => {
+    setCurrentImage((prev) => (prev + 1) % heroImages.length);
+  };
+
   return (
     <div className="min-h-screen font-sans text-gray-900 bg-[#FFFBF7]">
       {/* 1. NAVIGATION BAR */}
       <nav className="flex items-center justify-between px-8 py-4 bg-white sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="bg-[#F36F21] p-1.5 rounded-lg">
-            <span className="text-white font-bold text-xl">D</span>
-          </div>
-          <span className="text-xl font-bold tracking-tight">DormFlow</span>
-        </div>
-        
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
-          <a href="#" className="hover:text-[#F36F21]">Features</a>
-          <a href="#" className="hover:text-[#F36F21]">Pricing</a>
-          <a href="#" className="hover:text-[#F36F21]">About Us</a>
-          <a href="#" className="hover:text-[#F36F21]">Contact</a>
-        </div>
+        <Link to={ROUTES.LANDING} className="flex items-center gap-2 group">
+          <img
+            src="/images/logo.png"
+            alt="DMS logo"
+            className="w-12 h-12 rounded-lg object-cover"
+          />
+          <span className="text-xl font-bold tracking-tight transition-colors group-hover:text-[#F37021]">DMS</span>
+        </Link>
 
         <div className="flex items-center gap-4">
-          <Link to="/signin" className="text-[#F36F21] font-semibold px-4 py-2 hover:bg-orange-50 rounded-lg">Sign In</Link>
+          <Link to={ROUTES.ABOUT_US} className="text-gray-700 font-semibold px-2 py-2 hover:text-[#F37021]">
+            About Us
+          </Link>
+          <Link
+            to={ROUTES.SIGN_IN}
+            className="bg-[#F37021] text-white font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Sign In
+          </Link>
         </div>
       </nav>
 
@@ -40,40 +88,83 @@ const LandingPage = () => {
       <section className="container mx-auto px-8 py-16 flex flex-col md:flex-row items-center justify-between">
         <div className="md:w-1/2 space-y-6">
           <div className="inline-block bg-orange-100 text-[#F36F21] text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-            ✨ Modern dormitory management solution
+            Exclusive for FPT University Students
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
-            Dormitory Management <br />
-            <span className="text-gray-800">Smart & Efficient</span>
+            Smart FPT Dormitory <br />
+            <span className="text-gray-800">Experience</span>
           </h1>
-          <p className="text-gray-500 text-lg max-w-lg">
-            DormFlow helps students and dormitory managers connect easily. Manage rooms, payments, and requests all in one app.
+          <p className="text-gray-500 text-lg max-w-xl leading-relaxed">
+            FPT Da Nang DMS helps students and Dormitory Management effortlessly track room allocation, pay utility overages, and report maintenance issues transparently and efficiently.
           </p>
-          <div className="flex items-center gap-4 pt-4">
-            <button className="bg-[#F36F21] text-white px-8 py-3.5 rounded-lg font-bold flex items-center gap-2 hover:bg-[#D85F19]">
-              Get Started <ChevronRight size={20} />
-            </button>
-            <button className="border-2 border-orange-200 text-[#F36F21] px-8 py-3 rounded-lg font-bold hover:bg-orange-50 transition-colors">
-              View Demo
+          <div className="flex gap-4 pt-2">
+            <Link
+              to={ROUTES.SIGN_IN}
+              className="bg-[#F37021] text-white font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
+            >
+              Login Now
+            </Link>
+            <button
+              className="bg-white text-[#F37021] border border-[#F37021] font-semibold px-6 py-3 rounded-lg hover:bg-orange-50 transition-colors"
+            >
+              User Guide
             </button>
           </div>
-          
           <div className="grid grid-cols-3 gap-8 pt-10 border-t border-gray-100">
-            <div><p className="text-2xl font-bold text-[#F36F21]">500+</p><p className="text-sm text-gray-500">Dormitories</p></div>
-            <div><p className="text-2xl font-bold text-[#F36F21]">50K+</p><p className="text-sm text-gray-500">Students</p></div>
-            <div><p className="text-2xl font-bold text-[#F36F21]">4.9/5</p><p className="text-sm text-gray-500">Rating</p></div>
+            {heroStats.map((item) => (
+              <div key={item.label}>
+                <p className="text-2xl font-bold text-[#F36F21]">{item.value}</p>
+                <p className="text-sm text-gray-500">{item.label}</p>
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="md:w-1/2 mt-12 md:mt-0 relative flex justify-center items-center">
-          <div className="w-full max-w-[500px] aspect-square bg-[#F36F21] rounded-[60px] shadow-2xl flex flex-col items-center justify-center text-white p-12 transform hover:scale-105 transition-transform duration-300">
-            <div className="bg-white/20 p-6 rounded-3xl mb-8">
-              <Home size={60} strokeWidth={1.5} />
+          <div className="relative w-full max-w-[500px] aspect-square rounded-[60px] shadow-2xl overflow-hidden group">
+            <div
+              className="flex h-full transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${currentImage * 100}%)` }}
+            >
+              {heroImages.map((image, index) => (
+                <img
+                  key={image}
+                  src={image}
+                  alt={`Dormitory building ${index + 1}`}
+                  className="w-full h-full object-cover flex-shrink-0"
+                />
+              ))}
             </div>
-            <h3 className="text-3xl font-bold mb-3 text-center">Management App</h3>
-            <p className="text-orange-100 text-center text-lg opacity-90">
-              Easy to use & modern
-            </p>
+
+            <button
+              type="button"
+              onClick={goToPrevImage}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/35 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label="Previous image"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={goToNextImage}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/35 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label="Next image"
+            >
+              <ChevronRight size={20} />
+            </button>
+
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2">
+              {heroImages.map((_, index) => (
+                <button
+                  key={`dot-${index}`}
+                  type="button"
+                  onClick={() => setCurrentImage(index)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${currentImage === index ? 'bg-white' : 'bg-white/50'
+                    }`}
+                  aria-label={`Go to image ${index + 1}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -87,12 +178,12 @@ const LandingPage = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: <Home className="text-white" />, title: "Room Management", desc: "Easily manage room information, layouts, and availability" },
-              { icon: <CreditCard className="text-white" />, title: "Digital Payments", desc: "Multiple payment methods with maximum security" },
-              { icon: <MessageSquare className="text-white" />, title: "Direct Communication", desc: "Chat with managers and dormitory staff instantly" },
-              { icon: <BarChart3 className="text-white" />, title: "Detailed Reports", desc: "Complete statistics dashboard for management" },
-              { icon: <ShieldCheck className="text-white" />, title: "High Security", desc: "Data is encrypted and safely protected" },
-              { icon: <Clock className="text-white" />, title: "24/7 Support", desc: "Support team always ready to help you" },
+              { icon: <Home className="text-white" />, title: "Room Allocation", desc: "Smoothly manage check-ins, check-outs, and Dom transfers" },
+              { icon: <CreditCard className="text-white" />, title: "Utility Payments", desc: "Easily pay monthly electricity and water overflow quotas" },
+              { icon: <MessageSquare className="text-white" />, title: "Fix Requests", desc: "Report AC, lighting, or furniture issues directly to SRO" },
+              { icon: <BarChart3 className="text-white" />, title: "Usage Tracking", desc: "Track electricity and water consumption seamlessly" },
+              { icon: <ShieldCheck className="text-white" />, title: "Violation Rules", desc: "Keep track of penalty points and maintain campus security" },
+              { icon: <Clock className="text-white" />, title: "24/7 Support", desc: "Access the dormitory support team anytime you need" },
             ].map((item, index) => (
               <div key={index} className="p-8 rounded-2xl bg-[#FFFBF7] hover:shadow-lg transition-shadow border border-orange-50 group">
                 <div className="bg-[#F36F21] w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-orange-200 shadow-lg">
@@ -110,10 +201,18 @@ const LandingPage = () => {
       <section className="container mx-auto px-8 py-20">
         <div className="bg-[#F36F21] rounded-[40px] p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl">
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
-            <h2 className="text-4xl md:text-5xl font-bold">Ready to Upgrade Your Dormitory?</h2>
+            <h2 className="text-4xl md:text-5xl font-bold">Ready for the New Semester at FPT Dorm?</h2>
             <p className="text-orange-100 text-lg">
-              Start your digital transformation journey today. Free 30-day trial, no credit card required.
+              Login to the system to book your room, submit requests, and get the latest announcements from the management board.
             </p>
+            <div className="pt-4">
+              <Link
+                to={ROUTES.SIGN_IN}
+                className="inline-block bg-white text-[#F36F21] font-bold px-8 py-4 rounded-xl hover:bg-orange-50 transition-colors"
+              >
+                Login to DMS
+              </Link>
+            </div>
           </div>
           {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20"></div>
@@ -126,10 +225,12 @@ const LandingPage = () => {
         <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-6">
             <div className="flex items-center gap-2 text-white">
-              <div className="bg-[#F36F21] p-1.5 rounded-lg">
-                <span className="font-bold text-lg">D</span>
-              </div>
-              <span className="text-xl font-bold">DormFlow</span>
+              <img
+                src="/images/logo.png"
+                alt="DMS logo"
+                className="w-8 h-8 rounded-lg object-cover"
+              />
+              <span className="text-xl font-bold">DMS</span>
             </div>
             <p className="text-sm leading-relaxed">
               Smart dormitory management solution for the digital student generation.
@@ -163,9 +264,9 @@ const LandingPage = () => {
             </ul>
           </div>
         </div>
-        
+
         <div className="container mx-auto mt-16 pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm">© 2026 DormFlow. All rights reserved.</p>
+          <p className="text-sm">© 2026 DMS. All rights reserved.</p>
           <div className="flex gap-4">
             <div className="bg-gray-800 p-2 rounded-full hover:bg-gray-700 cursor-pointer"><Facebook size={18} /></div>
             <div className="bg-gray-800 p-2 rounded-full hover:bg-gray-700 cursor-pointer"><Twitter size={18} /></div>

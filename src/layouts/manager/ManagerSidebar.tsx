@@ -97,11 +97,13 @@ export default function ManagerSidebar({
     >
       {/* Brand */}
       <div className="h-16 px-5 flex items-center gap-3 border-b border-[#d4621c] shrink-0">
-        <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center font-bold text-base">
-          F
-        </div>
+        <img
+          src="/images/logo.png"
+          alt="FUDA Dormitory logo"
+          className="w-10 h-10 rounded-xl object-cover bg-white"
+        />
         <div className="leading-tight">
-          <div className="font-semibold text-base">FPT Dormitory</div>
+          <div className="font-semibold text-base">FUDA Dormitory</div>
           <div className="text-xs text-white">Manager Panel</div>
         </div>
         {!isDesktop && (
