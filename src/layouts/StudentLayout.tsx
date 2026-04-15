@@ -333,26 +333,23 @@ const StudentLayout = () => {
       >
         {!collapsed || mobile ? (
           <Space>
-            <div
-              style={{
-                backgroundColor: studentSidebarAccent,
-                borderRadius: '8px',
-                padding: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
-            </div>
+            <img
+              src="/images/logo.png"
+              alt="FUDA Dormitory logo"
+              style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', background: 'white' }}
+            />
             <div>
-              <div style={{ color: 'white', fontWeight: 'bold' }}>DOM</div>
-              <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>FPT Dormitory</div>
+              <div style={{ color: 'white', fontWeight: 'bold' }}>FUDA Dormitory</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>Student Panel</div>
             </div>
           </Space>
         ) : (
           <div style={{ width: '100%', textAlign: 'center' }}>
-            <EnvironmentOutlined style={{ fontSize: '24px', color: 'white' }} />
+            <img
+              src="/images/logo.png"
+              alt="logo"
+              style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover', background: 'white', display: 'inline-block' }}
+            />
           </div>
         )}
 

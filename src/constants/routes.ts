@@ -1,5 +1,6 @@
 export const ROUTES = {
   LANDING: '/',
+  ABOUT_US: '/about-us',
   SIGN_IN: '/signin',
   SIGN_UP: '/signup',
   GOOGLE_CALLBACK: '/auth/google/callback',
