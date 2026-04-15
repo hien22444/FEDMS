@@ -355,7 +355,8 @@ const Booking: React.FC = () => {
     const handleCancelled = () => {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       resetForm(); setView('form');
-      if (windowStatus?.window_type !== 'hold') loadRoomTypes();
+      if (windowStatus?.window_type === 'hold') loadActiveBooking();
+      else loadRoomTypes();
     };
 
     window.addEventListener('student:booking:approved', handleApproved);
@@ -445,6 +446,16 @@ const Booking: React.FC = () => {
         ) ?? null
         : null;
       if (pendingKeep) {
+        // Immediately verify PayOS status — avoids waiting for webhook/polling
+        try {
+          const statusResult = await checkPaymentStatus(pendingKeep.id);
+          if (statusResult.status === 'cancelled' || statusResult.status === 'expired') {
+            await cancelBookingRequest(pendingKeep.id).catch(() => {});
+            return; // stay on hold-bed view; activeBooking is already set above
+          }
+        } catch { /* booking already deleted or network error — fall through to restore view */ }
+
+        // Still genuinely awaiting payment: restore payment view
         setPaymentBooking(pendingKeep);
         setPaymentInvoice(pendingKeep.invoice || null);
         setPayos(
@@ -468,6 +479,21 @@ const Booking: React.FC = () => {
       const data = await getMyBookings({ page: 1, limit: 50 });
       const pending = data.items.find(b => b.status === 'awaiting_payment');
       if (pending) {
+        // Immediately verify PayOS status — avoids waiting for webhook/polling
+        try {
+          const statusResult = await checkPaymentStatus(pending.id);
+          if (statusResult.status === 'cancelled' || statusResult.status === 'expired') {
+            await cancelBookingRequest(pending.id).catch(() => {});
+            loadRoomTypes();
+            return;
+          }
+          if (statusResult.paid || statusResult.status === 'approved') {
+            resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+            return;
+          }
+        } catch { /* booking already deleted or network error — fall through to restore view */ }
+
+        // Still genuinely awaiting payment: restore payment view
         setPaymentBooking(pending);
         setPaymentInvoice(pending.invoice || null);
         setPayos(
