@@ -9,6 +9,7 @@ import {
   UserCog,
   BarChart3,
   Database,
+  BookOpen,
   LogOut,
   X,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { label: 'Room Type Management', path: ROUTES.ADMIN_ROOM_TYPES, icon: <Layers3 size={18} /> },
   { label: 'Facility Management', path: ROUTES.ADMIN_FACILITIES, icon: <FolderCog size={18} /> },
   { label: 'User Management', path: ROUTES.ADMIN_USERS, icon: <UserCog size={18} /> },
+  { label: 'Dorm Rules (AI)', path: ROUTES.ADMIN_DORM_RULES, icon: <BookOpen size={18} /> },
   { label: 'Reports & Monitoring', path: ROUTES.ADMIN_REPORTS, icon: <BarChart3 size={18} /> },
   { label: 'Data Management', path: ROUTES.ADMIN_DATA, icon: <Database size={18} /> },
 ];

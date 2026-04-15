@@ -14,6 +14,8 @@ import type {
   IRecentRequest,
 } from '@/interfaces/manager.interface';
 import { fetchDashboardStats, type DashboardStatsResponse } from '@/lib/actions/admin';
+import { getAllMaintenanceRequests } from '@/lib/actions/maintenanceRequest';
+import { getAllOtherRequests } from '@/lib/actions/otherRequest';
 
 const DEFAULT_STATS: DashboardStatsResponse = {
   totalDorms: 0, totalBlocks: 0, totalRooms: 0, totalBeds: 0,
@@ -25,12 +27,37 @@ const DEFAULT_STATS: DashboardStatsResponse = {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStatsResponse>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
+  const [recentRequests, setRecentRequests] = useState<IRecentRequest[]>([]);
 
   useEffect(() => {
     fetchDashboardStats(true)
       .then((data) => { if (data) setStats(data); })
       .catch((err) => console.error('Dashboard load error:', err))
       .finally(() => setLoading(false));
+
+    Promise.all([
+      getAllMaintenanceRequests({ page: 1, limit: 5 }),
+      getAllOtherRequests({ page: 1, limit: 5 }),
+    ]).then(([maintRes, otherRes]) => {
+      const maintItems: IRecentRequest[] = (maintRes?.data ?? []).map((r) => ({
+        id: r.request_code,
+        room: r.room?.room_number ?? '—',
+        type: r.issue_type,
+        status: r.status as IRecentRequest['status'],
+        date: r.requested_at ? new Date(r.requested_at).toLocaleDateString('vi-VN') : '—',
+      }));
+      const otherItems: IRecentRequest[] = (otherRes?.data ?? []).map((r) => ({
+        id: r.request_code,
+        room: '—',
+        type: r.title,
+        status: r.status as IRecentRequest['status'],
+        date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : '—',
+      }));
+      const combined = [...maintItems, ...otherItems]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 5);
+      setRecentRequests(combined);
+    }).catch(() => {});
   }, []);
 
   const bedStatusData: IBedStatusDistribution = {
@@ -38,8 +65,6 @@ export default function DashboardPage() {
     available: stats.availableBeds,
     maintenance: stats.maintenanceBeds,
   };
-
-  const recentRequests: IRecentRequest[] = [];
 
   return (
     <div className="space-y-6">
@@ -104,7 +129,7 @@ export default function DashboardPage() {
         <StatCard
           title="Unpaid Invoices"
           value={stats.unpaidInvoices}
-          subtitle="Total: 0 VND"
+          subtitle={`Total: ${(stats.unpaidAmount || 0).toLocaleString('vi-VN')} VND`}
           icon={<FileText size={24} />}
           variant="danger"
         />

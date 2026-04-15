@@ -51,6 +51,7 @@ import ElectricityPage from '@/pages/manager/electricity';
 import ManagerCheckoutPage from '@/pages/manager/checkout';
 import ManagerStudentsCfdRiskPage from '@/pages/manager/students-cfd-risk';
 import ManagerDateConfigPage from '@/pages/manager/config';
+import ManagerInvoicesPage from '@/pages/manager/invoices';
 
 // Student pages
 import StudentDashboard from '@/pages/student/dashboard';
@@ -77,6 +78,7 @@ import AdminRoomsPage from '@/pages/admin/rooms';
 import AdminRoomTypesPage from '@/pages/admin/room-types';
 import AdminUsersPage from '@/pages/admin/users';
 import AdminFacilitiesPage from '@/pages/admin/facilities';
+import AdminDormRulesPage from '@/pages/admin/dorm-rules';
 
 const ComingSoon = ({ label }: { label: string }) => (
   <div className="p-8 text-center text-gray-500">{label} - Coming Soon</div>
@@ -265,6 +267,10 @@ const router = createBrowserRouter([
                 element: <AdminFacilitiesPage />,
               },
               {
+                path: 'dorm-rules',
+                element: <AdminDormRulesPage />,
+              },
+              {
                 path: 'reports',
                 element: <ComingSoon label="Reports & Monitoring" />,
               },
@@ -362,7 +368,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'invoices',
-                element: <ComingSoon label="Invoice List" />,
+                element: <ManagerInvoicesPage />,
               },
               {
                 path: 'news',
