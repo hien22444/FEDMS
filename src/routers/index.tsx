@@ -8,6 +8,7 @@ import SignInPage from '@/pages/signin';
 import SignUpPage from '@/pages/signup';
 import GoogleCallbackPage from '@/pages/auth/google-callback';
 import LandingPage from '@/pages/landing/landingpage';
+import AboutUsPage from '@/pages/about-us';
 import NotFoundPage from '@/pages/not-found';
 import AdminLoginPage from '@/pages/admin/login';
 
@@ -88,6 +89,10 @@ const router = createBrowserRouter([
   {
     path: ROUTES.LANDING,
     element: <LandingPage />,
+  },
+  {
+    path: ROUTES.ABOUT_US,
+    element: <AboutUsPage />,
   },
 
   // All auth-aware routes (provides AuthContext via AuthLayout)
