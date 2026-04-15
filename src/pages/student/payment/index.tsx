@@ -1035,11 +1035,39 @@ const Payment: React.FC = () => {
         getMyTransferRequests().catch(() => [] as RoomTransferRequest[]),
         getMyInvoices().catch(() => [] as StudentInvoice[]),
       ]);
-      setItems(data.items);
       const list = Array.isArray(transfers) ? transfers : [];
+      const invList = Array.isArray(invoices) ? invoices : [];
+
+      // Immediately verify PayOS status for any awaiting_payment bookings —
+      // avoids waiting for webhook when student returns after cancelling on PayOS.
+      const awaitingPayment = data.items.filter((b) => b.status === 'awaiting_payment');
+      if (awaitingPayment.length > 0) {
+        const statusResults = await Promise.allSettled(
+          awaitingPayment.map((b) => checkPaymentStatus(b.id))
+        );
+        const cancelledIds = awaitingPayment
+          .filter((_, i) => {
+            const r = statusResults[i];
+            return (
+              r.status === 'fulfilled' &&
+              (r.value.status === 'cancelled' || r.value.status === 'expired')
+            );
+          })
+          .map((b) => b.id);
+        if (cancelledIds.length > 0) {
+          await Promise.allSettled(cancelledIds.map((id) => cancelBookingRequest(id)));
+          const refreshed = await getMyBookings({ page: 1, limit: 50 });
+          setItems(refreshed.items);
+          setTransferRequests(list);
+          setTransferPending(list.filter((t) => t.status === 'pending_payment_upgrade'));
+          setMyInvoices(invList);
+          return;
+        }
+      }
+
+      setItems(data.items);
       setTransferRequests(list);
       setTransferPending(list.filter((t) => t.status === 'pending_payment_upgrade'));
-      const invList = Array.isArray(invoices) ? invoices : [];
       setMyInvoices(invList);
     } catch {
       message.error('Failed to load payment data');
