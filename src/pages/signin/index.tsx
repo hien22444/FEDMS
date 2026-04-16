@@ -16,10 +16,12 @@ import {
 } from '@ant-design/icons';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const SignInPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<IUser.SignInDto>();
   const { token } = theme.useToken();
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +30,13 @@ const SignInPage = () => {
   const { mutateAsync, isPending } = useMutation({
     mutationFn: signIn,
   });
+
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      toast.error(error);
+    }
+  }, [searchParams]);
 
   // Helper function to get redirect path based on role
   const getRedirectPath = (role: string) => {
@@ -196,17 +205,16 @@ const SignInPage = () => {
               name="email"
               label={
                 <span style={{ color: token.colorTextSecondary, fontWeight: 500 }}>
-                  Admin
+                  Email or Admin Username
                 </span>
               }
               rules={[
-                { required: true, message: 'Please enter your email!' },
-                { type: 'email', message: 'Invalid email address!' },
+                { required: true, message: 'Please enter your email or admin username!' },
               ]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: token.colorTextSecondary }} />}
-                placeholder="System admin email"
+                placeholder="Enter email or admin username"
                 style={{ height: '48px', borderRadius: '8px' }}
               />
             </Form.Item>
