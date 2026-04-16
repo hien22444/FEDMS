@@ -9,9 +9,9 @@ import {
 import type { UploadFile } from 'antd';
 import {
   getEWUsages, createEWUsage, updateEWUsage, resetMeter,
-  importEWUsages, exportEWUsages, quickCreateEWUsage, recalculateEWUsages,
+  importEWUsages, exportEWUsages, recalculateEWUsages,
   type EWUsage, type EWUsageFilter, type CreateEWUsageDto, type UpdateEWUsageDto,
-  type EWImportResult, type QuickCreateEWUsageDto, type RecalculateResult,
+  type EWImportResult, type RecalculateResult,
 } from '@/lib/actions/ewUsage';
 import { fetchBlocks, type Block } from '@/lib/actions';
 import { useWindowSize } from '@/hooks/useWindowSize';
@@ -20,6 +20,8 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const getErrorMessage = (error: unknown, fallback: string) =>
   (error as { message?: string })?.message || fallback;
+const formatDateDMY = (value?: string | Date) =>
+  value ? new Intl.DateTimeFormat('en-GB').format(new Date(value)) : '—';
 
 const MONTHS = [
   { label: 'All', value: '' },
@@ -62,9 +64,6 @@ export default function ElectricityPage() {
   const [editRecord, setEditRecord] = useState<EWUsage | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [form] = Form.useForm();
-  const [quickOpen, setQuickOpen] = useState(false);
-  const [quickLoading, setQuickLoading] = useState(false);
-  const [quickForm] = Form.useForm();
 
   // Reset modal
   const [resetOpen, setResetOpen] = useState(false);
@@ -98,7 +97,7 @@ export default function ElectricityPage() {
         setBlocks(
           Array.isArray(res)
             ? res
-            : ('data' in res && Array.isArray(res.data) ? res.data : [])
+            : ('items' in res && Array.isArray(res.items) ? res.items : [])
         )
       )
       .catch(() => {});
@@ -122,7 +121,19 @@ export default function ElectricityPage() {
   const handleRecalculate = async () => {
     setRecalcLoading(true);
     try {
-      const res = await recalculateEWUsages();
+      const normalizedBlockName = blockName.trim().toLowerCase();
+      const matchedBlock = normalizedBlockName
+        ? blocks.find((item) =>
+          [item.block_name, item.block_code]
+            .filter(Boolean)
+            .some((value) => String(value).trim().toLowerCase() === normalizedBlockName)
+        )
+        : undefined;
+      const res = await recalculateEWUsages({
+        block: matchedBlock?.id,
+        month: filterMonth || undefined,
+        year: filterYear || undefined,
+      });
       setRecalcResult(res);
       fetchData(page);
     } catch (err) {
@@ -139,9 +150,7 @@ export default function ElectricityPage() {
     try {
       const result = await importEWUsages(importFile.originFileObj as File);
       setImportResult(result);
-      if (result.billing) {
-        message.success('Import completed and utility invoices were synchronized');
-      }
+      message.success('Import completed successfully');
       fetchData(1);
     } catch (err) {
       message.error(getErrorMessage(err, 'Import failed'));
@@ -159,21 +168,12 @@ export default function ElectricityPage() {
     setFormOpen(true);
   };
 
-  const openQuickCreate = () => {
-    quickForm.setFieldsValue({
-      type: 'electric',
-      meter_increment: 10,
-    });
-    setQuickOpen(true);
-  };
-
   const openEdit = (record: EWUsage) => {
     setEditRecord(record);
     form.setFieldsValue({
       block: record.block,
       type: record.type,
       meter_right: record.meter_right,
-      term: record.term,
     });
     setFormOpen(true);
   };
@@ -188,7 +188,6 @@ export default function ElectricityPage() {
         const body: UpdateEWUsageDto = {
           type: payload.type,
           meter_right: payload.meter_right,
-          term: payload.term,
         };
         await updateEWUsage(editRecord.id, body);
         message.success('Updated successfully');
@@ -198,7 +197,6 @@ export default function ElectricityPage() {
           type: payload.type,
           meter_right: payload.meter_right,
           date: payload.date,
-          term: payload.term,
         };
         await createEWUsage(body);
         message.success('Created successfully');
@@ -213,44 +211,13 @@ export default function ElectricityPage() {
     }
   };
 
-  const handleQuickCreateSubmit = async () => {
-    try {
-      const values = await quickForm.validateFields();
-      setQuickLoading(true);
-
-      const body: QuickCreateEWUsageDto = {
-        block: values.block,
-        type: values.type,
-        meter_increment: values.meter_increment,
-      };
-      if (values.meter_right !== undefined && values.meter_right !== null) {
-        body.meter_right = values.meter_right;
-      }
-      if (values.date) body.date = values.date.toISOString();
-      if (values.term) body.term = values.term;
-
-      const created = await quickCreateEWUsage(body);
-      message.success(
-        `Quick-created ${created.type} usage for ${created.block_name} (${new Date(created.date).toLocaleDateString('en-US')})`
-      );
-      setQuickOpen(false);
-      quickForm.resetFields();
-      fetchData(1);
-      setPage(1);
-    } catch (err) {
-      message.error(getErrorMessage(err, 'Quick create failed'));
-    } finally {
-      setQuickLoading(false);
-    }
-  };
-
   // ── Reset meter ──────────────────────────────────────────────────
   const handleResetSubmit = async () => {
     try {
-      const { block, type, meter_right } = await resetForm.validateFields();
+      const { block, type, meter_right, date } = await resetForm.validateFields();
       setResetLoading(true);
-      await resetMeter(block, type, meter_right);
-      message.success('Meter reset successfully');
+      await resetMeter(block, type, meter_right, date.toISOString());
+      message.success('Meter baseline reset record created successfully');
       setResetOpen(false);
       resetForm.resetFields();
       fetchData(page);
@@ -280,11 +247,14 @@ export default function ElectricityPage() {
       title: 'Usage Type',
       dataIndex: 'type',
       key: 'type',
-      width: 110,
-      render: (type: string) => (
-        <Tag color={type === 'electric' ? 'orange' : 'blue'}>
-          {type === 'electric' ? 'Electric' : 'Water'}
-        </Tag>
+      width: 160,
+      render: (_type: string, record: EWUsage) => (
+        <Space size={4} wrap>
+          <Tag color={record.type === 'electric' ? 'orange' : 'blue'}>
+            {record.type === 'electric' ? 'Electric' : 'Water'}
+          </Tag>
+          {record.is_reset && <Tag color="purple">Reset</Tag>}
+        </Space>
       ),
     },
     {
@@ -292,13 +262,7 @@ export default function ElectricityPage() {
       dataIndex: 'date',
       key: 'date',
       width: 120,
-      render: (d: string) => d ? new Date(d).toLocaleDateString('en-US') : '—',
-    },
-    {
-      title: 'Term',
-      dataIndex: 'term',
-      key: 'term',
-      width: 100,
+      render: (d: string) => formatDateDMY(d),
     },
     {
       title: 'Meter Reading',
@@ -349,9 +313,6 @@ export default function ElectricityPage() {
         <Button icon={<UploadOutlined />} onClick={() => setImportOpen(true)}>
           Import Data
         </Button>
-        <Button onClick={openQuickCreate}>
-          Quick Create
-        </Button>
         <Button icon={<PlusOutlined />} type="primary" onClick={openCreate}>
           Create New Record
         </Button>
@@ -359,15 +320,15 @@ export default function ElectricityPage() {
           Reset Meter
         </Button>
         <Popconfirm
-          title="Recalculate utility invoices?"
-          description="The system will create or update invoices for all students staying in blocks with unbilled usage data. Continue?"
+          title="Recalculate EW usage?"
+          description="The system will only recompute usage splits for the selected records. No invoices will be created."
           onConfirm={handleRecalculate}
           okText="Recalculate"
           cancelText="Cancel"
           okButtonProps={{ loading: recalcLoading }}
         >
           <Button icon={<ThunderboltOutlined />} loading={recalcLoading} type="primary">
-            Recalculate Utilities
+            Recalculate EW
           </Button>
         </Popconfirm>
         <Button icon={<ExportOutlined />} onClick={handleExport}>
@@ -457,10 +418,10 @@ export default function ElectricityPage() {
         {!importResult ? (
           <div>
             <p style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
-              Excel file format: <b>Dorm | Block | Type (E/W) | Date | Meter | Term</b>
+              Excel file format: <b>Dorm | Block | Type (E/W) | Date | Meter</b>
               <br />
               <span style={{ color: '#999' }}>
-                Type: E = Electric, W = Water. Meter: current reading (&gt;= 0). Invoices are recalculated automatically after a successful import.
+                Type: E = Electric, W = Water. Meter: current reading (&gt;= 0). Import only creates usage records. Use Recalculate EW here, then create invoices from the manager invoices page.
               </span>
             </p>
             <Upload
@@ -479,16 +440,6 @@ export default function ElectricityPage() {
             <p>Already exists in database: <b>{importResult.duplicateInDB}</b></p>
             {importResult.warnings > 0 && <p>Meter decrease warnings: <b>{importResult.warnings}</b></p>}
             <p>Other errors: <b>{importResult.failed}</b></p>
-            {importResult.billing && (
-              <div style={{ marginBottom: 12, padding: 12, borderRadius: 6, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
-                <p style={{ marginBottom: 4 }}>
-                  Invoices synced: <b>{importResult.billing.invoicesCreated}</b> new, <b>{importResult.billing.invoicesUpdated}</b> updated
-                </p>
-                <p style={{ marginBottom: 0 }}>
-                  Cancelled: <b>{importResult.billing.invoicesCancelled ?? 0}</b>, Students affected: <b>{importResult.billing.totalStudents}</b>
-                </p>
-              </div>
-            )}
             {importResult.errors.length > 0 && (
               <div style={{ maxHeight: 200, overflowY: 'auto', fontSize: 12, background: '#fff1f0', padding: 8, borderRadius: 4 }}>
                 {importResult.errors.map((e, i) => (
@@ -498,76 +449,6 @@ export default function ElectricityPage() {
             )}
           </div>
         )}
-      </Modal>
-
-      <Modal
-        title="Quick Create EW Usage"
-        open={quickOpen}
-        onCancel={() => {
-          setQuickOpen(false);
-          quickForm.resetFields();
-        }}
-        onOk={handleQuickCreateSubmit}
-        confirmLoading={quickLoading}
-        okText="Create"
-      >
-        <Form form={quickForm} layout="vertical">
-          <Form.Item
-            label="Block"
-            name="block"
-            rules={[{ required: true, message: 'Please select a block' }]}
-          >
-            <Select
-              placeholder="Select block"
-              showSearch
-              optionFilterProp="children"
-            >
-              {blocks.map((block) => (
-                <Option key={block.id} value={block.id}>
-                  {block.block_name || block.block_code}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            label="Type"
-            name="type"
-            rules={[{ required: true, message: 'Please select a type' }]}
-          >
-            <Select>
-              <Option value="electric">Electric</Option>
-              <Option value="water">Water</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item
-            label="Meter Increase"
-            name="meter_increment"
-            tooltip="Used only when Current Meter is left empty"
-          >
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            label="Current Meter"
-            name="meter_right"
-            tooltip="Optional. Leave empty to auto-use previous meter + increase"
-          >
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            label="Recorded Date"
-            name="date"
-            tooltip="Optional. Leave empty to auto-use the next month"
-          >
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            label="Term"
-            name="term"
-            tooltip="Optional. Leave empty to auto-derive from the date"
-          >
-            <Input placeholder="Fall-2026" />
-          </Form.Item>
-        </Form>
       </Modal>
 
       {/* Reset Modal */}
@@ -608,6 +489,16 @@ export default function ElectricityPage() {
           >
             <InputNumber style={{ width: '100%' }} placeholder="Enter new meter reading" min={0} />
           </Form.Item>
+          <Form.Item
+            name="date"
+            label="Reset Date"
+            rules={[{ required: true, message: 'Please select the reset date' }]}
+          >
+            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          </Form.Item>
+          <Text type="secondary">
+            Reset creates a new zero-consumption baseline record for the selected date. Use this when a meter is replaced mid-month.
+          </Text>
         </Form>
       </Modal>
 
@@ -642,12 +533,9 @@ export default function ElectricityPage() {
           </Form.Item>
           {!editRecord && (
             <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-              <DatePicker style={{ width: '100%' }} />
+              <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
             </Form.Item>
           )}
-          <Form.Item name="term" label="Term" rules={[{ required: true }]}>
-            <Input placeholder="Fall - 2025" />
-          </Form.Item>
         </Form>
       </Modal>
 
@@ -660,16 +548,18 @@ export default function ElectricityPage() {
         cancelButtonProps={{ style: { display: 'none' } }}
         okText="Close"
       >
-        {recalcResult && (
-          <Descriptions column={1} bordered size="small" style={{ marginTop: 12 }}>
-            <Descriptions.Item label="New invoices">{recalcResult.invoicesCreated}</Descriptions.Item>
-            <Descriptions.Item label="Updated invoices">{recalcResult.invoicesUpdated}</Descriptions.Item>
-            <Descriptions.Item label="Cancelled invoices">{recalcResult.invoicesCancelled ?? 0}</Descriptions.Item>
-            <Descriptions.Item label="Students">{recalcResult.totalStudents}</Descriptions.Item>
-            <Descriptions.Item label="Message">{recalcResult.message}</Descriptions.Item>
-          </Descriptions>
-        )}
+          {recalcResult && (
+            <Descriptions column={1} bordered size="small" style={{ marginTop: 12 }}>
+              <Descriptions.Item label="Calculated records">{recalcResult.recordsCalculated}</Descriptions.Item>
+              <Descriptions.Item label="Processed groups">{recalcResult.groupsProcessed}</Descriptions.Item>
+              <Descriptions.Item label="Unique students in recalculated month(s)">
+                {recalcResult.totalStudents}
+              </Descriptions.Item>
+              <Descriptions.Item label="Message">{recalcResult.message}</Descriptions.Item>
+            </Descriptions>
+          )}
       </Modal>
+
     </div>
   );
 }

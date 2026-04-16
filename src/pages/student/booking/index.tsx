@@ -68,8 +68,6 @@ import { brandPalette } from '@/themes/brandPalette';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-type ViewState = 'form' | 'payment';
-
 type BedCard = BookingBed & {
   room_number: string;
   price_per_semester: number;
@@ -88,7 +86,7 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 };
 
 const Booking: React.FC = () => {
-  const [modalApi, modalContextHolder] = Modal.useModal();
+  const [, modalContextHolder] = Modal.useModal();
   const { width } = useWindowSize();
   const isTablet = width >= 768;
   const isDesktop = width >= 1024;
@@ -102,7 +100,7 @@ const Booking: React.FC = () => {
   const [activeTab, setActiveTab] = useState('new');
 
   // ─── New Booking state ───
-  const [view, setView] = useState<ViewState>('form');
+  const [, setView] = useState<'form' | 'payment'>('form');
   const [semester, setSemester] = useState<NextSemesterInfo | null>(null);
   const [roomTypes, setRoomTypes] = useState<BookingRoomType[]>([]);
   const [dorms, setDorms] = useState<BookingDorm[]>([]);
@@ -807,6 +805,7 @@ const Booking: React.FC = () => {
       }
     }, 500);
   };
+  void openPayosWindow;
 
   const formatCountdown = (s: number) =>
     `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
@@ -970,6 +969,7 @@ const Booking: React.FC = () => {
       </div>
     );
   };
+  void renderPaymentPage;
 
   // ─── Render: New Booking Form ───
   const renderBookingForm = () => (
