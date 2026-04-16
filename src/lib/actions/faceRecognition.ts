@@ -3,27 +3,11 @@ import type { IFaceRecognition } from '@/interfaces';
 
 // ─── Face Registration (Manager) ───
 
-export interface RegisterFaceEmbeddingPayload {
-  embedding: number[];
-  qualityScore?: number;
-  faceCropBase64?: string;
-}
-
 export const registerFace = async (studentId: string, image: File) => {
   const formData = new FormData();
   formData.append('studentId', studentId);
   formData.append('image', image);
   return api.post<IFaceRecognition.RegisterResponse>('face-recognition/register', formData);
-};
-
-export const saveRegisteredFace = async (
-  studentId: string,
-  payload: RegisterFaceEmbeddingPayload
-) => {
-  return api.post<IFaceRecognition.RegisterResponse>('face-recognition/register', {
-    studentId,
-    ...payload,
-  });
 };
 
 export const removeFace = async (studentId: string) => {

@@ -29,12 +29,6 @@ import {
   updateCameraSource,
   resetCameraSource,
 } from '@/lib/actions/camera';
-import {
-  getLocalCameraStatus,
-  getLocalFaceServiceUrl,
-  startLocalCamera,
-  stopLocalCamera,
-} from '@/lib/faceService';
 import type { IFaceRecognition } from '@/interfaces';
 
 const CameraCheckinPage = () => {
@@ -47,8 +41,6 @@ const CameraCheckinPage = () => {
   const canManageSources = isAdmin || isAdminAccessGranted;
   const sourceAuthToken = user?.role === 'security' ? adminAccessToken || undefined : undefined;
   const feed = useCameraFeed();
-  const localFaceServiceUrl = getLocalFaceServiceUrl();
-  const useLocalFaceService = Boolean(localFaceServiceUrl);
 
   const [stats, setStats] = useState<IFaceRecognition.AccessLogStats>({
     todayCheckIns: 0,
@@ -79,9 +71,7 @@ const CameraCheckinPage = () => {
     const statusEntries = await Promise.all(
       camerasData.map(async (cam) => {
         try {
-          const s = useLocalFaceService
-            ? await getLocalCameraStatus(cam.camera_id)
-            : await fetchCameraStatus(cam.camera_id);
+          const s = await fetchCameraStatus(cam.camera_id);
           return [cam.camera_id, s?.status || 'offline'] as const;
         } catch {
           return [cam.camera_id, 'offline'] as const;
@@ -89,7 +79,7 @@ const CameraCheckinPage = () => {
       })
     );
     setInitialStatuses(Object.fromEntries(statusEntries));
-  }, [useLocalFaceService]);
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -113,18 +103,6 @@ const CameraCheckinPage = () => {
     loadData();
   }, [loadData]);
 
-  useEffect(() => {
-    if (!useLocalFaceService || cameras.length === 0) return;
-
-    const intervalId = window.setInterval(() => {
-      void syncCameraStatuses(cameras);
-    }, 5000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [cameras, syncCameraStatuses, useLocalFaceService]);
-
   // Merge socket logs with initial logs, deduplicating by id
   const allLogs = (() => {
     const seen = new Set<string>();
@@ -142,17 +120,7 @@ const CameraCheckinPage = () => {
   const handleStartCamera = async (cameraId: string) => {
     setLoadingCameras((prev) => ({ ...prev, [cameraId]: true }));
     try {
-      if (useLocalFaceService) {
-        const camera = cameras.find((item) => item.camera_id === cameraId);
-        if (!camera) {
-          throw new Error('Camera configuration not found');
-        }
-
-        await startLocalCamera(camera);
-        await syncCameraStatuses(cameras);
-      } else {
-        await startCamera(cameraId);
-      }
+      await startCamera(cameraId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Failed to start camera';
       message.error(msg);
@@ -164,12 +132,7 @@ const CameraCheckinPage = () => {
   const handleStopCamera = async (cameraId: string) => {
     setLoadingCameras((prev) => ({ ...prev, [cameraId]: true }));
     try {
-      if (useLocalFaceService) {
-        await stopLocalCamera(cameraId);
-        await syncCameraStatuses(cameras);
-      } else {
-        await stopCamera(cameraId);
-      }
+      await stopCamera(cameraId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Failed to stop camera';
       message.error(msg);
@@ -229,14 +192,6 @@ const CameraCheckinPage = () => {
 
     setSourceEditorLoading(true);
     try {
-      if (useLocalFaceService) {
-        try {
-          await stopLocalCamera(sourceEditorCamera.camera_id);
-        } catch {
-          // Ignore local stop failure here and still persist the source change.
-        }
-      }
-
       const updatedCamera = await updateCameraSource(sourceEditorCamera.camera_id, {
         source_type: sourceEditorType,
         source_url: sourceUrl,
@@ -260,14 +215,6 @@ const CameraCheckinPage = () => {
 
     setSourceEditorLoading(true);
     try {
-      if (useLocalFaceService) {
-        try {
-          await stopLocalCamera(sourceEditorCamera.camera_id);
-        } catch {
-          // Ignore local stop failure here and still persist the source reset.
-        }
-      }
-
       const updatedCamera = await resetCameraSource(sourceEditorCamera.camera_id, sourceAuthToken);
       upsertCameraState(updatedCamera);
       setSourceEditorCamera(updatedCamera);
@@ -332,13 +279,6 @@ const CameraCheckinPage = () => {
           Camera Check-In Management
         </h1>
       </div>
-
-      {useLocalFaceService && (
-        <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-          Camera control is using local FaceService at <span className="font-medium">{localFaceServiceUrl}</span>.
-          Recognition callbacks still go to BEDMS, so live detections continue to appear here without ngrok.
-        </div>
-      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -7,13 +7,7 @@ import {
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import {
-  getRegisteredStudents,
-  registerFace,
-  removeFace,
-  saveRegisteredFace,
-} from '@/lib/actions/faceRecognition';
-import { getLocalFaceServiceUrl, registerFaceWithLocalService } from '@/lib/faceService';
+import { getRegisteredStudents, registerFace, removeFace } from '@/lib/actions/faceRecognition';
 import type { IFaceRecognition } from '@/interfaces';
 import { api } from '@/lib/apiRequest';
 
@@ -24,9 +18,6 @@ interface StudentOption {
 }
 
 export default function FaceRegistrationPage() {
-  const localFaceServiceUrl = getLocalFaceServiceUrl();
-  const isLocalFaceServiceMode = Boolean(localFaceServiceUrl);
-
   // ─── State ───
   const [students, setStudents] = useState<StudentOption[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
@@ -142,22 +133,8 @@ export default function FaceRegistrationPage() {
     setLoading(true);
     try {
       const file = new File([capturedBlob], 'face.jpg', { type: 'image/jpeg' });
-      if (isLocalFaceServiceMode) {
-        const result = await registerFaceWithLocalService(file);
-        await saveRegisteredFace(selectedStudent, {
-          embedding: result.embedding,
-          qualityScore: result.quality_score,
-          faceCropBase64: result.face_crop_base64,
-        });
-      } else {
-        await registerFace(selectedStudent, file);
-      }
-
-      message.success(
-        isLocalFaceServiceMode
-          ? 'Face registered through local FaceService'
-          : 'Face registered successfully!'
-      );
+      await registerFace(selectedStudent, file);
+      message.success('Face registered successfully!');
       setCapturedImage(null);
       setCapturedBlob(null);
       setSelectedStudent(null);
@@ -275,16 +252,6 @@ export default function FaceRegistrationPage() {
           Register student faces for AI-powered check-in/check-out
         </p>
       </div>
-
-      {isLocalFaceServiceMode && (
-        <Card className="border-orange-200 bg-orange-50">
-          <p className="text-sm text-orange-800">
-            Local FaceService bridge is enabled. This page sends captured photos from the browser
-            to <span className="font-medium">{localFaceServiceUrl}</span>, then saves the returned
-            embedding to BEDMS.
-          </p>
-        </Card>
-      )}
 
       {/* Registration Form */}
       <Card title="Register New Face">
