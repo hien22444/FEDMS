@@ -10,7 +10,6 @@ import {
   Empty,
   Tabs,
   Pagination,
-  Popconfirm,
   message,
   Alert,
   Tag,
@@ -26,7 +25,6 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
-  ArrowLeftOutlined,
   HomeOutlined,
 } from '@ant-design/icons';
 import {
@@ -132,7 +130,7 @@ const Booking: React.FC = () => {
 
   // ─── Payment state ───
   const [paymentBooking, setPaymentBooking] = useState<BookingRequestItem | null>(null);
-  const [paymentInvoice, setPaymentInvoice] = useState<BookingInvoice | null>(null);
+  const [, setPaymentInvoice] = useState<BookingInvoice | null>(null);
   const [payos, setPayos] = useState<SubmitBookingResponse['payos'] | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
   const [paymentStarted, setPaymentStarted] = useState(false);
@@ -750,29 +748,6 @@ const Booking: React.FC = () => {
     }
   };
 
-  const handleClickToPay = () => {
-    if (!payos?.checkoutUrl || !paymentBooking) return;
-    window.location.href = payos.checkoutUrl;
-  };
-
-  const handleCancelFromPayment = async () => {
-    if (!paymentBooking) return;
-    try {
-      await cancelBookingRequest(paymentBooking.id);
-      message.success('Booking cancelled');
-      resetForm();
-      setView('form');
-      if (windowStatus?.window_type === 'hold') {
-        loadActiveBooking();
-      } else {
-        loadRoomTypes();
-      }
-    } catch (err: unknown) {
-      const cancelMsg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Failed to cancel';
-      message.error(cancelMsg);
-    }
-  };
-
   const handleResumePayment = (booking: BookingRequestItem) => {
     setPaymentBooking(booking);
     setPaymentInvoice(booking.invoice || null);
@@ -804,199 +779,12 @@ const Booking: React.FC = () => {
     payosWindowRef.current = null;
   };
 
-  // Open PayOS in a new tab and immediately detect when it closes (cancel or complete)
-  const openPayosWindow = (url: string, bookingId: string) => {
-    if (payosClosedCheckRef.current) { clearInterval(payosClosedCheckRef.current); payosClosedCheckRef.current = null; }
-    const win = window.open(url, '_blank');
-    payosWindowRef.current = win;
-    if (!win) return; // popup blocked — fallback already happened via link
-
-    payosClosedCheckRef.current = setInterval(async () => {
-      if (!win.closed) return; // still open
-      clearInterval(payosClosedCheckRef.current!);
-      payosClosedCheckRef.current = null;
-      try {
-        const result = await checkPaymentStatus(bookingId);
-        if (result.status === 'cancelled' || result.status === 'expired') {
-          resetForm(); setView('form');
-          if (windowStatus?.window_type === 'hold') loadActiveBooking(); else loadRoomTypes();
-        } else if (result.paid || result.status === 'approved') {
-          if (windowStatus?.window_type === 'hold') { setHoldSuccess(true); resetForm(); setView('form'); }
-          else { resetForm(); setView('form'); setActiveTab('my'); loadMyBookings(); }
-        }
-      } catch (err: unknown) {
-        if ((err as { statusCode?: number })?.statusCode === 404) {
-          resetForm(); setView('form');
-          if (windowStatus?.window_type === 'hold') loadActiveBooking(); else loadRoomTypes();
-        }
-      }
-    }, 500);
-  };
-  void openPayosWindow;
-
-  const formatCountdown = (s: number) =>
-    `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
-
   // ─── Derived ───
   const selectedRoomTypeInfo = roomTypes.find(r => r.room_type === selectedRoomType);
   const selectedDormInfo = dorms.find(d => d.dorm_id === selectedDorm);
   const selectedFloorInfo = floors.find(f => f.floor === selectedFloor);
   const selectedBlockInfo = blocks.find(b => b.block_id === selectedBlock);
   const selectedDormName = selectedDormInfo?.dorm_name;
-
-  // ─── Render: Payment ───
-  const renderPaymentPage = () => {
-    if (!paymentBooking || !paymentInvoice) return null;
-    const isExpired = paymentStarted && countdown <= 0;
-    return (
-      <div>
-        <Button
-          type="text" icon={<ArrowLeftOutlined />}
-          onClick={() => {
-            resetForm();
-            setView('form');
-            if (windowStatus?.window_type === 'hold') {
-              loadActiveBooking();
-            } else {
-              loadRoomTypes();
-            }
-          }}
-          style={{ marginBottom: 16 }}
-        >Back to Booking</Button>
-
-        <Card style={{ marginBottom: 24, textAlign: 'center' }}>
-          <Text type="secondary" style={{ fontSize: 16 }}>Total Payment</Text>
-          <Title level={2} style={{ color: '#ff4d4f', margin: '8px 0' }}>
-            {formatCurrency(paymentInvoice.total_amount)}
-          </Title>
-          {paymentStarted && !isExpired && (
-            <Alert type="warning" showIcon icon={<ClockCircleOutlined />}
-              message={<span>Slots are only held for 10 minutes, please pay before this time.{' '}
-                <Text strong style={{ color: '#ff4d4f', fontSize: 18 }}>{formatCountdown(countdown)}</Text>
-              </span>}
-              style={{ marginTop: 16 }}
-            />
-          )}
-          {isExpired && (
-            <Alert type="error" showIcon message="Booking expired. The bed has been released."
-              description="Please go back and create a new booking." style={{ marginTop: 16 }} />
-          )}
-        </Card>
-
-        <Card title="Payment Information" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', gap: isTablet ? 40 : 20, flexWrap: 'wrap' }}>
-            {/* Left: Booking summary + buttons */}
-            <div style={{ minWidth: isTablet ? 260 : '100%', maxWidth: isTablet ? 320 : '100%', flex: '1 1 280px' }}>
-              <Title level={5} style={{ marginBottom: 12 }}>Booking Summary</Title>
-              <div
-                style={{
-                  background: '#f9fafb',
-                  borderRadius: 8,
-                  padding: 12,
-                  border: '1px solid #e5e7eb',
-                  marginBottom: 16,
-                  fontSize: 13,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <Text type="secondary">Room</Text>
-                  <Text strong>{paymentBooking.room?.room_number || '—'}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <Text type="secondary">Bed</Text>
-                  <Text strong>{paymentBooking.bed?.bed_number || '—'}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <Text type="secondary">Dorm / Block</Text>
-                  <Text strong>
-                    {paymentBooking.room?.block?.dorm?.dorm_name || '—'}
-                    {paymentBooking.room?.block?.block_code ? ` · ${paymentBooking.room.block.block_code}` : ''}
-                  </Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <Text type="secondary">Semester</Text>
-                  <Text strong>{paymentBooking.semester?.replace('-', ' - ')}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text type="secondary">Invoice code</Text>
-                  <Text strong>{paymentInvoice.invoice_code}</Text>
-                </div>
-              </div>
-
-              {payos?.checkoutUrl && !isExpired && (
-                <Button
-                  type="primary"
-                  block
-                  onClick={handleClickToPay}
-                  style={{ borderRadius: 6, marginBottom: 8 }}
-                >
-                  Click to pay
-                </Button>
-              )}
-              <Popconfirm
-                title="Cancel this booking?"
-                description="The bed will be released immediately."
-                onConfirm={handleCancelFromPayment}
-                okText="Yes, cancel"
-                cancelText="No"
-              >
-                {/* <Button danger block style={{ borderRadius: 6 }}>
-                  Cancel Booking
-                </Button> */}
-              </Popconfirm>
-            </div>
-
-            {/* Right: QR + countdown or payment guide */}
-            <div style={{ flex: 1, minWidth: isTablet ? 260 : '100%' }}>
-              {payos?.qrCode ? (
-                <div style={{ textAlign: 'center' }}>
-                  {/* Highlighted countdown */}
-                  <div style={{
-                    display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-                    background: isExpired ? '#fff1f0' : '#fff9e6',
-                    border: `2px solid ${isExpired ? '#ff4d4f' : countdown <= 60 ? '#ff4d4f' : '#fa8c16'}`,
-                    borderRadius: 12, padding: isTablet ? '12px 32px' : '12px 20px', marginBottom: 20,
-                  }}>
-                    <Text style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
-                      <ClockCircleOutlined style={{ marginRight: 4 }} />
-                      Time remaining to pay
-                    </Text>
-                    <span style={{
-                      fontSize: isTablet ? 44 : 32, fontWeight: 700, fontFamily: 'monospace', letterSpacing: 2,
-                      color: isExpired ? '#ff4d4f' : countdown <= 60 ? '#ff4d4f' : '#fa8c16',
-                    }}>
-                      {isExpired ? '00:00' : formatCountdown(countdown)}
-                    </span>
-                  </div>
-
-
-                </div>
-              ) : (
-                <>
-                  <Title level={5}>Payment Guide</Title>
-                  <Space direction="vertical" size="middle">
-                    {[
-                      ['Step 1', 'Open your banking app (BIDV, Vietcombank, Momo, etc.)'],
-                      ['Step 2', 'Scan the QR code or transfer manually'],
-                      ['Step 3', `Enter the exact amount: ${formatCurrency(paymentInvoice.total_amount)}`],
-                      ['Step 4', `Use transfer note: ${paymentInvoice.invoice_code}`],
-                      ['Step 5', 'Confirm and enter OTP to complete payment'],
-                    ].map(([label, desc]) => (
-                      <div key={label}>
-                        <Text strong style={{ marginRight: 4 }}>{label}:</Text>
-                        <Text>{desc}</Text>
-                      </div>
-                    ))}
-                  </Space>
-                </>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  };
-  void renderPaymentPage;
 
   // ─── Render: New Booking Form ───
   const renderBookingForm = () => (
