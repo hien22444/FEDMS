@@ -83,7 +83,7 @@ export default function FaceRegistrationPage() {
       setIsStreaming(true);
       setCapturedImage(null);
       setCapturedBlob(null);
-    } catch (err) {
+    } catch {
       message.error('Failed to access webcam. Please check permissions.');
     }
   };
@@ -171,7 +171,6 @@ export default function FaceRegistrationPage() {
     return () => {
       stopWebcam();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── Table columns ───

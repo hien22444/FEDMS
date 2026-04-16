@@ -84,12 +84,14 @@ const SecurityLayout = () => {
           <div className="flex items-center justify-between gap-4">
             {/* Logo */}
             <div className="flex min-w-0 items-center gap-3">
-              <div className="bg-[#F36F21] p-2 rounded-lg">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
+              <img
+                src="/images/logo.png"
+                alt="FUDA Dormitory logo"
+                className="w-10 h-10 rounded-lg object-cover bg-white"
+              />
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl">DormFlow Security</h1>
-                <p className="hidden text-sm text-gray-500 sm:block">Security Management System</p>
+                <h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl">FUDA Dormitory</h1>
+                <p className="hidden text-sm text-gray-500 sm:block">Security Panel</p>
               </div>
             </div>
 

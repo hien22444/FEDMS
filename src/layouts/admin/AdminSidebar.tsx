@@ -70,11 +70,13 @@ export default function AdminSidebar({
     >
       {/* Brand */}
       <div className="flex h-20 items-center gap-3 border-b border-[#d4621c] px-5">
-        <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center font-bold">
-          D
-        </div>
+        <img
+          src="/images/logo.png"
+          alt="FUDA Dormitory logo"
+          className="w-10 h-10 rounded-xl object-cover bg-white"
+        />
         <div className="leading-tight">
-          <div className="font-semibold text-base">Dorm Mgmt</div>
+          <div className="font-semibold text-base">FUDA Dormitory</div>
           <div className="text-xs text-white">Admin Panel</div>
         </div>
         {!isDesktop && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Button,
@@ -198,12 +198,13 @@ const Booking: React.FC = () => {
       });
     };
     const handleBedUnlocked = ({ bedId }: { bedId: string }) => {
-      // B's soft lock on A's hold-bed expired → reload so A can hold again
-      // Only reload if it was actually B who locked it (not A unlocking their own hold)
+      // B's soft lock on A's hold-bed released/expired → restore "Hold Bed" button without reloading
       if (windowBedIdRef.current === bedId) {
         if (bedTakenByOtherRef.current) {
           bedTakenByOtherRef.current = false;
-          window.location.reload();
+          setWindowStatus(prev =>
+            prev ? { ...prev, bed_taken: false, bed_taken_reason: undefined } : prev
+          );
         }
         return;
       }
@@ -352,7 +353,8 @@ const Booking: React.FC = () => {
     const handleCancelled = () => {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       resetForm(); setView('form');
-      if (windowStatus?.window_type !== 'hold') loadRoomTypes();
+      if (windowStatus?.window_type === 'hold') loadActiveBooking();
+      else loadRoomTypes();
     };
 
     window.addEventListener('student:booking:approved', handleApproved);
@@ -442,6 +444,16 @@ const Booking: React.FC = () => {
         ) ?? null
         : null;
       if (pendingKeep) {
+        // Immediately verify PayOS status — avoids waiting for webhook/polling
+        try {
+          const statusResult = await checkPaymentStatus(pendingKeep.id);
+          if (statusResult.status === 'cancelled' || statusResult.status === 'expired') {
+            await cancelBookingRequest(pendingKeep.id).catch(() => {});
+            return; // stay on hold-bed view; activeBooking is already set above
+          }
+        } catch { /* booking already deleted or network error — fall through to restore view */ }
+
+        // Still genuinely awaiting payment: restore payment view
         setPaymentBooking(pendingKeep);
         setPaymentInvoice(pendingKeep.invoice || null);
         setPayos(
@@ -465,6 +477,21 @@ const Booking: React.FC = () => {
       const data = await getMyBookings({ page: 1, limit: 50 });
       const pending = data.items.find(b => b.status === 'awaiting_payment');
       if (pending) {
+        // Immediately verify PayOS status — avoids waiting for webhook/polling
+        try {
+          const statusResult = await checkPaymentStatus(pending.id);
+          if (statusResult.status === 'cancelled' || statusResult.status === 'expired') {
+            await cancelBookingRequest(pending.id).catch(() => {});
+            loadRoomTypes();
+            return;
+          }
+          if (statusResult.paid || statusResult.status === 'approved') {
+            resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+            return;
+          }
+        } catch { /* booking already deleted or network error — fall through to restore view */ }
+
+        // Still genuinely awaiting payment: restore payment view
         setPaymentBooking(pending);
         setPaymentInvoice(pending.invoice || null);
         setPayos(
@@ -1093,52 +1120,138 @@ const Booking: React.FC = () => {
       {/* Divider */}
       <div style={{ borderTop: '1px solid #e8e8e8', marginBottom: 24 }} />
 
-      {/* Bed Cards */}
+      {/* Bed Cards — grouped by room */}
       {loading.beds ? (
         <div style={{ textAlign: 'center', padding: 48 }}><Spin size="large" /></div>
       ) : selectedBlock && allBeds.length === 0 && !loading.beds ? (
         <Empty description="No bookable beds" />
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(auto-fill, minmax(140px, 1fr))' : 'repeat(auto-fill, minmax(120px, 1fr))', gap: 16 }}>
-          {allBeds.map(bed => {
-            const isSelected = selectedBed?.id === bed.id;
-            return (
-              <div
-                key={bed.id}
-                onClick={() => handleBedClick(bed)}
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  border: `2px solid ${isSelected ? '#1a6ef5' : '#e8e8e8'}`,
-                  borderRadius: 8,
-                  padding: '16px 12px 12px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  background: '#fff',
-                  transition: 'border-color 0.2s',
-                }}
-              >
-                {/* Orange badge */}
-                <div style={{
-                  position: 'absolute', top: 8, right: 8,
-                  background: '#fa8c16', color: '#fff',
-                  width: 26, height: 26, borderRadius: 4,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: 13,
-                }}>
-                  {bed.bed_number}
+      ) : (() => {
+        // Group beds by room_number
+        const grouped = allBeds.reduce<Record<string, BedCard[]>>((acc, bed) => {
+          const key = bed.room_number ?? 'Unknown';
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(bed);
+          return acc;
+        }, {});
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {Object.entries(grouped).map(([roomNumber, beds]) => {
+              const first = beds[0];
+              return (
+                <div key={roomNumber}>
+                  {/* Room header */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                    padding: '10px 14px',
+                    background: '#fafafa',
+                    border: '1px solid #f0f0f0',
+                    borderLeft: '4px solid #fa8c16',
+                    borderRadius: '0 8px 8px 0',
+                    marginBottom: 12,
+                  }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e' }}>
+                      🏠 Room {roomNumber}
+                    </span>
+                    <span style={{
+                      fontSize: 12, color: '#888',
+                      padding: '2px 8px', background: '#f0f0f0',
+                      borderRadius: 20,
+                    }}>
+                      Floor {first.floor}
+                    </span>
+                    <span style={{
+                      fontSize: 12, fontWeight: 600, color: '#fa8c16',
+                      padding: '2px 8px', background: '#fff7e6',
+                      border: '1px solid #ffd591', borderRadius: 20,
+                    }}>
+                      {formatCurrency(first.price_per_semester)} / semester
+                    </span>
+                    <Tag color="success" style={{ marginLeft: 'auto', fontSize: 11, borderRadius: 20 }}>
+                      {beds.length} bed{beds.length > 1 ? 's' : ''} available
+                    </Tag>
+                  </div>
+
+                  {/* Bed cards */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isDesktop
+                      ? 'repeat(auto-fill, minmax(155px, 1fr))'
+                      : 'repeat(auto-fill, minmax(130px, 1fr))',
+                    gap: 12,
+                  }}>
+                    {beds.map(bed => {
+                      const isSelected = selectedBed?.id === bed.id;
+                      return (
+                        <div
+                          key={bed.id}
+                          onClick={() => handleBedClick(bed)}
+                          style={{
+                            position: 'relative',
+                            border: `2px solid ${isSelected ? '#fa8c16' : '#e8e8e8'}`,
+                            borderRadius: 10,
+                            padding: '20px 12px 12px',
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            background: isSelected ? '#fff7e6' : '#fff',
+                            boxShadow: isSelected
+                              ? '0 4px 12px rgba(250,140,22,0.18)'
+                              : '0 1px 4px rgba(0,0,0,0.06)',
+                            transition: 'all 0.18s ease',
+                            transform: isSelected ? 'translateY(-2px)' : 'none',
+                          }}
+                        >
+                          {/* Bed number ribbon */}
+                          <div style={{
+                            position: 'absolute',
+                            top: 0, left: 0,
+                            background: isSelected ? '#fa8c16' : '#434343',
+                            color: '#fff',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: '3px 10px',
+                            borderRadius: '8px 0 8px 0',
+                            letterSpacing: '0.3px',
+                          }}>
+                            Bed #{bed.bed_number}
+                          </div>
+
+                          {/* Bed emoji */}
+                          <div style={{ fontSize: 38, lineHeight: 1, margin: '6px 0 10px' }}>🛏️</div>
+
+                          {/* Status chip */}
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '3px 10px',
+                            borderRadius: 20,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: isSelected ? '#fff7e6' : '#f6ffed',
+                            color: isSelected ? '#fa8c16' : '#52c41a',
+                            border: `1px solid ${isSelected ? '#ffd591' : '#b7eb8f'}`,
+                          }}>
+                            <span style={{
+                              width: 6, height: 6, borderRadius: '50%',
+                              background: isSelected ? '#fa8c16' : '#52c41a',
+                              flexShrink: 0,
+                            }} />
+                            {isSelected ? 'Selected' : 'Available'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-
-                {/* Bed emoji */}
-                <div style={{ fontSize: 44, lineHeight: 1, margin: '4px 0 6px' }}>🛏️</div>
-
-                {/* Room label */}
-                <Text style={{ fontSize: 12, color: '#555' }}>Room : {bed.room_number}</Text>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Confirm Modal */}
       <Modal
