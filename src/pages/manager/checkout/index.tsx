@@ -32,11 +32,13 @@ const ManagerCheckout = () => {
       toast.error('Please enter a student code');
       return;
     }
+
     setSearching(true);
     setStudentInfo(null);
     setCheckedOut(false);
     setCheckoutDate(null);
     setNotFound(false);
+
     try {
       const data = await searchStudentForCheckout(code);
       setStudentInfo(data);
@@ -54,12 +56,13 @@ const ManagerCheckout = () => {
 
   const handleCheckout = async () => {
     if (!studentInfo) return;
+
     setCheckingOut(true);
     try {
       const data = await checkoutStudent(studentInfo.student.student_code);
       setCheckoutDate(data.checkout_date);
       setCheckedOut(true);
-      // Re-fetch student info to sync UI — contract will now be null
+
       const updated = await searchStudentForCheckout(studentInfo.student.student_code);
       setStudentInfo(updated);
       toast.success(`${data.full_name} has been checked out successfully!`);

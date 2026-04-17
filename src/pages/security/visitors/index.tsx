@@ -22,6 +22,7 @@ import {
 import type { IVisitor } from '@/interfaces';
 
 type Tab = 'requests' | 'active';
+type NoticeType = 'warning' | 'error' | 'success';
 
 const VisitorsPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>('requests');
@@ -30,6 +31,7 @@ const VisitorsPage = () => {
   const [loading, setLoading] = useState(false);
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [notice, setNotice] = useState<{ type: NoticeType; message: string } | null>(null);
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -57,6 +59,12 @@ const VisitorsPage = () => {
     fetchActive();
   }, [fetchRequests, fetchActive]);
 
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(null), 3500);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+
   const pendingCount = requests.filter((r) => r.status === 'pending').length;
   const activeCount = activeVisitors.length;
 
@@ -72,8 +80,9 @@ const VisitorsPage = () => {
     try {
       await approveVisitorRequest(id);
       fetchRequests();
+      setNotice({ type: 'success', message: 'Visitor request approved.' });
     } catch (err: any) {
-      alert(err?.message || 'Failed to approve');
+      setNotice({ type: 'error', message: err?.message || 'Failed to approve.' });
     }
   };
 
@@ -83,8 +92,9 @@ const VisitorsPage = () => {
       setRejectModal(null);
       setRejectReason('');
       fetchRequests();
+      setNotice({ type: 'success', message: 'Visitor request rejected.' });
     } catch (err: any) {
-      alert(err?.message || 'Failed to reject');
+      setNotice({ type: 'error', message: err?.message || 'Failed to reject.' });
     }
   };
 
@@ -93,8 +103,9 @@ const VisitorsPage = () => {
       await completeVisitorRequest(id);
       fetchRequests();
       fetchActive();
+      setNotice({ type: 'success', message: 'Visitor request completed.' });
     } catch (err: any) {
-      alert(err?.message || 'Failed to complete');
+      setNotice({ type: 'error', message: err?.message || 'Failed to complete.' });
     }
   };
 
@@ -104,15 +115,19 @@ const VisitorsPage = () => {
     const [th, tm] = timeTo.split(':').map(Number);
     const nowMin = now.getHours() * 60 + now.getMinutes();
     if (nowMin < fh * 60 + fm || nowMin > th * 60 + tm) {
-      alert(`Check-in is only allowed between ${timeFrom} and ${timeTo}`);
+      setNotice({
+        type: 'warning',
+        message: `Check-in is only allowed between ${timeFrom} and ${timeTo}.`,
+      });
       return;
     }
     try {
       await checkinVisitor(requestId, visitorId);
       fetchRequests();
       fetchActive();
+      setNotice({ type: 'success', message: 'Visitor checked in successfully.' });
     } catch (err: any) {
-      alert(err?.message || 'Failed to check in');
+      setNotice({ type: 'error', message: err?.message || 'Failed to check in.' });
     }
   };
 
@@ -121,8 +136,9 @@ const VisitorsPage = () => {
       await checkoutVisitor(checkinId);
       fetchActive();
       fetchRequests();
+      setNotice({ type: 'success', message: 'Visitor checked out successfully.' });
     } catch (err: any) {
-      alert(err?.message || 'Failed to check out');
+      setNotice({ type: 'error', message: err?.message || 'Failed to check out.' });
     }
   };
 
@@ -154,6 +170,45 @@ const VisitorsPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Visitor Management</h1>
         </div>
       </div>
+
+      {notice && (
+        <div className="fixed inset-x-0 top-20 z-50 flex justify-center px-4 pointer-events-none">
+          <div
+            className={cn(
+              'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border px-4 py-3 text-sm shadow-lg backdrop-blur-sm',
+              notice.type === 'warning' && 'border-amber-200 bg-white/95 text-amber-800',
+              notice.type === 'error' && 'border-red-200 bg-white/95 text-red-700',
+              notice.type === 'success' && 'border-emerald-200 bg-white/95 text-emerald-700'
+            )}
+          >
+            <div
+              className={cn(
+                'mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full',
+                notice.type === 'warning' && 'bg-amber-100 text-amber-700',
+                notice.type === 'error' && 'bg-red-100 text-red-600',
+                notice.type === 'success' && 'bg-emerald-100 text-emerald-600'
+              )}
+            >
+              <RiTimeLine className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                {notice.type === 'warning' && 'Check-in Warning'}
+                {notice.type === 'error' && 'Action Failed'}
+                {notice.type === 'success' && 'Success'}
+              </p>
+              <p className="mt-1 leading-5">{notice.message}</p>
+            </div>
+            <button
+              onClick={() => setNotice(null)}
+              className="text-current/70 hover:text-current transition-colors"
+              aria-label="Dismiss notice"
+            >
+              <RiCloseCircleLine className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200">

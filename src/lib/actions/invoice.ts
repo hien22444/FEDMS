@@ -135,6 +135,20 @@ export interface BulkInvoiceResult {
   invoices: ManagerInvoice[];
 }
 
+export interface EWInvoiceCreateDto {
+  student_code?: string;
+  invoice_month: string;
+  due_date: string;
+}
+
+export interface EWInvoiceCreateResult {
+  invoicesCreated: number;
+  invoicesUpdated: number;
+  invoicesCancelled: number;
+  totalStudents: number;
+  message: string;
+}
+
 export const getManagerInvoices = async (params?: ManagerInvoiceFilter): Promise<ManagerInvoiceListResponse> => {
   const query = params
     ? '?' + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])).toString()
@@ -150,12 +164,20 @@ export const createInvoiceForStudent = async (body: CreateInvoiceDto): Promise<M
   return api.post<ManagerInvoice>('invoices', body);
 };
 
+export const createEWInvoiceForStudent = async (body: EWInvoiceCreateDto): Promise<EWInvoiceCreateResult> => {
+  return api.post<EWInvoiceCreateResult>('invoices/ew/student', body);
+};
+
 export const createInvoicesForRoom = async (roomId: string, body: BulkInvoiceDto): Promise<BulkInvoiceResult> => {
   return api.post<BulkInvoiceResult>(`invoices/bulk/room/${roomId}`, body);
 };
 
 export const createInvoicesForBlock = async (blockId: string, body: BulkInvoiceDto): Promise<BulkInvoiceResult> => {
   return api.post<BulkInvoiceResult>(`invoices/bulk/block/${blockId}`, body);
+};
+
+export const createEWInvoicesForAllBlocks = async (body: EWInvoiceCreateDto): Promise<EWInvoiceCreateResult> => {
+  return api.post<EWInvoiceCreateResult>('invoices/ew/block', body);
 };
 
 export const cancelManagerInvoice = async (id: string): Promise<ManagerInvoice> => {

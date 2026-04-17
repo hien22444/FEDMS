@@ -21,7 +21,7 @@ const GoogleCallbackPage = () => {
       try {
         const errorParam = searchParams.get('error');
         if (errorParam) {
-          setError('Google sign-in failed. Please try again.');
+          setError(errorParam);
           return;
         }
 
