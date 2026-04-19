@@ -50,6 +50,7 @@ const CreateViolationPage = lazy(() =>
   })),
 );
 const ManagerChatPage = lazy(() => import('@/pages/manager/chat'));
+const ManagerEmailCenterPage = lazy(() => import('@/pages/manager/email'));
 const ManagerNotificationsPage = lazy(() => import('@/pages/manager/notifications'));
 const ManagerRoomsPage = lazy(() => import('@/pages/manager/rooms'));
 const ManagerBedsPage = lazy(() => import('@/pages/manager/beds'));
@@ -381,7 +382,7 @@ const router = createBrowserRouter([
               },
               {
                 path: 'email',
-                element: <ComingSoon label="Send Email" />,
+                element: <ManagerEmailCenterPage />,
               },
               {
                 path: 'notifications',

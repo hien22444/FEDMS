@@ -75,3 +75,4 @@ export * from './dateConfig';
 export * from './ewUsage';
 export * from './checkoutRequest';
 export * from './agent';
+export * from './email';
