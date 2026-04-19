@@ -128,7 +128,9 @@ export default function ManagerEmailCenterPage() {
     loadTemplates();
     loadHistory(1);
     fetchDorms({ page: 1, limit: 100 }).then((res) => setDorms(res.items)).catch(() => {});
-    getEmailFilterOptions().then(setFilterOptions).catch(() => {});
+    getEmailFilterOptions()
+      .then((res) => setFilterOptions(res ?? { room_types: [], semesters: [] }))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -488,14 +490,14 @@ export default function ManagerEmailCenterPage() {
                           <Select
                             placeholder="Room type" allowClear
                             value={filters.room_type}
-                            options={filterOptions.room_types.map((v) => ({ value: v, label: v }))}
+                            options={(filterOptions?.room_types ?? []).map((v) => ({ value: v, label: v }))}
                             onChange={(v) => handleFilterChange('room_type', v)}
                             showSearch
                           />
                           <Select
                             placeholder="Semester" allowClear
                             value={filters.semester}
-                            options={filterOptions.semesters.map((v) => ({ value: v, label: v }))}
+                            options={(filterOptions?.semesters ?? []).map((v) => ({ value: v, label: v }))}
                             onChange={(v) => handleFilterChange('semester', v)}
                             showSearch
                           />
