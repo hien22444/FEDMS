@@ -26,6 +26,11 @@ export interface EmailFilters {
   block_id?: string;
   gender?: string;
   student_type?: string;
+  student_code_prefix?: string;
+  room_type?: string;
+  semester?: string;
+  invoice_status?: string;
+  behavioral_score_max?: string;
 }
 
 export interface EmailStudentPreview {
@@ -33,11 +38,17 @@ export interface EmailStudentPreview {
   email: string;
   full_name: string;
   student_code: string;
+  behavioral_score?: number;
+}
+
+export interface EmailFilterOptions {
+  room_types: string[];
+  semesters: string[];
 }
 
 const buildQuery = (obj: Record<string, string | undefined>) => {
   const p = new URLSearchParams();
-  Object.entries(obj).forEach(([k, v]) => { if (v) p.append(k, v); });
+  Object.entries(obj).forEach(([k, v]) => { if (v !== undefined && v !== '') p.append(k, v); });
   const q = p.toString();
   return q ? `?${q}` : '';
 };
@@ -47,8 +58,22 @@ export const previewEmailRecipients = (filters: EmailFilters) =>
     `emails/students/preview${buildQuery(filters as Record<string, string | undefined>)}`
   );
 
-export const sendEmailCampaign = (payload: { subject: string; body: string; filters: EmailFilters }) =>
-  api.post<{ sent: boolean; count: number }>('emails/send', payload);
+export const getEmailFilterOptions = () =>
+  api.get<EmailFilterOptions>('emails/filter-options');
+
+export const sendEmailCampaign = (payload: {
+  subject: string;
+  body: string;
+  filters: EmailFilters;
+  extra_emails?: string[];
+}) => api.post<{ sent: boolean; count: number }>('emails/send', payload);
+
+export const uploadInlineImage = async (file: File): Promise<string> => {
+  const fd = new FormData();
+  fd.append('image', file);
+  const res = await api.post<{ url: string }>('emails/upload-image', fd);
+  return res.url;
+};
 
 export const getEmailTemplates = () =>
   api.get<{ items: EmailTemplate[] }>('emails/templates');
