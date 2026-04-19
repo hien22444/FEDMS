@@ -108,6 +108,7 @@ export const MANAGER_MENU = [
     items: [
       { key: 'news', label: 'News Management', icon: 'news', path: '/manager/news' },
       { key: 'chat', label: 'Chat with Students', icon: 'chat', path: '/manager/chat' },
+      { key: 'email-center', label: 'Email Center', icon: 'email', path: '/manager/email' },
       { key: 'notifications', label: 'Notifications', icon: 'bell', path: '/manager/notifications' },
     ],
   },

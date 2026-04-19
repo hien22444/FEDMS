@@ -61,6 +61,7 @@ export const ROUTES = {
   MANAGER_INVOICES: '/manager/invoices',
   MANAGER_NEWS: '/manager/news',
   MANAGER_CHAT: '/manager/chat',
+  MANAGER_EMAIL_CENTER: '/manager/email',
   MANAGER_SETTINGS: '/manager/settings',
   MANAGER_FACE_REGISTRATION: '/manager/face-registration',
 };
