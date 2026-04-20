@@ -17,7 +17,7 @@ export default defineConfig({
         },
     },
     build: {
-        chunkSizeWarningLimit: 800,
+        chunkSizeWarningLimit: 1000,
         rollupOptions: {
             output: {
                 manualChunks(id) {
@@ -26,16 +26,32 @@ export default defineConfig({
                     }
                     // Normalize path separators for cross-platform matching
                     const p = id.replace(/\\/g, '/');
-                    // React core ONLY — strict path matching to avoid catching
-                    // @tanstack/react-query, mobx-react-lite, react-hot-toast, etc.
+                    // React core + anything deeply coupled to React's module identity.
+                    // Keep mobx-react-lite, react-hot-toast, @tanstack/react-query here
+                    // so they share the SAME React module instance (avoids hook errors
+                    // from duplicate React copies across chunks).
                     if (p.includes('/node_modules/react/') ||
                         p.includes('/node_modules/react-dom/') ||
                         p.includes('/node_modules/react-router/') ||
                         p.includes('/node_modules/react-router-dom/') ||
-                        p.includes('/node_modules/scheduler/')) {
+                        p.includes('/node_modules/scheduler/') ||
+                        p.includes('/node_modules/react-is/') ||
+                        p.includes('/node_modules/mobx-react') ||
+                        p.includes('/node_modules/react-hot-toast/') ||
+                        p.includes('/node_modules/@tanstack/') ||
+                        p.includes('/node_modules/react-hook-form/') ||
+                        p.includes('/node_modules/react-markdown/') ||
+                        p.includes('/node_modules/react-infinite-scroll-component/') ||
+                        p.includes('/node_modules/react-icons/')) {
                         return 'react-vendor';
                     }
-                    if (p.includes('/node_modules/antd/') || p.includes('/node_modules/@ant-design/')) {
+                    // Keep antd together with ALL its internal rc-* deps to avoid
+                    // cross-chunk circular init issues.
+                    if (p.includes('/node_modules/antd/') ||
+                        p.includes('/node_modules/antd-img-crop/') ||
+                        p.includes('/node_modules/@ant-design/') ||
+                        p.includes('/node_modules/rc-') ||
+                        p.includes('/node_modules/@rc-component/')) {
                         return 'antd-vendor';
                     }
                     if (p.includes('/node_modules/recharts/') || p.includes('/node_modules/d3-')) {
@@ -52,25 +68,8 @@ export default defineConfig({
                     if (p.includes('/node_modules/@tiptap/') || p.includes('/node_modules/prosemirror-')) {
                         return 'tiptap-vendor';
                     }
-                    if (p.includes('/node_modules/mobx/') || p.includes('/node_modules/mobx-react')) {
-                        return 'mobx-vendor';
-                    }
-                    if (p.includes('/node_modules/@tanstack/')) {
-                        return 'query-vendor';
-                    }
-                    if (p.includes('/node_modules/dayjs/') || p.includes('/node_modules/date-fns/')) {
-                        return 'date-vendor';
-                    }
                     if (p.includes('/node_modules/exceljs/')) {
                         return 'excel-vendor';
-                    }
-                    if (p.includes('/node_modules/react-markdown/') ||
-                        p.includes('/node_modules/rehype-') ||
-                        p.includes('/node_modules/remark-') ||
-                        p.includes('/node_modules/micromark') ||
-                        p.includes('/node_modules/mdast-') ||
-                        p.includes('/node_modules/hast-')) {
-                        return 'markdown-vendor';
                     }
                     return 'vendor';
                 },
