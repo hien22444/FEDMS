@@ -154,6 +154,8 @@ const Booking: React.FC = () => {
   const softLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Beds removed from the grid due to a soft lock — restored on unlock
   const removedByLockRef = useRef<Map<string, BedCard>>(new Map());
+  // Beds removed via bed_reserved — restored if booking is later cancelled
+  const reservedBedsRef = useRef<Map<string, BedCard>>(new Map());
   // Timer for the 5-min hold-bed soft lock TTL (matches backend LOCK_TTL_MS)
   const holdLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ref so socket handlers always read the latest windowStatus.bed_id without stale closure
@@ -206,9 +208,11 @@ const Booking: React.FC = () => {
         }
         return;
       }
-      const bed = removedByLockRef.current.get(bedId);
+      // Check both maps: soft-locked beds and beds that were reserved but booking was cancelled
+      const bed = removedByLockRef.current.get(bedId) ?? reservedBedsRef.current.get(bedId);
       if (bed) {
         removedByLockRef.current.delete(bedId);
+        reservedBedsRef.current.delete(bedId);
         setAllBeds(prev => {
           if (prev.some(b => b.id === bedId)) return prev;
           return [...prev, bed].sort((a, b) => Number(a.bed_number) - Number(b.bed_number));
@@ -216,8 +220,20 @@ const Booking: React.FC = () => {
       }
     };
     const handleBedReserved = ({ bedId }: { bedId: string }) => {
-      removedByLockRef.current.delete(bedId);
-      setAllBeds(prev => prev.filter(b => b.id !== bedId));
+      // Move bed from removedByLockRef to reservedBedsRef so it can be restored if booking is cancelled
+      const bed = removedByLockRef.current.get(bedId);
+      if (bed) {
+        reservedBedsRef.current.set(bedId, bed);
+        removedByLockRef.current.delete(bedId);
+      }
+      setAllBeds(prev => {
+        // If bed wasn't in removedByLockRef (missed bed_soft_locked event), capture it from current list
+        if (!reservedBedsRef.current.has(bedId)) {
+          const bedInList = prev.find(b => b.id === bedId);
+          if (bedInList) reservedBedsRef.current.set(bedId, bedInList);
+        }
+        return prev.filter(b => b.id !== bedId);
+      });
     };
     socket.on('booking_config_updated', handleConfigUpdated);
     socket.on('bed_soft_locked', handleBedLocked);
