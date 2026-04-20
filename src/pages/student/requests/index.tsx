@@ -19,6 +19,7 @@ import {
   Spin,
   Alert,
   Tabs,
+  Upload,
 } from 'antd';
 import {
   FileSearchOutlined,
@@ -55,7 +56,7 @@ import type { RoomEquipment } from '@/lib/actions/admin';
 import type { IVisitor } from '@/interfaces';
 import { ViolationType, ReporterType, type IViolation } from '@/interfaces';
 import violationActions from '@/lib/actions/violation';
-const { getMyViolationReports, createViolationReport } = violationActions;
+const { getMyViolationReports, createViolationReport, uploadEvidenceImage } = violationActions;
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 import BedTransferPage from '@/pages/student/bed-transfer';
@@ -185,11 +186,28 @@ const Requests: React.FC = () => {
       );
     };
 
+    const handleMaintenanceUpdated = (req: StudentMaintenanceRequest) => {
+      setMaintenanceRequests((prev) =>
+        prev.map((r) => (r.id === req.id ? { ...r, ...req } : r))
+      );
+    };
+
+    const handleViolationUpdated = (req: IViolation.ViolationReport) => {
+      setViolationReports((prev) =>
+        prev.map((r) => (r.id === req.id ? { ...r, ...req } : r))
+      );
+    };
+
     socket.on('checkout_status_updated', handleStatusUpdated);
     socket.on('checkout_completed', handleCompleted);
+    socket.on('maintenance_updated', handleMaintenanceUpdated);
+    socket.on('violation_updated', handleViolationUpdated);
+
     return () => {
       socket.off('checkout_status_updated', handleStatusUpdated);
       socket.off('checkout_completed', handleCompleted);
+      socket.off('maintenance_updated', handleMaintenanceUpdated);
+      socket.off('violation_updated', handleViolationUpdated);
     };
   }, []);
 
@@ -1743,6 +1761,7 @@ const MaintenanceForm: React.FC<{
 }> = ({ onSuccess, openRequest = null }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+  const [fileList, setFileList] = useState<any[]>([]);
   const [roomEquipment, setRoomEquipment] = useState<RoomEquipment[]>([]);
   const [loadingEq, setLoadingEq] = useState(true);
   const [loadingContext, setLoadingContext] = useState(true);
@@ -1811,10 +1830,11 @@ const MaintenanceForm: React.FC<{
       await createMaintenanceRequest({
         description: values.description,
         equipment: selectedEquipment,
-        evidence_urls: values.evidence_urls?.length ? values.evidence_urls : undefined,
+        evidence_urls: fileList.map(f => f.url || f.response?.url).filter(Boolean),
       });
       message.success('Maintenance request submitted');
       form.resetFields();
+      setFileList([]);
       onSuccess();
     } catch (err: any) {
       if (err?.errorFields) return;
@@ -1889,12 +1909,29 @@ const MaintenanceForm: React.FC<{
       >
         <TextArea rows={4} placeholder="Describe the damage or issue in detail..." size="large" />
       </Form.Item>
-      <Form.Item name="evidence_urls" label="Evidence image URLs (optional)">
-        <Select
-          mode="tags"
-          placeholder="Paste image URLs, press Enter"
-          tokenSeparators={[',']}
-        />
+      <Form.Item label="Image">
+        <Upload
+          multiple
+          listType="picture-card"
+          fileList={fileList}
+          onChange={({ fileList }) => setFileList(fileList)}
+          customRequest={async ({ file, onSuccess, onError }) => {
+            try {
+              const url = await uploadEvidenceImage(file as File);
+              onSuccess?.({ url });
+            } catch (err: any) {
+              onError?.(err);
+              message.error('Failed to upload evidence');
+            }
+          }}
+        >
+          {fileList.length >= 3 ? null : (
+            <div>
+              <PlusOutlined style={{ color: '#999' }} />
+              <div style={{ marginTop: 8 }}>Upload</div>
+            </div>
+          )}
+        </Upload>
       </Form.Item>
       <Button
         type="primary"
@@ -1922,6 +1959,7 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
   const { modal } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+  const [fileList, setFileList] = useState<any[]>([]);
 
   const handleSubmit = async () => {
     try {
@@ -1966,12 +2004,13 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
                 ? values.violation_date.format('YYYY-MM-DD')
                 : dayjs().format('YYYY-MM-DD'),
               location: values.location,
-              evidence_urls: values.evidence_urls || [],
+              evidence_urls: fileList.map(f => f.url || f.response?.url).filter(Boolean),
             };
 
             await createViolationReport(dto);
             message.success('Violation report submitted successfully');
             form.resetFields();
+            setFileList([]);
             onSuccess?.();
           } catch (err: any) {
             if (err?.message) {
@@ -2063,12 +2102,29 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
         <TextArea placeholder="Provide detailed description..." rows={4} size="large" />
       </Form.Item>
 
-      <Form.Item name="evidence_urls" label="Evidence Links (images)">
-        <Select
-          mode="tags"
-          placeholder="Paste image URLs and press Enter"
-          tokenSeparators={[',']}
-        />
+      <Form.Item label="Image">
+        <Upload
+          multiple
+          listType="picture-card"
+          fileList={fileList}
+          onChange={({ fileList }) => setFileList(fileList)}
+          customRequest={async ({ file, onSuccess, onError }) => {
+            try {
+              const url = await uploadEvidenceImage(file as File);
+              onSuccess?.({ url });
+            } catch (err: any) {
+              onError?.(err);
+              message.error('Failed to upload evidence');
+            }
+          }}
+        >
+          {fileList.length >= 3 ? null : (
+            <div>
+              <PlusOutlined style={{ color: '#999' }} />
+              <div style={{ marginTop: 8 }}>Upload</div>
+            </div>
+          )}
+        </Upload>
       </Form.Item>
 
       <Button type="primary" size="large" onClick={handleSubmit} loading={submitting}>

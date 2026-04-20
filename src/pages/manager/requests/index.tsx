@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { connectSocket } from '@/lib/socket';
-import { Alert, App, Button, Card, DatePicker, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { Alert, App, Button, Card, DatePicker, Form, Image, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { getAllOtherRequests, reviewOtherRequest, type OtherRequestItem } from '@/lib/actions/otherRequest';
 import {
@@ -219,6 +219,7 @@ export default function ManagerRequestsPage() {
       message.info({ content: `New checkout request: ${req.request_code}`, duration: 5 });
       // Re-fetch from API to keep list in sync with current status filter
       loadCheckoutData();
+      loadAllData();
     };
 
     const handleInspected = (req: StudentCheckoutRequest) => {
@@ -229,6 +230,7 @@ export default function ManagerRequestsPage() {
       setCheckoutItems((prev) =>
         prev.map((i) => (i.id === req.id ? (req as StudentCheckoutRequest) : i))
       );
+      loadAllData();
     };
 
     const handleStatusUpdated = (req: StudentCheckoutRequest) => {
@@ -238,17 +240,39 @@ export default function ManagerRequestsPage() {
       if (checkoutSelected?.id === req.id) {
         setCheckoutSelected(req as StudentCheckoutRequest);
       }
+      loadAllData();
+    };
+
+    const handleNewMaintenance = (req: StudentMaintenanceRequest) => {
+      message.info({ content: `New maintenance request: ${req.request_code}`, duration: 5 });
+      loadMaintenanceData();
+      loadAllData();
+    };
+
+    const handleMaintenanceUpdated = (req: StudentMaintenanceRequest) => {
+      setMaintenanceItems((prev) =>
+        prev.map((i) => (i.id === req.id ? (req as StudentMaintenanceRequest) : i))
+      );
+      if (maintenanceSelected?.id === req.id) {
+        setMaintenanceSelected(req as StudentMaintenanceRequest);
+      }
+      loadAllData();
     };
 
     socket.on('new_checkout_request', handleNewRequest);
     socket.on('checkout_inspected', handleInspected);
     socket.on('checkout_status_updated', handleStatusUpdated);
+    socket.on('new_maintenance_request', handleNewMaintenance);
+    socket.on('maintenance_updated', handleMaintenanceUpdated);
+
     return () => {
       socket.off('new_checkout_request', handleNewRequest);
       socket.off('checkout_inspected', handleInspected);
       socket.off('checkout_status_updated', handleStatusUpdated);
+      socket.off('new_maintenance_request', handleNewMaintenance);
+      socket.off('maintenance_updated', handleMaintenanceUpdated);
     };
-  }, [message, checkoutSelected?.id, loadCheckoutData]);
+  }, [message, checkoutSelected?.id, maintenanceSelected?.id, loadCheckoutData, loadMaintenanceData, loadAllData]);
 
   useEffect(() => {
     if (!checkoutSelected?.id) return;
@@ -1042,17 +1066,21 @@ export default function ManagerRequestsPage() {
             {maintenanceSelected.evidence_urls && maintenanceSelected.evidence_urls.length > 0 && (
               <div>
                 <Text type="secondary" className="block mb-2">
-                  Evidence links
+                  Evidence
                 </Text>
-                <ul className="list-disc pl-5 text-sm space-y-1">
-                  {maintenanceSelected.evidence_urls.map((url, idx) => (
-                    <li key={idx}>
-                      <a href={url} target="_blank" rel="noopener noreferrer">
-                        {url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <Image.PreviewGroup>
+                  <Space wrap>
+                    {maintenanceSelected.evidence_urls.map((url, idx) => (
+                      <Image
+                        key={idx}
+                        width={100}
+                        height={100}
+                        src={url}
+                        style={{ objectFit: 'cover' }}
+                      />
+                    ))}
+                  </Space>
+                </Image.PreviewGroup>
               </div>
             )}
             <div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { connectSocket } from '@/lib/socket';
 import { App, Button, Table, Tag, Modal, Drawer, Form, Input, InputNumber, Switch, Select, message, Space } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -108,6 +109,16 @@ export default function ManagerBlocksPage() {
   useEffect(() => {
     loadDorms();
     loadBlocks();
+  }, []);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    socket.on('block_updated', () => {
+      loadBlocks();
+    });
+    return () => {
+      socket.off('block_updated');
+    };
   }, []);
 
   const handleApplyFilter = () => {

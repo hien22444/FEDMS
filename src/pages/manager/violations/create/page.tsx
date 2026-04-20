@@ -15,11 +15,12 @@ import {
   Space,
   Divider,
   InputNumber,
+  Upload,
 } from 'antd';
 import { Search, ArrowLeft, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { createViolationReport, searchStudentByCode } from '@/lib/actions/violation';
+import { createViolationReport, searchStudentByCode, uploadEvidenceImage } from '@/lib/actions/violation';
 import type { IViolation } from '@/interfaces';
 import { ViolationType, ReporterType, PenaltyType } from '@/interfaces';
 
@@ -37,7 +38,6 @@ const penaltyTypeOptions = [
 ];
 
 type CreateFormValues = IViolation.CreateViolationDto & {
-  initial_penalty_type?: PenaltyType;
   initial_points_deducted?: number;
   initial_penalty_reason?: string;
 };
@@ -53,6 +53,7 @@ export default function CreateViolationPage() {
     null
   );
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [fileList, setFileList] = useState<any[]>([]);
 
   const handleSearchStudent = async () => {
     if (!studentCode.trim()) {
@@ -102,12 +103,12 @@ export default function CreateViolationPage() {
       description: autoDescription,
       violation_date: dayjs(values.violation_date).format('YYYY-MM-DD'),
       location: values.location,
-      evidence_urls: values.evidence_urls || [],
+      evidence_urls: fileList.map(f => f.url || f.response?.url).filter(Boolean),
     };
 
-    if (values.initial_penalty_type && values.initial_points_deducted) {
+    if (values.initial_points_deducted) {
       data.initial_penalty = {
-        penalty_type: values.initial_penalty_type,
+        penalty_type: values.initial_points_deducted > 2 ? PenaltyType.SEVERE : PenaltyType.MINOR,
         points_deducted: values.initial_points_deducted,
         reason: values.initial_penalty_reason || undefined,
       };
@@ -315,28 +316,34 @@ export default function CreateViolationPage() {
               </Form.Item>
             </div>
 
-            <Form.Item name="evidence_urls" label="Evidence Links (images)">
-              <Select
-                mode="tags"
-                placeholder="Enter image URL and press Enter"
-                tokenSeparators={[',']}
-              />
+            <Form.Item label="Image">
+              <Upload
+                multiple
+                listType="picture-card"
+                fileList={fileList}
+                onChange={({ fileList }) => setFileList(fileList)}
+                customRequest={async ({ file, onSuccess, onError }) => {
+                  try {
+                    const url = await uploadEvidenceImage(file as File);
+                    onSuccess?.({ url });
+                  } catch (err: any) {
+                    onError?.(err);
+                    message.error('Failed to upload evidence');
+                  }
+                }}
+              >
+                {fileList.length >= 3 ? null : (
+                  <div>
+                    <div className="flex justify-center"><Search className="w-4 h-4 text-gray-400" /></div>
+                    <div style={{ marginTop: 8 }}>Upload</div>
+                  </div>
+                )}
+              </Upload>
             </Form.Item>
 
             <Divider>Penalty (CFD deduction)</Divider>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Form.Item
-                name="initial_penalty_type"
-                label="Severity Level"
-                rules={[{ required: true, message: 'Please select severity level' }]}
-              >
-                <Select
-                  options={penaltyTypeOptions}
-                  placeholder="Select severity"
-                />
-              </Form.Item>
-
               <Form.Item
                 name="initial_points_deducted"
                 label="Points to Deduct"
@@ -345,14 +352,14 @@ export default function CreateViolationPage() {
                   {
                     type: 'number',
                     min: 0.5,
-                    max: 5,
-                    message: 'Points must be between 0.5 and 5',
+                    max: 8,
+                    message: 'Points must be between 0.5 and 8',
                   },
                 ]}
               >
                 <InputNumber
                   min={0.5}
-                  max={5}
+                  max={8}
                   step={0.5}
                   style={{ width: '100%' }}
                   placeholder="e.g. 1.0"

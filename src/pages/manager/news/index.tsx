@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { connectSocket } from '@/lib/socket';
 import { Button, Tag, Modal, Form, Input, Select, Switch, message, Card, Space } from 'antd';
 import { FileText, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -38,6 +39,16 @@ export default function ManagerNewsPage() {
 
   useEffect(() => {
     loadNews();
+  }, []);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    socket.on('news_updated', () => {
+      loadNews();
+    });
+    return () => {
+      socket.off('news_updated');
+    };
   }, []);
 
   const openCreateModal = () => {

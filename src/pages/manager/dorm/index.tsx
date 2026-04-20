@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { connectSocket } from '@/lib/socket';
 import { App, Button, Table, Tag, Modal, Drawer, Form, Input, InputNumber, Switch, message } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -88,6 +89,16 @@ export default function ManagerDormsPage() {
 
   useEffect(() => {
     loadDorms();
+  }, []);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    socket.on('dorm_updated', () => {
+      loadDorms();
+    });
+    return () => {
+      socket.off('dorm_updated');
+    };
   }, []);
 
   const openDetails = async (record: Dorm) => {

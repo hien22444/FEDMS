@@ -13,10 +13,11 @@ import {
   Descriptions,
   Tag,
   Space,
+  Upload,
 } from 'antd';
 import { Search, User, AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
-import { createViolationReport, searchStudentByCode } from '@/lib/actions/violation';
+import { createViolationReport, searchStudentByCode, uploadEvidenceImage } from '@/lib/actions/violation';
 import type { IViolation } from '@/interfaces';
 import { ViolationType, ReporterType } from '@/interfaces';
 
@@ -38,6 +39,7 @@ export default function SecurityReportViolationPage() {
     null,
   );
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [fileList, setFileList] = useState<any[]>([]);
 
   const handleSearchStudent = async () => {
     if (!studentCode.trim()) {
@@ -116,7 +118,7 @@ export default function SecurityReportViolationPage() {
             description: values.description,
             violation_date: dayjs(values.violation_date).format('YYYY-MM-DD'),
             location: values.location,
-            evidence_urls: values.evidence_urls || [],
+            evidence_urls: fileList.map(f => f.url || f.response?.url).filter(Boolean),
           };
 
           await createViolationReport(data);
@@ -125,6 +127,7 @@ export default function SecurityReportViolationPage() {
           setSelectedStudent(null);
           setStudentCode('');
           setSearchError(null);
+          setFileList([]);
         } catch (error) {
           console.error('Error creating violation report:', error);
           message.error('Failed to submit violation report');
@@ -290,16 +293,33 @@ export default function SecurityReportViolationPage() {
               />
             </Form.Item>
 
-            <Form.Item name="evidence_urls" label="Evidence Links (images)">
-              <Select
-                mode="tags"
-                placeholder="Enter image URL and press Enter"
-                tokenSeparators={[',']}
-              />
+            <Form.Item label="Image">
+              <Upload
+                multiple
+                listType="picture-card"
+                fileList={fileList}
+                onChange={({ fileList }) => setFileList(fileList)}
+                customRequest={async ({ file, onSuccess, onError }) => {
+                  try {
+                    const url = await uploadEvidenceImage(file as File);
+                    onSuccess?.({ url });
+                  } catch (err: any) {
+                    onError?.(err);
+                    message.error('Failed to upload evidence');
+                  }
+                }}
+              >
+                {fileList.length >= 3 ? null : (
+                  <div>
+                    <div className="flex justify-center"><Search className="w-4 h-4 text-gray-400" /></div>
+                    <div style={{ marginTop: 8 }}>Upload</div>
+                  </div>
+                )}
+              </Upload>
             </Form.Item>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button onClick={() => form.resetFields()}>Reset</Button>
+              <Button onClick={() => { form.resetFields(); setFileList([]); }}>Reset</Button>
               <Button
                 type="primary"
                 htmlType="submit"

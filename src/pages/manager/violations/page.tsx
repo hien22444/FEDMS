@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { connectSocket } from '@/lib/socket';
 import {
   Table,
   Tag,
@@ -103,6 +104,24 @@ export default function ViolationListPage() {
     fetchData();
     fetchStatistics();
   }, []);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    const handleSync = () => {
+      fetchData(pagination.page);
+      fetchStatistics();
+    };
+
+    socket.on('new_violation_report', handleSync);
+    socket.on('violation_updated', handleSync);
+    socket.on('violation_deleted', handleSync);
+
+    return () => {
+      socket.off('new_violation_report', handleSync);
+      socket.off('violation_updated', handleSync);
+      socket.off('violation_deleted', handleSync);
+    };
+  }, [pagination.page]);
 
   const handleSearch = () => {
     fetchData(1);

@@ -13,6 +13,7 @@ import {
   message,
   Space,
 } from 'antd';
+import { connectSocket } from '@/lib/socket';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { DoorClosed } from 'lucide-react';
@@ -179,6 +180,17 @@ export default function ManagerRoomsPage() {
     loadRooms();
     loadAllRoomsForCapacity();
     loadRoomTypePrices();
+  }, []);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    socket.on('room_updated', () => {
+      loadRooms();
+      loadAllRoomsForCapacity();
+    });
+    return () => {
+      socket.off('room_updated');
+    };
   }, []);
 
   const closeMainModal = () => {

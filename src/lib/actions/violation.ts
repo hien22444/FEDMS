@@ -47,6 +47,22 @@ export const createViolationReport = async (data: IViolation.CreateViolationDto)
 };
 
 /**
+ * Upload evidence image
+ */
+export const uploadEvidenceImage = async (file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const res = await api.post<{ url: string }>(`${API_PREFIX}/upload-evidence`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return res.url;
+};
+
+/**
  * Review/Update violation report status
  */
 export const reviewViolationReport = async (id: string, data: IViolation.ReviewViolationDto) => {
@@ -108,6 +124,7 @@ const violationActions = {
   getMyPenalties,
   getViolationReportById,
   createViolationReport,
+  uploadEvidenceImage,
   reviewViolationReport,
   deleteViolationReport,
   searchStudentByCode,
