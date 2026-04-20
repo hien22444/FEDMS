@@ -181,6 +181,46 @@ export default function ManagerRequestsPage() {
     loadAllData();
   }, [loadAllData]);
 
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getAllOtherRequests({
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        page: 1,
+        limit: 100,
+      });
+      setItems(Array.isArray(res.data) ? res.data : []);
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to load other requests');
+    } finally {
+      setLoading(false);
+    }
+  }, [message, statusFilter]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const loadMaintenanceData = useCallback(async () => {
+    setMaintenanceLoading(true);
+    try {
+      const res = await getAllMaintenanceRequests({
+        status: maintenanceStatusFilter === 'all' ? undefined : maintenanceStatusFilter,
+        page: 1,
+        limit: 100,
+      });
+      setMaintenanceItems(Array.isArray(res.data) ? res.data : []);
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to load maintenance requests');
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  }, [message, maintenanceStatusFilter]);
+
+  useEffect(() => {
+    loadMaintenanceData();
+  }, [loadMaintenanceData]);
+
   const allStatusNormalized = (status: string): string => {
     if (['pending', 'in_review'].includes(status)) return 'pending';
     if (['resolved', 'completed', 'done'].includes(status)) return 'completed';
@@ -522,45 +562,7 @@ export default function ManagerRequestsPage() {
     },
   ];
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await getAllOtherRequests({
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        page: 1,
-        limit: 100,
-      });
-      setItems(Array.isArray(res.data) ? res.data : []);
-    } catch (e: any) {
-      message.error(e?.message || 'Failed to load other requests');
-    } finally {
-      setLoading(false);
-    }
-  }, [message, statusFilter]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const loadMaintenanceData = useCallback(async () => {
-    setMaintenanceLoading(true);
-    try {
-      const res = await getAllMaintenanceRequests({
-        status: maintenanceStatusFilter === 'all' ? undefined : maintenanceStatusFilter,
-        page: 1,
-        limit: 100,
-      });
-      setMaintenanceItems(Array.isArray(res.data) ? res.data : []);
-    } catch (e: any) {
-      message.error(e?.message || 'Failed to load maintenance requests');
-    } finally {
-      setMaintenanceLoading(false);
-    }
-  }, [message, maintenanceStatusFilter]);
-
-  useEffect(() => {
-    loadMaintenanceData();
-  }, [loadMaintenanceData]);
 
 
   /** Sync selected row after list refresh (same request still open in detail tab) */

@@ -32,10 +32,6 @@ const violationTypeOptions = [
   { value: ViolationType.OTHER, label: 'Other' },
 ];
 
-const penaltyTypeOptions = [
-  { value: PenaltyType.MINOR, label: 'Minor (max -2 points)' },
-  { value: PenaltyType.SEVERE, label: 'Severe (max -5 points)' },
-];
 
 type CreateFormValues = IViolation.CreateViolationDto & {
   initial_points_deducted?: number;
