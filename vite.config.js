@@ -17,26 +17,60 @@ export default defineConfig({
         },
     },
     build: {
+        chunkSizeWarningLimit: 800,
         rollupOptions: {
             output: {
                 manualChunks(id) {
                     if (!id.includes('node_modules')) {
                         return undefined;
                     }
-                    if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+                    // Normalize path separators for cross-platform matching
+                    const p = id.replace(/\\/g, '/');
+                    // React core ONLY — strict path matching to avoid catching
+                    // @tanstack/react-query, mobx-react-lite, react-hot-toast, etc.
+                    if (p.includes('/node_modules/react/') ||
+                        p.includes('/node_modules/react-dom/') ||
+                        p.includes('/node_modules/react-router/') ||
+                        p.includes('/node_modules/react-router-dom/') ||
+                        p.includes('/node_modules/scheduler/')) {
                         return 'react-vendor';
                     }
-                    if (id.includes('antd')) {
+                    if (p.includes('/node_modules/antd/') || p.includes('/node_modules/@ant-design/')) {
                         return 'antd-vendor';
                     }
-                    if (id.includes('recharts')) {
+                    if (p.includes('/node_modules/recharts/') || p.includes('/node_modules/d3-')) {
                         return 'charts-vendor';
                     }
-                    if (id.includes('framer-motion')) {
+                    if (p.includes('/node_modules/framer-motion/')) {
                         return 'motion-vendor';
                     }
-                    if (id.includes('socket.io-client')) {
+                    if (p.includes('/node_modules/socket.io-client/') ||
+                        p.includes('/node_modules/engine.io-client/') ||
+                        p.includes('/node_modules/socket.io-parser/')) {
                         return 'socket-vendor';
+                    }
+                    if (p.includes('/node_modules/@tiptap/') || p.includes('/node_modules/prosemirror-')) {
+                        return 'tiptap-vendor';
+                    }
+                    if (p.includes('/node_modules/mobx/') || p.includes('/node_modules/mobx-react')) {
+                        return 'mobx-vendor';
+                    }
+                    if (p.includes('/node_modules/@tanstack/')) {
+                        return 'query-vendor';
+                    }
+                    if (p.includes('/node_modules/dayjs/') || p.includes('/node_modules/date-fns/')) {
+                        return 'date-vendor';
+                    }
+                    if (p.includes('/node_modules/exceljs/')) {
+                        return 'excel-vendor';
+                    }
+                    if (p.includes('/node_modules/react-markdown/') ||
+                        p.includes('/node_modules/rehype-') ||
+                        p.includes('/node_modules/remark-') ||
+                        p.includes('/node_modules/micromark') ||
+                        p.includes('/node_modules/mdast-') ||
+                        p.includes('/node_modules/hast-')) {
+                        return 'markdown-vendor';
                     }
                     return 'vendor';
                 },
