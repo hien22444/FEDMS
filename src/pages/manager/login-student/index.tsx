@@ -19,12 +19,12 @@ export default function LoginAsStudentPage() {
     try {
       const res = await loginAsStudent(studentCode.trim());
 
-      // Switch to student token
+      // Switch to student token and clear manager refresh token.
       localStorage.setItem('token', res.token);
+      localStorage.removeItem('refreshToken');
 
-      // Hard redirect so AuthContext re-initializes with student role
-      // (avoids PrivateRoute race condition with stale manager role in context)
-      window.location.href = '/student/dashboard';
+      // Replace history so browser back does not jump into manager pages.
+      window.location.replace('/student/dashboard');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Student not found.';
       setError(msg);

@@ -234,14 +234,34 @@ export interface CheckoutResult {
   student_code: string;
   full_name: string;
   checkout_date: string;
+  ew_settlement?: {
+    records: Array<{
+      id: string;
+      type: 'electric' | 'water';
+      date: string;
+      meter_right: number;
+      consumption: number;
+      amount: number;
+    }>;
+    invoice: {
+      invoicesCreated: number;
+      invoicesUpdated: number;
+      invoicesCancelled?: number;
+      totalStudents: number;
+      message: string;
+    };
+  } | null;
 }
 
 export const searchStudentForCheckout = async (studentCode: string) => {
   return api.get<CheckoutStudentInfo>(`bookings/checkout/search?student_code=${encodeURIComponent(studentCode)}`);
 };
 
-export const checkoutStudent = async (studentCode: string) => {
-  return api.post<CheckoutResult>('bookings/checkout', { student_code: studentCode });
+export const checkoutStudent = async (
+  studentCode: string,
+  body?: { electric_meter_right?: number; water_meter_right?: number; term?: string }
+) => {
+  return api.post<CheckoutResult>('bookings/checkout', { student_code: studentCode, ...(body || {}) });
 };
 
 export interface CfdAtRiskStudent {

@@ -1592,6 +1592,43 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
+  const PHONE_REGEX = /^0\d{9}$/;
+  const CCCD_REGEX = /^\d{12}$/;
+  const FULL_NAME_REGEX = /^[A-Za-zÀ-ỹ\s'.-]+$/u;
+
+  const validateFullName = (_: unknown, value?: string) => {
+    const name = value?.trim() || '';
+    if (!name) return Promise.reject(new Error('Full name is required'));
+    if (!FULL_NAME_REGEX.test(name)) {
+      return Promise.reject(new Error('Full name can only contain letters and spaces'));
+    }
+    if (name.length < 4) {
+      return Promise.reject(new Error('Full name is too short'));
+    }
+    if (name.split(/\s+/).length < 2) {
+      return Promise.reject(new Error('Please enter at least first name and last name'));
+    }
+    return Promise.resolve();
+  };
+
+  const validateCitizenId = (_: unknown, value?: string) => {
+    const citizenId = (value || '').trim();
+    if (!citizenId) return Promise.reject(new Error('Citizen ID is required'));
+    if (!CCCD_REGEX.test(citizenId)) {
+      return Promise.reject(new Error('Citizen ID must contain exactly 12 digits'));
+    }
+    return Promise.resolve();
+  };
+
+  const validatePhone = (_: unknown, value?: string) => {
+    const phone = (value || '').trim();
+    if (!phone) return Promise.reject(new Error('Phone number is required'));
+    if (!PHONE_REGEX.test(phone)) {
+      return Promise.reject(new Error('Phone number must be 10 digits and start with 0'));
+    }
+    return Promise.resolve();
+  };
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
@@ -1674,9 +1711,9 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
                       {...restField}
                       name={[name, 'full_name']}
                       label="Full Name"
-                      rules={[{ required: true, message: 'Required' }]}
+                      rules={[{ validator: validateFullName }]}
                     >
-                      <Input placeholder="Full name" />
+                      <Input placeholder="Full name" maxLength={60} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
@@ -1684,9 +1721,17 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
                       {...restField}
                       name={[name, 'citizen_id']}
                       label="Citizen ID (CCCD)"
-                      rules={[{ required: true, message: 'Required' }]}
+                      rules={[{ validator: validateCitizenId }]}
                     >
-                      <Input placeholder="ID card number" />
+                      <Input
+                        placeholder="12-digit citizen ID"
+                        maxLength={12}
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, '');
+                          form.setFieldValue(['visitors', name, 'citizen_id'], digitsOnly);
+                        }}
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1696,9 +1741,17 @@ const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
                       {...restField}
                       name={[name, 'phone']}
                       label="Phone"
-                      rules={[{ required: true, message: 'Required' }]}
+                      rules={[{ validator: validatePhone }]}
                     >
-                      <Input placeholder="0123 456 789" />
+                      <Input
+                        placeholder="10-digit phone number"
+                        maxLength={10}
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, '');
+                          form.setFieldValue(['visitors', name, 'phone'], digitsOnly);
+                        }}
+                      />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>

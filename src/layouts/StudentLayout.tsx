@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import {
   Layout,
   Menu,
@@ -7,6 +7,7 @@ import {
   Button,
   Badge,
   Popover,
+  Spin,
   Typography,
   notification,
   theme,
@@ -554,7 +555,15 @@ const StudentLayout = () => {
         </div>
 
         <Content style={{ minWidth: 0 }}>
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="flex h-full min-h-[60vh] items-center justify-center">
+                <Spin size="large" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </Content>
       </Layout>
       <Agent />

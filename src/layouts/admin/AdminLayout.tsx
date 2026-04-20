@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Menu } from 'lucide-react';
+import { Spin } from 'antd';
 import AdminSidebar from './AdminSidebar';
 import { useWindowSize } from '@/hooks/useWindowSize';
 
@@ -56,7 +57,15 @@ export default function AdminLayout() {
       </header>
 
       <main className="min-w-0 overflow-y-auto px-4 pb-6 pt-20 sm:px-6 lg:ml-[280px]">
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <Spin size="large" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

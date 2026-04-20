@@ -1,6 +1,11 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+const BASE_URL = import.meta.env.VITE_BASE_URL?.replace(/\/v1\/?$/, '') || '';
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_BASE_SOCKET_IO ||
+  BASE_URL ||
+  'http://localhost:3001';
 
 let socket: Socket | null = null;
 

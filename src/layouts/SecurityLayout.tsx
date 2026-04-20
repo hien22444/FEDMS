@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,7 +14,7 @@ import {
   X,
   KeyRound,
 } from 'lucide-react';
-import { Button, Form, Input, Modal, message } from 'antd';
+import { Button, Form, Input, Modal, Spin, message } from 'antd';
 import { ROUTES } from '@/constants';
 import { cn } from '@/utils';
 import { useAuth, useSecurityAdminAccess } from '@/contexts';
@@ -209,7 +209,15 @@ const SecurityLayout = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <Spin size="large" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
       <Modal

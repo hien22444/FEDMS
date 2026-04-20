@@ -12,6 +12,15 @@ import { useWindowSize } from '@/hooks/useWindowSize';
 import { brandPalette } from '@/themes/brandPalette';
 
 const { Title, Text } = Typography;
+const formatDateDMY = (value?: string | Date) =>
+  value ? new Intl.DateTimeFormat('en-GB').format(new Date(value)) : '-';
+const formatMonthYear = (value?: string | Date) =>
+  value
+    ? new Intl.DateTimeFormat('en-GB', {
+        month: 'long',
+        year: 'numeric',
+      }).format(new Date(value))
+    : '-';
 
 const statusColor: Record<string, string> = {
   unpaid: 'red',
@@ -72,8 +81,18 @@ const Utilities = () => {
     Promise.all([fetchEW, fetchInvoices]).finally(() => setLoading(false));
   }, []);
 
-  const totalAmount = records.reduce((sum, record) => sum + (record.amount || 0), 0);
   const latest = records[0];
+  const latestMonthLabel = latest ? formatMonthYear(latest.date) : '-';
+  const latestMonthKey = latest ? new Date(latest.date).toISOString().slice(0, 7) : null;
+  const latestMonthRecords = latestMonthKey
+    ? records.filter(
+        (record) => new Date(record.date).toISOString().slice(0, 7) === latestMonthKey
+      )
+    : [];
+  const latestMonthTotal = latestMonthKey
+    ? latestMonthRecords
+        .reduce((sum, record) => sum + (record.amount || 0), 0)
+    : 0;
   const canPayInvoice = (invoice: StudentInvoice) =>
     invoice.payment_status === 'unpaid' && invoice.total_amount > 0;
 
@@ -138,7 +157,7 @@ const Utilities = () => {
         render: (value: string) => {
           const [year, month] = value.split('-');
           return month && year
-            ? `${new Date(Number(year), Number(month) - 1).toLocaleString('en-US', { month: 'long' })} ${year}`
+            ? formatMonthYear(new Date(Number(year), Number(month) - 1, 1))
             : value;
         },
       },
@@ -176,7 +195,7 @@ const Utilities = () => {
         title: 'Due Date',
         dataIndex: 'due_date',
         key: 'due_date',
-        render: (value: string) => new Date(value).toLocaleDateString('en-US'),
+        render: (value: string) => formatDateDMY(value),
       },
       {
         title: 'Action',
@@ -222,7 +241,7 @@ const Utilities = () => {
       dataIndex: 'date',
       key: 'date',
       width: 160,
-      render: (value: string) => new Date(value).toLocaleDateString('en-US'),
+      render: (value: string) => formatDateDMY(value),
     },
     {
       title: 'Consumption',
@@ -304,29 +323,26 @@ const Utilities = () => {
                   <ThunderboltOutlined style={{ fontSize: 32, color: brandPalette.primaryAccent }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <Text type="secondary">Latest Term</Text>
+                  <Text type="secondary">Latest Month</Text>
                   <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>
                     {latest ? `${latest.consumption} ${latest.unit}` : '-'}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 13 }}>{latest?.term}</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>{latestMonthLabel}</Text>
                 </div>
                 <div style={{ textAlign: isTablet ? 'right' : 'left', width: isTablet ? 'auto' : '100%' }}>
-                  <Text type="secondary">Latest Term Amount</Text>
+                  <Text type="secondary">Total</Text>
                   <div style={{ fontSize: 22, fontWeight: 700, color: token.colorError, marginTop: 4 }}>
-                    {latest ? `${latest.amount.toLocaleString('en-US')} VND` : '-'}
+                    {latestMonthTotal.toLocaleString('en-US')} VND
                   </div>
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    Grand total: <b>{totalAmount.toLocaleString('en-US')} VND</b>
-                  </Text>
                 </div>
               </div>
             </Card>
 
-            <Card title="Utility Usage by Term" style={{ marginBottom: 24 }}>
+            <Card title="Utility Usage - Latest Month" style={{ marginBottom: 24 }}>
               <Table
                 rowKey="id"
                 columns={usageColumns}
-                dataSource={records}
+                dataSource={latestMonthRecords}
                 pagination={false}
                 size="middle"
                 scroll={{ x: 760 }}
@@ -353,7 +369,7 @@ const Utilities = () => {
                 {selectedRecord.type === 'electric' ? 'Electric' : 'Water'}
               </Descriptions.Item>
               <Descriptions.Item label="Recorded Date">
-                {new Date(selectedRecord.date).toLocaleDateString('en-US')}
+                {formatDateDMY(selectedRecord.date)}
               </Descriptions.Item>
               <Descriptions.Item label="Previous Meter">
                 {selectedRecord.meter_left} {selectedRecord.unit}
