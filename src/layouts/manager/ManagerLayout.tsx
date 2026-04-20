@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { Spin } from 'antd';
 import ManagerSidebar from './ManagerSidebar';
 import ManagerHeader from './ManagerHeader';
 import { useWindowSize } from '@/hooks/useWindowSize';
@@ -34,7 +35,15 @@ export default function ManagerLayout() {
         onToggleSidebar={() => setMobileSidebarOpen((prev) => !prev)}
       />
       <main className="px-4 pb-6 pt-20 sm:px-6 lg:ml-[280px] lg:px-6">
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <Spin size="large" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
