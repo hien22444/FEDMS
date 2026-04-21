@@ -91,6 +91,15 @@ export default function CreateViolationPage() {
       values.violation_other_detail ||
       `Manager created violation: ${violationLabel}`;
 
+    const evidence_urls = fileList
+      .map(f => {
+        if (f.url) return f.url;
+        if (f.response && typeof f.response === 'object' && f.response.url) return f.response.url;
+        if (typeof f.response === 'string') return f.response;
+        return null;
+      })
+      .filter(Boolean) as string[];
+
     const data: IViolation.CreateViolationDto = {
       student_code: selectedStudent.student_code,
       reporter_type: ReporterType.MANAGER,
@@ -99,7 +108,7 @@ export default function CreateViolationPage() {
       description: autoDescription,
       violation_date: dayjs(values.violation_date).format('YYYY-MM-DD'),
       location: values.location,
-      evidence_urls: fileList.map(f => f.url || f.response?.url).filter(Boolean),
+      evidence_urls,
     };
 
     if (values.initial_points_deducted) {
@@ -212,7 +221,9 @@ export default function CreateViolationPage() {
 
             {searchLoading && (
               <div className="flex justify-center py-4">
-                <Spin tip="Searching..." />
+                <Spin tip="Searching...">
+                  <div style={{ padding: 20 }} />
+                </Spin>
               </div>
             )}
 
@@ -321,6 +332,8 @@ export default function CreateViolationPage() {
                 customRequest={async ({ file, onSuccess, onError }) => {
                   try {
                     const url = await uploadEvidenceImage(file as File);
+                    // Manually update the fileList in state to ensure 'url' is persisted immediately
+                    setFileList(prev => prev.map(f => f.uid === (file as any).uid ? { ...f, url, status: 'done' } : f));
                     onSuccess?.({ url });
                   } catch (err: any) {
                     onError?.(err);

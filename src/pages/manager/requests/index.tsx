@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { connectSocket } from '@/lib/socket';
-import { Alert, App, Button, Card, DatePicker, Form, Image, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { Alert, App, Button, Card, Form, Image, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { getAllOtherRequests, reviewOtherRequest, type OtherRequestItem } from '@/lib/actions/otherRequest';
 import {
@@ -640,7 +640,6 @@ export default function ManagerRequestsPage() {
       status: getMaintenanceNextStatusDefault(String(item.status)),
       technician_name: item.technician_name || '',
       technician_phone: item.technician_phone || '',
-      scheduled_time: item.scheduled_time ? dayjs(item.scheduled_time) : null,
       completion_notes: item.completion_notes || '',
       rejection_reason: item.rejection_reason || '',
     });
@@ -673,9 +672,6 @@ export default function ManagerRequestsPage() {
         }
         payload.technician_name = values.technician_name?.trim() || undefined;
         payload.technician_phone = values.technician_phone || undefined;
-        payload.scheduled_time = values.scheduled_time
-          ? values.scheduled_time.toISOString()
-          : undefined;
       }
       if (status === 'completed') {
         payload.completion_notes = values.completion_notes || undefined;
@@ -1065,24 +1061,33 @@ export default function ManagerRequestsPage() {
                 </div>
               </div>
             )}
-            {maintenanceSelected.evidence_urls && maintenanceSelected.evidence_urls.length > 0 && (
-              <div>
-                <Text type="secondary" className="block mb-2">
-                  Evidence
+            {maintenanceSelected.evidence_urls && maintenanceSelected.evidence_urls.length > 0 ? (
+              <div className="mt-4">
+                <Text type="secondary" className="block mb-2 font-medium">
+                  Evidence Imaging
                 </Text>
                 <Image.PreviewGroup>
-                  <Space wrap>
+                  <Space wrap size={[12, 12]}>
                     {maintenanceSelected.evidence_urls.map((url, idx) => (
-                      <Image
-                        key={idx}
-                        width={100}
-                        height={100}
-                        src={url}
-                        style={{ objectFit: 'cover' }}
-                      />
+                      <div key={idx} className="relative group">
+                        <Image
+                          width={110}
+                          height={110}
+                          src={url}
+                          className="rounded-lg object-cover border-2 border-gray-100 hover:border-blue-400 transition-all duration-300 shadow-sm"
+                          fallback="https://placehold.co/110x110?text=No+Image"
+                        />
+                      </div>
                     ))}
                   </Space>
                 </Image.PreviewGroup>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <Text type="secondary" className="block mb-1 font-medium">
+                  Evidence Imaging
+                </Text>
+                <Text type="disabled">No evidence imaging provided</Text>
               </div>
             )}
             <div>
@@ -1138,38 +1143,6 @@ export default function ManagerRequestsPage() {
                     disabled={isMaintenanceTerminal}
                     placeholder="Enter 10-digit phone number"
                     maxLength={10}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="scheduled_time"
-                  label="Scheduled time"
-                  rules={[{ required: true, message: 'Scheduled time is required' }]}
-                >
-                  <DatePicker
-                    disabled={isMaintenanceTerminal}
-                    showTime={{ format: 'HH:mm' }}
-                    format="DD/MM/YYYY HH:mm"
-                    style={{ width: '100%' }}
-                    disabledDate={(current) =>
-                      !!current && current.endOf('day').isBefore(dayjs().startOf('day'))
-                    }
-                    disabledTime={(current) => {
-                      if (!current || !current.isSame(dayjs(), 'day')) {
-                        return {};
-                      }
-                      const now = dayjs();
-                      const disabledHours = Array.from({ length: now.hour() }, (_, i) => i);
-                      const disabledMinutes =
-                        current.hour() === now.hour()
-                          ? Array.from({ length: now.minute() + 1 }, (_, i) => i)
-                          : [];
-                      return {
-                        disabledHours: () => disabledHours,
-                        disabledMinutes: () => disabledMinutes,
-                        disabledSeconds: () => Array.from({ length: 60 }, (_, i) => i),
-                      };
-                    }}
                   />
                 </Form.Item>
               </>

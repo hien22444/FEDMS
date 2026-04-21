@@ -62,7 +62,6 @@ export function useDetectionNotifications() {
       },
     );
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-dismiss toast after duration

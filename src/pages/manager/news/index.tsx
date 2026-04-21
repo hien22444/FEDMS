@@ -33,7 +33,6 @@ export default function ManagerNewsPage() {
     } catch (error: any) {
       console.error(error);
       message.error('Failed to load news list');
-    } finally {
     }
   };
 
@@ -69,7 +68,6 @@ export default function ManagerNewsPage() {
         title: editingNews.title,
         content: editingNews.content,
         category: editingNews.category || 'general',
-        thumbnail_url: editingNews.thumbnail_url,
         is_published: editingNews.is_published,
       });
     } else {
@@ -220,10 +218,6 @@ export default function ManagerNewsPage() {
             />
           </Form.Item>
 
-          <Form.Item label="Thumbnail URL" name="thumbnail_url">
-            <Input placeholder="Optional thumbnail image URL" />
-          </Form.Item>
-
           <Form.Item label="Published" name="is_published" valuePropName="checked">
             <Switch />
           </Form.Item>
@@ -271,4 +265,3 @@ export default function ManagerNewsPage() {
     </div>
   );
 }
-

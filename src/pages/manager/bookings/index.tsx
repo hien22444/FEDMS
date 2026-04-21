@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Table,
   Tag,
@@ -35,6 +35,7 @@ const ManagerBookings = () => {
     total: 0,
   });
   const [search, setSearch] = useState('');
+  const searchRef = useRef(search);
   const [emailModal, setEmailModal] = useState<{ open: boolean; bookingId: string; studentName: string } | null>(null);
   const [emailSending, setEmailSending] = useState(false);
   const [emailForm] = Form.useForm();
@@ -42,14 +43,15 @@ const ManagerBookings = () => {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastForm] = Form.useForm();
 
-  const fetchData = async (page = 1, overrides?: { search?: string }) => {
+  searchRef.current = search;
+
+  const fetchData = useCallback(async (page = 1) => {
     setLoading(true);
-    const q = overrides !== undefined ? overrides.search : search;
     try {
       const res = await getAllBookings({
         page,
-        limit: pagination.limit,
-        search: q || undefined,
+        limit: 10,
+        search: searchRef.current.trim() || undefined,
       });
       setData(res.items);
       setPagination((prev) => ({
@@ -62,17 +64,18 @@ const ManagerBookings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData(1);
-  }, []);
+  }, [fetchData]);
 
   const handleSearch = () => fetchData(1);
 
   const handleReset = () => {
     setSearch('');
-    fetchData(1, { search: '' });
+    searchRef.current = '';
+    fetchData(1);
   };
 
   const handleBroadcast = async () => {
@@ -223,7 +226,11 @@ const ManagerBookings = () => {
             placeholder="Search by name, student code or semester..."
             prefix={<Search className="w-4 h-4 text-gray-400" />}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              searchRef.current = value;
+              setSearch(value);
+            }}
             style={{ width: isTablet ? 320 : '100%' }}
             onPressEnter={handleSearch}
           />

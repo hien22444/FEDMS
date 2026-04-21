@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-namespace */
 export namespace IVisitor {
   export interface Visitor {
     id: string;

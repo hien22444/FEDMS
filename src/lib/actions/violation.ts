@@ -53,11 +53,7 @@ export const uploadEvidenceImage = async (file: File) => {
   const formData = new FormData();
   formData.append('image', file);
 
-  const res = await api.post<{ url: string }>(`${API_PREFIX}/upload-evidence`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const res = await api.post<{ url: string }>(`${API_PREFIX}/upload-evidence`, formData);
 
   return res.url;
 };

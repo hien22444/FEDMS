@@ -14,12 +14,12 @@ import {
   Col,
   theme,
   Modal,
-  message,
   Form,
   Spin,
   Alert,
   Tabs,
   Upload,
+  Image,
 } from 'antd';
 import {
   FileSearchOutlined,
@@ -117,6 +117,7 @@ type UnifiedListItem = {
 };
 
 const Requests: React.FC = () => {
+  const { message, modal, notification } = App.useApp();
   const { token } = theme.useToken();
   const [searchParams, setSearchParams] = useSearchParams();
   const { width } = useWindowSize();
@@ -187,27 +188,41 @@ const Requests: React.FC = () => {
     };
 
     const handleMaintenanceUpdated = (req: StudentMaintenanceRequest) => {
-      setMaintenanceRequests((prev) =>
-        prev.map((r) => (r.id === req.id ? { ...r, ...req } : r))
-      );
+      setMaintenanceRequests((prev) => {
+        const existing = prev.find((r) => r.id === req.id);
+        if (existing) {
+          return prev.map((r) => (r.id === req.id ? { ...r, ...req } : r));
+        }
+        return [req, ...prev];
+      });
     };
 
     const handleViolationUpdated = (req: IViolation.ViolationReport) => {
-      setViolationReports((prev) =>
-        prev.map((r) => (r.id === req.id ? { ...r, ...req } : r))
-      );
+      setViolationReports((prev) => {
+        const existing = prev.find((r) => r.id === req.id);
+        if (existing) {
+          return prev.map((r) => (r.id === req.id ? { ...r, ...req } : r));
+        }
+        return [req, ...prev];
+      });
+    };
+
+    const handleViolationDeleted = (id: string) => {
+      setViolationReports((prev) => prev.filter((r) => r.id !== id));
     };
 
     socket.on('checkout_status_updated', handleStatusUpdated);
     socket.on('checkout_completed', handleCompleted);
     socket.on('maintenance_updated', handleMaintenanceUpdated);
     socket.on('violation_updated', handleViolationUpdated);
+    socket.on('violation_deleted', handleViolationDeleted);
 
     return () => {
       socket.off('checkout_status_updated', handleStatusUpdated);
       socket.off('checkout_completed', handleCompleted);
       socket.off('maintenance_updated', handleMaintenanceUpdated);
       socket.off('violation_updated', handleViolationUpdated);
+      socket.off('violation_deleted', handleViolationDeleted);
     };
   }, []);
 
@@ -622,18 +637,23 @@ const Requests: React.FC = () => {
             </div>
             {r.evidence_urls && r.evidence_urls.length > 0 && (
               <div>
-                <Text type="secondary" className="block mb-1">
-                  Evidence links
+                <Text type="secondary" className="block mb-2">
+                  Evidence:
                 </Text>
-                <ul className="list-disc pl-5 text-sm space-y-1">
-                  {r.evidence_urls.map((url, i) => (
-                    <li key={i}>
-                      <a href={url} target="_blank" rel="noopener noreferrer">
-                        {url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <Image.PreviewGroup>
+                  <Space wrap size={[8, 8]}>
+                    {r.evidence_urls.map((url, i) => (
+                      <Image
+                        key={i}
+                        width={90}
+                        height={90}
+                        src={url}
+                        className="rounded-lg object-cover border-2 border-gray-100 hover:border-blue-300 transition-all shadow-sm"
+                        fallback="https://placehold.co/90x90?text=No+Image"
+                      />
+                    ))}
+                  </Space>
+                </Image.PreviewGroup>
               </div>
             )}
             <div>
@@ -691,20 +711,29 @@ const Requests: React.FC = () => {
                 {m.description || '-'}
               </div>
             </div>
-            {m.evidence_urls && m.evidence_urls.length > 0 && (
+            {m.evidence_urls && m.evidence_urls.length > 0 ? (
               <div>
-                <Text type="secondary" className="block mb-1">
-                  Evidence links
+                <Text type="secondary" className="block mb-2">
+                  Evidence:
                 </Text>
-                <ul className="list-disc pl-5 text-sm space-y-1">
-                  {m.evidence_urls.map((url, i) => (
-                    <li key={i}>
-                      <a href={url} target="_blank" rel="noopener noreferrer">
-                        {url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <Image.PreviewGroup>
+                  <Space wrap size={[8, 8]}>
+                    {m.evidence_urls.map((url, i) => (
+                      <Image
+                        key={i}
+                        width={90}
+                        height={90}
+                        src={url}
+                        className="rounded-lg object-cover border-2 border-gray-100 hover:border-blue-300 transition-all shadow-sm"
+                        fallback="https://placehold.co/90x90?text=No+Image"
+                      />
+                    ))}
+                  </Space>
+                </Image.PreviewGroup>
+              </div>
+            ) : (
+              <div>
+                <Text type="secondary">Evidence:</Text> <Text type="disabled">No evidence images provided</Text>
               </div>
             )}
             <div>
@@ -721,25 +750,7 @@ const Requests: React.FC = () => {
                 </div>
               </div>
             )}
-            {(m.technician_name || m.technician_phone || m.scheduled_time) && (
-              <div>
-                <Text type="secondary" className="block mb-1">
-                  Technician information:
-                </Text>
-                <div className="rounded border border-gray-200 bg-white p-3 text-sm space-y-1.5">
-                  <div>
-                    <Text type="secondary">Name:</Text> <Text>{m.technician_name || '-'}</Text>
-                  </div>
-                  <div>
-                    <Text type="secondary">Phone:</Text> <Text>{m.technician_phone || '-'}</Text>
-                  </div>
-                  <div>
-                    <Text type="secondary">Scheduled time:</Text>{' '}
-                    <Text>{m.scheduled_time ? dayjs(m.scheduled_time).format('DD/MM/YYYY HH:mm') : '-'}</Text>
-                  </div>
-                </div>
-              </div>
-            )}
+
             {m.completion_notes && (
               <div>
                 <Text type="secondary">Completion notes:</Text>
@@ -1054,7 +1065,7 @@ const Requests: React.FC = () => {
                 if (key === 'detail' && !selectedAll) return;
                 setAllInnerTab(key);
               }}
-              destroyInactiveTabPane={false}
+              destroyOnHidden={false}
               items={[
                 {
                   key: 'list',
@@ -1108,7 +1119,7 @@ const Requests: React.FC = () => {
                 if (key === 'detail' && !selectedVisitor) return;
                 setVisitorInnerTab(key);
               }}
-              destroyInactiveTabPane={false}
+              destroyOnHidden={false}
               items={[
                 {
                   key: 'list',
@@ -1157,7 +1168,7 @@ const Requests: React.FC = () => {
                 if (key === 'detail' && !selectedMaintenance) return;
                 setMaintenanceInnerTab(key);
               }}
-              destroyInactiveTabPane={false}
+              destroyOnHidden={false}
               items={[
                 {
                   key: 'list',
@@ -1223,7 +1234,7 @@ const Requests: React.FC = () => {
                 if (key === 'detail' && !selectedReport) return;
                 setReportInnerTab(key);
               }}
-              destroyInactiveTabPane={false}
+              destroyOnHidden={false}
               items={[
                 {
                   key: 'list',
@@ -1272,7 +1283,7 @@ const Requests: React.FC = () => {
                 if (key === 'detail' && !selectedOther) return;
                 setOtherSubTab(key);
               }}
-              destroyInactiveTabPane={false}
+              destroyOnHidden={false}
               items={[
                 {
                   key: 'list',
@@ -1462,7 +1473,7 @@ const Requests: React.FC = () => {
                 if (key === 'detail' && !selectedCheckout) return;
                 setCheckoutInnerTab(key);
               }}
-              destroyInactiveTabPane={false}
+              destroyOnHidden={false}
               items={[
                 {
                   key: 'list',
@@ -1557,7 +1568,7 @@ const Requests: React.FC = () => {
           onCancel={handleCloseForm}
           footer={null}
           width={isTablet ? 720 : 'calc(100vw - 24px)'}
-          destroyOnClose
+          destroyOnHidden
           title={
             <Space>
               <ArrowLeftOutlined onClick={handleCloseForm} style={{ cursor: 'pointer' }} />
@@ -1589,6 +1600,7 @@ const Requests: React.FC = () => {
 
 // ─── Visitor Request Form (connected to API) ───
 const VisitorForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
@@ -1812,6 +1824,8 @@ const MaintenanceForm: React.FC<{
   onSuccess: () => void;
   openRequest?: StudentMaintenanceRequest | null;
 }> = ({ onSuccess, openRequest = null }) => {
+  const { message } = App.useApp();
+  const { token } = theme.useToken();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
@@ -1880,10 +1894,19 @@ const MaintenanceForm: React.FC<{
       const values = await form.validateFields();
       setSubmitting(true);
       const selectedEquipment = values.equipment ? String(values.equipment).trim() : undefined;
+      const evidence_urls = fileList
+        .map(f => {
+          if (f.url) return f.url;
+          if (f.response && typeof f.response === 'object' && f.response.url) return f.response.url;
+          if (typeof f.response === 'string') return f.response;
+          return null;
+        })
+        .filter(Boolean) as string[];
+
       await createMaintenanceRequest({
         description: values.description,
         equipment: selectedEquipment,
-        evidence_urls: fileList.map(f => f.url || f.response?.url).filter(Boolean),
+        evidence_urls,
       });
       message.success('Maintenance request submitted');
       form.resetFields();
@@ -1971,6 +1994,8 @@ const MaintenanceForm: React.FC<{
           customRequest={async ({ file, onSuccess, onError }) => {
             try {
               const url = await uploadEvidenceImage(file as File);
+              // Manually update the fileList in state to ensure 'url' is persisted immediately
+              setFileList(prev => prev.map(f => f.uid === (file as any).uid ? { ...f, url, status: 'done' } : f));
               onSuccess?.({ url });
             } catch (err: any) {
               onError?.(err);
@@ -2009,7 +2034,7 @@ const violationTypeOptions = [
 ];
 
 const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
@@ -2048,6 +2073,15 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
         onOk: async () => {
           setSubmitting(true);
           try {
+            const evidence_urls = fileList
+              .map(f => {
+                if (f.url) return f.url;
+                if (f.response && typeof f.response === 'object' && f.response.url) return f.response.url;
+                if (typeof f.response === 'string') return f.response;
+                return null;
+              })
+              .filter(Boolean) as string[];
+
             const dto: IViolation.CreateViolationDto = {
               reporter_type: ReporterType.STUDENT,
               violation_type: values.violation_type,
@@ -2057,7 +2091,7 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
                 ? values.violation_date.format('YYYY-MM-DD')
                 : dayjs().format('YYYY-MM-DD'),
               location: values.location,
-              evidence_urls: fileList.map(f => f.url || f.response?.url).filter(Boolean),
+              evidence_urls,
             };
 
             await createViolationReport(dto);
@@ -2164,6 +2198,8 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
           customRequest={async ({ file, onSuccess, onError }) => {
             try {
               const url = await uploadEvidenceImage(file as File);
+              // Manually update the fileList in state to ensure 'url' is persisted immediately
+              setFileList(prev => prev.map(f => f.uid === (file as any).uid ? { ...f, url, status: 'done' } : f));
               onSuccess?.({ url });
             } catch (err: any) {
               onError?.(err);
@@ -2188,7 +2224,7 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
 };
 
 const OtherRequestForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
@@ -2269,6 +2305,7 @@ const OtherRequestForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) =
 
 // ─── Checkout Request Form ───
 const CheckoutRequestForm: React.FC<{ onSuccess: () => void; onClose: () => void }> = ({ onSuccess, onClose }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 

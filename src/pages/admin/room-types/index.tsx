@@ -48,9 +48,8 @@ export default function AdminRoomTypesPage() {
     } catch (error: any) {
       console.error(error);
       message.error('Failed to load room type pricing');
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -114,7 +113,6 @@ export default function AdminRoomTypesPage() {
       }
     } catch (error: any) {
       const raw = Array.isArray(error?.message) ? error.message.join(', ') : (error?.message || '');
-      // eslint-disable-next-line no-console
       console.error('Failed to persist room type prices', error, raw);
       modal.error({
         title: 'Failed to update room type pricing',
@@ -122,12 +120,10 @@ export default function AdminRoomTypesPage() {
         okText: 'OK',
         zIndex: 2000,
       });
-    } finally {
     }
   };
 
   const handleDelete = (record: RoomTypeRow, index: number) => {
-    // eslint-disable-next-line no-console
     console.log('RoomType delete clicked', { record, index });
 
     modal.confirm({
@@ -144,7 +140,6 @@ export default function AdminRoomTypesPage() {
           const raw = Array.isArray(error?.message)
             ? error.message.join(', ')
             : error?.message || '';
-          // eslint-disable-next-line no-console
           console.error('Failed to delete room type', error, raw);
           modal.error({
             title: 'Cannot delete room type',
@@ -306,4 +301,3 @@ export default function AdminRoomTypesPage() {
     </div>
   );
 }
-

@@ -1025,7 +1025,7 @@ const Payment: React.FC = () => {
       return new Date(tb).getTime() - new Date(ta).getTime();
     });
     return merged;
-  }, [history, transferHistory]);
+  }, [history, transferHistory, managerPaid]);
 
   const load = async () => {
     setLoading(true);
@@ -1159,7 +1159,7 @@ const Payment: React.FC = () => {
     tick();
     const id = window.setInterval(tick, 4000);
     return () => window.clearInterval(id);
-  }, [transferPending.map((t) => `${t.id}:${t.status}`).join('|')]);
+  }, [transferPending]);
 
   const handleCancel = async (bookingId: string) => {
     try {
