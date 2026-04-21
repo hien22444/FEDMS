@@ -31,7 +31,7 @@ import {
 } from '@/lib/actions/camera';
 import type { IFaceRecognition } from '@/interfaces';
 
-const CameraCheckinPage = () => {
+const CameraManagementPage = () => {
   const { user } = useAuth();
   const {
     isAdminAccessGranted,
@@ -276,7 +276,7 @@ const CameraCheckinPage = () => {
       <div className="flex items-center gap-3">
         <Video className="w-6 h-6 text-[#F36F21]" />
         <h1 className="text-2xl font-bold text-gray-900">
-          Camera Check-In Management
+          Camera Management
         </h1>
       </div>
 
@@ -806,4 +806,4 @@ function CameraPanel({
   );
 }
 
-export default CameraCheckinPage;
+export default CameraManagementPage;

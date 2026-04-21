@@ -24,7 +24,7 @@ const AdminLoginPage = lazy(() => import('@/pages/admin/login'));
 
 // Security pages
 const DashboardPage = lazy(() => import('@/pages/security/dashboard'));
-const CameraCheckinPage = lazy(() => import('@/pages/security/camera-checkin'));
+const CameraManagementPage = lazy(() => import('@/pages/security/camera-management'));
 const CheckoutRequestsPage = lazy(() => import('@/pages/security/checkout-requests'));
 const VisitorsPage = lazy(() => import('@/pages/security/visitors'));
 const SecurityReportViolationPage = lazy(() => import('@/pages/security/report-violation'));
@@ -210,8 +210,8 @@ const router = createBrowserRouter([
                 element: <DashboardPage />,
               },
               {
-                path: 'camera-checkin',
-                element: <CameraCheckinPage />,
+                path: 'camera-management',
+                element: <CameraManagementPage />,
               },
               {
                 path: 'checkout-requests',

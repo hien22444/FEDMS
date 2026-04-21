@@ -67,7 +67,7 @@ const SecurityLayout = () => {
 
   const navItems = [
     { path: ROUTES.DASHBOARD, label: 'Overview', icon: LayoutDashboard },
-    { path: ROUTES.CAMERA_CHECKIN, label: 'Camera Checkin', icon: Camera },
+    { path: ROUTES.CAMERA_MANAGEMENT, label: 'Camera Management', icon: Camera },
     { path: ROUTES.CHECKOUT_REQUESTS, label: 'Checkout Requests', icon: FileText },
     { path: ROUTES.VISITORS, label: 'Visitors', icon: Users },
     { path: ROUTES.SECURITY_REPORT_VIOLATION, label: 'Report Violation', icon: AlertTriangle },
