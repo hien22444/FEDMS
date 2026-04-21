@@ -53,23 +53,30 @@ class ApiRequest {
     config: ApiRequestConfig = {},
     isRetry = false,
   ): Promise<T> {
-    // Get token from localStorage
     const token = localStorage.getItem('token');
     const { body, headers: configHeaders, ...rest } = config;
 
-    const headers: HeadersInit = {
+    const headers = new Headers({
       Accept: 'application/json',
       'Accept-Language': 'en',
-      ...(token && { Authorization: `Bearer ${token}` }),
       ...(configHeaders as Record<string, string>),
-    };
+    });
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
 
     let requestBody: BodyInit | null | undefined = body as BodyInit | null | undefined;
 
     if (isJsonBody(body)) {
       requestBody = JSON.stringify(body);
-      headers['Content-Type'] = 'application/json';
+      headers.set('Content-Type', 'application/json');
+    } else if (body instanceof FormData) {
+      // For FormData, we MUST NOT set Content-Type manually.
+      // fetch will automatically set it to 'multipart/form-data; boundary=...'
+      headers.delete('Content-Type');
     }
+
     const res = await fetch(`${this.baseUrl}/${url}`, {
       ...rest,
       body: requestBody,

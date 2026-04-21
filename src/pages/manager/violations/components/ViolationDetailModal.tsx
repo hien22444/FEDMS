@@ -171,7 +171,7 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
       if (values.status === ViolationStatus.RESOLVED_PENALIZED) {
         reviewData.penalty = {
           student_code: String(values.penalty_student_code ?? '').trim().toUpperCase(),
-          penalty_type: values.penalty_type,
+          penalty_type: values.penalty_type || PenaltyType.MINOR,
           points_deducted: values.points_deducted,
           reason: values.penalty_reason || undefined,
         };
@@ -379,23 +379,26 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
           </>
         )}
 
-        {report.evidence_urls && report.evidence_urls.length > 0 && (
-          <Descriptions.Item label="Evidence" span={2}>
+        <Descriptions.Item label="Evidence" span={2}>
+          {report.evidence_urls && report.evidence_urls.length > 0 ? (
             <Image.PreviewGroup>
-              <Space wrap>
+              <Space wrap size={[10, 10]}>
                 {report.evidence_urls.map((url, index) => (
                   <Image
                     key={index}
-                    width={100}
-                    height={100}
+                    width={110}
+                    height={110}
                     src={url}
-                    style={{ objectFit: 'cover' }}
+                    className="rounded-lg object-cover border-2 border-gray-50 hover:border-blue-300 transition-all shadow-sm"
+                    fallback="https://placehold.co/110x110?text=No+Image"
                   />
                 ))}
               </Space>
             </Image.PreviewGroup>
-          </Descriptions.Item>
-        )}
+          ) : (
+            <span style={{ color: '#bfbfbf' }}>No evidence images provided</span>
+          )}
+        </Descriptions.Item>
 
         {report.reviewed_by && (
           <>
@@ -489,20 +492,6 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
                       No student found with this code. Enter the full code (e.g. DE170779).
                     </div>
                   )}
-
-                <Form.Item
-                  name="penalty_type"
-                  label="Severity Level"
-                  rules={[{ required: true, message: 'Please select severity level' }]}
-                >
-                  <Select
-                    placeholder="Select severity"
-                    options={Object.entries(penaltyTypeConfig).map(([value, config]) => ({
-                      value,
-                      label: `${config.label} (max -${config.maxPoints} points)`,
-                    }))}
-                  />
-                </Form.Item>
 
                 <Form.Item
                   name="points_deducted"

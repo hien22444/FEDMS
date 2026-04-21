@@ -23,6 +23,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext';
+import { connectSocket } from '@/lib/socket';
 import { getMyPenalties } from '@/lib/actions/violation';
 import type { IViolation } from '@/interfaces';
 import { ViolationType } from '@/interfaces';
@@ -68,6 +69,20 @@ const CFDPoints: React.FC = () => {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    const socket = connectSocket();
+
+    const handleCfdUpdated = () => {
+      load();
+    };
+
+    socket.on('cfd_updated', handleCfdUpdated);
+
+    return () => {
+      socket.off('cfd_updated', handleCfdUpdated);
+    };
   }, [load]);
 
   const behavioralScore = useMemo(() => {

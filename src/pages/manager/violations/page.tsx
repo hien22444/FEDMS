@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { connectSocket } from '@/lib/socket';
 import {
   Table,
   Tag,
@@ -114,6 +115,24 @@ export default function ViolationListPage() {
     fetchStatistics();
   }, [fetchData, fetchStatistics]);
 
+  useEffect(() => {
+    const socket = connectSocket();
+    const handleSync = () => {
+      fetchData(pagination.page);
+      fetchStatistics();
+    };
+
+    socket.on('new_violation_report', handleSync);
+    socket.on('violation_updated', handleSync);
+    socket.on('violation_deleted', handleSync);
+
+    return () => {
+      socket.off('new_violation_report', handleSync);
+      socket.off('violation_updated', handleSync);
+      socket.off('violation_deleted', handleSync);
+    };
+  }, [pagination.page]);
+
   const handleSearch = () => {
     fetchData(1);
   };
@@ -136,22 +155,22 @@ export default function ViolationListPage() {
   };
 
   const handleDelete = async (id: string) => {
-      Modal.confirm({
-        title: 'Confirm Delete',
-        content: 'Are you sure you want to delete this violation report?',
-        okText: 'Delete',
-        cancelText: 'Cancel',
-        okButtonProps: { danger: true },
-        onOk: async () => {
-          try {
-            await deleteViolationReport(id);
-            message.success('Violation report deleted successfully');
-            fetchData(pagination.page);
-          } catch {
-            message.error('Failed to delete violation report');
-          }
-        },
-      });
+    Modal.confirm({
+      title: 'Confirm Delete',
+      content: 'Are you sure you want to delete this violation report?',
+      okText: 'Delete',
+      cancelText: 'Cancel',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteViolationReport(id);
+          message.success('Violation report deleted successfully');
+          fetchData(pagination.page);
+        } catch {
+          message.error('Failed to delete violation report');
+        }
+      },
+    });
   };
 
   const handleModalClose = (refreshData?: boolean) => {

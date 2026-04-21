@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { connectSocket } from '@/lib/socket';
 import { Button, Tag, Modal, Form, Input, Select, Switch, message, Card, Space } from 'antd';
 import { FileText, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +40,16 @@ export default function ManagerNewsPage() {
     loadNews();
   }, []);
 
+  useEffect(() => {
+    const socket = connectSocket();
+    socket.on('news_updated', () => {
+      loadNews();
+    });
+    return () => {
+      socket.off('news_updated');
+    };
+  }, []);
+
   const openCreateModal = () => {
     setEditingNews(null);
     setModalOpen(true);
@@ -57,7 +68,6 @@ export default function ManagerNewsPage() {
         title: editingNews.title,
         content: editingNews.content,
         category: editingNews.category || 'general',
-        thumbnail_url: editingNews.thumbnail_url,
         is_published: editingNews.is_published,
       });
     } else {
@@ -206,10 +216,6 @@ export default function ManagerNewsPage() {
               showCount
               maxLength={5000}
             />
-          </Form.Item>
-
-          <Form.Item label="Thumbnail URL" name="thumbnail_url">
-            <Input placeholder="Optional thumbnail image URL" />
           </Form.Item>
 
           <Form.Item label="Published" name="is_published" valuePropName="checked">

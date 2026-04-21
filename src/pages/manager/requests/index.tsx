@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { connectSocket } from '@/lib/socket';
-import { Alert, App, Button, Card, DatePicker, Form, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { Alert, App, Button, Card, Form, Image, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { getAllOtherRequests, reviewOtherRequest, type OtherRequestItem } from '@/lib/actions/otherRequest';
 import {
@@ -181,6 +181,46 @@ export default function ManagerRequestsPage() {
     loadAllData();
   }, [loadAllData]);
 
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getAllOtherRequests({
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        page: 1,
+        limit: 100,
+      });
+      setItems(Array.isArray(res.data) ? res.data : []);
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to load other requests');
+    } finally {
+      setLoading(false);
+    }
+  }, [message, statusFilter]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const loadMaintenanceData = useCallback(async () => {
+    setMaintenanceLoading(true);
+    try {
+      const res = await getAllMaintenanceRequests({
+        status: maintenanceStatusFilter === 'all' ? undefined : maintenanceStatusFilter,
+        page: 1,
+        limit: 100,
+      });
+      setMaintenanceItems(Array.isArray(res.data) ? res.data : []);
+    } catch (e: any) {
+      message.error(e?.message || 'Failed to load maintenance requests');
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  }, [message, maintenanceStatusFilter]);
+
+  useEffect(() => {
+    loadMaintenanceData();
+  }, [loadMaintenanceData]);
+
   const allStatusNormalized = (status: string): string => {
     if (['pending', 'in_review'].includes(status)) return 'pending';
     if (['resolved', 'completed', 'done'].includes(status)) return 'completed';
@@ -219,6 +259,7 @@ export default function ManagerRequestsPage() {
       message.info({ content: `New checkout request: ${req.request_code}`, duration: 5 });
       // Re-fetch from API to keep list in sync with current status filter
       loadCheckoutData();
+      loadAllData();
     };
 
     const handleInspected = (req: StudentCheckoutRequest) => {
@@ -229,6 +270,7 @@ export default function ManagerRequestsPage() {
       setCheckoutItems((prev) =>
         prev.map((i) => (i.id === req.id ? (req as StudentCheckoutRequest) : i))
       );
+      loadAllData();
     };
 
     const handleStatusUpdated = (req: StudentCheckoutRequest) => {
@@ -238,17 +280,39 @@ export default function ManagerRequestsPage() {
       if (checkoutSelected?.id === req.id) {
         setCheckoutSelected(req as StudentCheckoutRequest);
       }
+      loadAllData();
+    };
+
+    const handleNewMaintenance = (req: StudentMaintenanceRequest) => {
+      message.info({ content: `New maintenance request: ${req.request_code}`, duration: 5 });
+      loadMaintenanceData();
+      loadAllData();
+    };
+
+    const handleMaintenanceUpdated = (req: StudentMaintenanceRequest) => {
+      setMaintenanceItems((prev) =>
+        prev.map((i) => (i.id === req.id ? (req as StudentMaintenanceRequest) : i))
+      );
+      if (maintenanceSelected?.id === req.id) {
+        setMaintenanceSelected(req as StudentMaintenanceRequest);
+      }
+      loadAllData();
     };
 
     socket.on('new_checkout_request', handleNewRequest);
     socket.on('checkout_inspected', handleInspected);
     socket.on('checkout_status_updated', handleStatusUpdated);
+    socket.on('new_maintenance_request', handleNewMaintenance);
+    socket.on('maintenance_updated', handleMaintenanceUpdated);
+
     return () => {
       socket.off('new_checkout_request', handleNewRequest);
       socket.off('checkout_inspected', handleInspected);
       socket.off('checkout_status_updated', handleStatusUpdated);
+      socket.off('new_maintenance_request', handleNewMaintenance);
+      socket.off('maintenance_updated', handleMaintenanceUpdated);
     };
-  }, [message, checkoutSelected?.id, loadCheckoutData]);
+  }, [message, checkoutSelected?.id, maintenanceSelected?.id, loadCheckoutData, loadMaintenanceData, loadAllData]);
 
   useEffect(() => {
     if (!checkoutSelected?.id) return;
@@ -498,45 +562,7 @@ export default function ManagerRequestsPage() {
     },
   ];
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await getAllOtherRequests({
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        page: 1,
-        limit: 100,
-      });
-      setItems(Array.isArray(res.data) ? res.data : []);
-    } catch (e: any) {
-      message.error(e?.message || 'Failed to load other requests');
-    } finally {
-      setLoading(false);
-    }
-  }, [message, statusFilter]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const loadMaintenanceData = useCallback(async () => {
-    setMaintenanceLoading(true);
-    try {
-      const res = await getAllMaintenanceRequests({
-        status: maintenanceStatusFilter === 'all' ? undefined : maintenanceStatusFilter,
-        page: 1,
-        limit: 100,
-      });
-      setMaintenanceItems(Array.isArray(res.data) ? res.data : []);
-    } catch (e: any) {
-      message.error(e?.message || 'Failed to load maintenance requests');
-    } finally {
-      setMaintenanceLoading(false);
-    }
-  }, [message, maintenanceStatusFilter]);
-
-  useEffect(() => {
-    loadMaintenanceData();
-  }, [loadMaintenanceData]);
 
 
   /** Sync selected row after list refresh (same request still open in detail tab) */
@@ -614,7 +640,6 @@ export default function ManagerRequestsPage() {
       status: getMaintenanceNextStatusDefault(String(item.status)),
       technician_name: item.technician_name || '',
       technician_phone: item.technician_phone || '',
-      scheduled_time: item.scheduled_time ? dayjs(item.scheduled_time) : null,
       completion_notes: item.completion_notes || '',
       rejection_reason: item.rejection_reason || '',
     });
@@ -647,9 +672,6 @@ export default function ManagerRequestsPage() {
         }
         payload.technician_name = values.technician_name?.trim() || undefined;
         payload.technician_phone = values.technician_phone || undefined;
-        payload.scheduled_time = values.scheduled_time
-          ? values.scheduled_time.toISOString()
-          : undefined;
       }
       if (status === 'completed') {
         payload.completion_notes = values.completion_notes || undefined;
@@ -1039,20 +1061,33 @@ export default function ManagerRequestsPage() {
                 </div>
               </div>
             )}
-            {maintenanceSelected.evidence_urls && maintenanceSelected.evidence_urls.length > 0 && (
-              <div>
-                <Text type="secondary" className="block mb-2">
-                  Evidence links
+            {maintenanceSelected.evidence_urls && maintenanceSelected.evidence_urls.length > 0 ? (
+              <div className="mt-4">
+                <Text type="secondary" className="block mb-2 font-medium">
+                  Evidence Imaging
                 </Text>
-                <ul className="list-disc pl-5 text-sm space-y-1">
-                  {maintenanceSelected.evidence_urls.map((url, idx) => (
-                    <li key={idx}>
-                      <a href={url} target="_blank" rel="noopener noreferrer">
-                        {url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <Image.PreviewGroup>
+                  <Space wrap size={[12, 12]}>
+                    {maintenanceSelected.evidence_urls.map((url, idx) => (
+                      <div key={idx} className="relative group">
+                        <Image
+                          width={110}
+                          height={110}
+                          src={url}
+                          className="rounded-lg object-cover border-2 border-gray-100 hover:border-blue-400 transition-all duration-300 shadow-sm"
+                          fallback="https://placehold.co/110x110?text=No+Image"
+                        />
+                      </div>
+                    ))}
+                  </Space>
+                </Image.PreviewGroup>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <Text type="secondary" className="block mb-1 font-medium">
+                  Evidence Imaging
+                </Text>
+                <Text type="disabled">No evidence imaging provided</Text>
               </div>
             )}
             <div>
@@ -1108,38 +1143,6 @@ export default function ManagerRequestsPage() {
                     disabled={isMaintenanceTerminal}
                     placeholder="Enter 10-digit phone number"
                     maxLength={10}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="scheduled_time"
-                  label="Scheduled time"
-                  rules={[{ required: true, message: 'Scheduled time is required' }]}
-                >
-                  <DatePicker
-                    disabled={isMaintenanceTerminal}
-                    showTime={{ format: 'HH:mm' }}
-                    format="DD/MM/YYYY HH:mm"
-                    style={{ width: '100%' }}
-                    disabledDate={(current) =>
-                      !!current && current.endOf('day').isBefore(dayjs().startOf('day'))
-                    }
-                    disabledTime={(current) => {
-                      if (!current || !current.isSame(dayjs(), 'day')) {
-                        return {};
-                      }
-                      const now = dayjs();
-                      const disabledHours = Array.from({ length: now.hour() }, (_, i) => i);
-                      const disabledMinutes =
-                        current.hour() === now.hour()
-                          ? Array.from({ length: now.minute() + 1 }, (_, i) => i)
-                          : [];
-                      return {
-                        disabledHours: () => disabledHours,
-                        disabledMinutes: () => disabledMinutes,
-                        disabledSeconds: () => Array.from({ length: 60 }, (_, i) => i),
-                      };
-                    }}
                   />
                 </Form.Item>
               </>

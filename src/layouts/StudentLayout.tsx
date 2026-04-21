@@ -473,7 +473,6 @@ const StudentLayout = () => {
           onClose={() => setMobileSidebarOpen(false)}
           closable={false}
           width={288}
-          bodyStyle={{ padding: 0 }}
           styles={{ body: { padding: 0, background: studentSidebarBg } }}
         >
           {sidebarContent(true)}
