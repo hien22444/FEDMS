@@ -278,7 +278,10 @@ export default function ManagerBedsPage() {
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3 mb-4">
         {BED_STATUS_OPTIONS.map((opt) => {
-          const count = beds.filter((b) => b.status === opt.value).length;
+          const count = beds.filter((b) => {
+            const displayStatus = (b.status === 'occupied' && b.upcoming_contract) ? 'reserved' : b.status;
+            return displayStatus === opt.value;
+          }).length;
           return (
             <div key={opt.value} className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm text-center">
               <Tag color={BED_STATUS_COLOR[opt.value]} className="mb-1">{opt.label}</Tag>
