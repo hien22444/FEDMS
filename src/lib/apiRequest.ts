@@ -71,7 +71,7 @@ class ApiRequest {
     if (isJsonBody(body)) {
       requestBody = JSON.stringify(body);
       headers.set('Content-Type', 'application/json');
-    } else if (body instanceof FormData) {
+    } else if ((body as unknown) instanceof FormData) {
       // For FormData, we MUST NOT set Content-Type manually.
       // fetch will automatically set it to 'multipart/form-data; boundary=...'
       headers.delete('Content-Type');
