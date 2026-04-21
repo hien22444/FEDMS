@@ -165,6 +165,8 @@ const Booking: React.FC = () => {
   const isHoldingOwnBedRef = useRef(false);
   // True only when another student locked A's hold-bed (so we know to reload when their lock expires)
   const bedTakenByOtherRef = useRef(false);
+  const loadNewBookingStateRef = useRef<(() => Promise<void>) | null>(null);
+  const loadMyBookingsRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     checkWindow();
@@ -259,19 +261,19 @@ const Booking: React.FC = () => {
         setCheckingHoldStatus(true);
         loadActiveBooking().then(alreadyHeld => {
           setCheckingHoldStatus(false);
-          if (!alreadyHeld) loadNewBookingState();
+          if (!alreadyHeld) void loadNewBookingStateRef.current?.();
         });
       }
     }
   }, [windowStatus]);
 
   useEffect(() => {
-    if (activeTab === 'my') loadMyBookings();
+    if (activeTab === 'my') void loadMyBookingsRef.current?.();
   }, [activeTab, myBookingsPage]);
 
   useEffect(() => {
     if (windowStatus?.dorm_booking_suspended) {
-      void loadMyBookings();
+      void loadMyBookingsRef.current?.();
     }
   }, [windowStatus?.dorm_booking_suspended]);
 
@@ -653,6 +655,9 @@ const Booking: React.FC = () => {
     } catch { message.error('Failed to load bookings'); }
     finally { setLoadingBookings(false); }
   };
+
+  loadNewBookingStateRef.current = loadNewBookingState;
+  loadMyBookingsRef.current = loadMyBookings;
 
   // ─── Cascade handlers ───
 

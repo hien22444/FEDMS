@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { App, Button, Table, Tag, Modal, Drawer, Form, Input, InputNumber, Switch, Select, message, Space } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -46,6 +46,15 @@ export default function ManagerBlocksPage() {
   const [filterGender, setFilterGender] = useState<string | undefined>(undefined);
   const [filterSearch, setFilterSearch] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
+  const filterDormIdRef = useRef(filterDormId);
+  const filterGenderRef = useRef(filterGender);
+  const filterSearchRef = useRef(filterSearch);
+  const filterStatusRef = useRef(filterStatus);
+
+  filterDormIdRef.current = filterDormId;
+  filterGenderRef.current = filterGender;
+  filterSearchRef.current = filterSearch;
+  filterStatusRef.current = filterStatus;
 
   const selectedDormId = Form.useWatch('dorm', form) as string | undefined;
   const blockCode = Form.useWatch('block_code', form) as string | undefined;
@@ -70,7 +79,7 @@ export default function ManagerBlocksPage() {
     }
   }, [selectedDormId, floorOptions, form]);
 
-  const loadDorms = async () => {
+  const loadDorms = useCallback(async () => {
     try {
       setLoadingDorms(true);
       const res = await fetchDorms({ page: 1, limit: 100 });
@@ -81,19 +90,23 @@ export default function ManagerBlocksPage() {
     } finally {
       setLoadingDorms(false);
     }
-  };
+  }, []);
 
-  const loadBlocks = async (overrides?: { page?: number }) => {
+  const loadBlocks = useCallback(async (overrides?: { page?: number }) => {
     try {
       setLoadingBlocks(true);
       const params: Record<string, string | number | boolean> = {
         page: overrides?.page ?? 1,
         limit: 50,
       };
-      if (filterDormId) params.dorm = filterDormId;
-      if (filterGender) params.gender_type = filterGender;
-      if (filterSearch.trim()) params.search = filterSearch.trim();
-      if (filterStatus) params.is_active = filterStatus === 'active';
+      const dormId = filterDormIdRef.current;
+      const gender = filterGenderRef.current;
+      const search = filterSearchRef.current;
+      const status = filterStatusRef.current;
+      if (dormId) params.dorm = dormId;
+      if (gender) params.gender_type = gender;
+      if (search.trim()) params.search = search.trim();
+      if (status) params.is_active = status === 'active';
 
       const res = await fetchBlocks(params);
       setBlocks(res.items);
@@ -103,12 +116,12 @@ export default function ManagerBlocksPage() {
     } finally {
       setLoadingBlocks(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadDorms();
     loadBlocks();
-  }, []);
+  }, [loadDorms, loadBlocks]);
 
   const handleApplyFilter = () => {
     loadBlocks({ page: 1 });
@@ -119,6 +132,10 @@ export default function ManagerBlocksPage() {
     setFilterGender(undefined);
     setFilterSearch('');
     setFilterStatus(undefined);
+    filterDormIdRef.current = undefined;
+    filterGenderRef.current = undefined;
+    filterSearchRef.current = '';
+    filterStatusRef.current = undefined;
     loadBlocks({ page: 1 });
   };
 
