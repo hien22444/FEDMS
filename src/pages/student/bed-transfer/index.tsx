@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Spin, Tag, Typography, message, theme, Table, Tabs } from 'antd';
 import {
   cancelTransferRequest,
@@ -90,12 +90,15 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
     };
   }, []);
 
-  const hasPendingUpgradePayment = requests.some((r) => r.status === 'pending_payment_upgrade');
+  const pendingUpgradeRequests = useMemo(
+    () => requests.filter((r) => r.status === 'pending_payment_upgrade'),
+    [requests],
+  );
+  const hasPendingUpgradePayment = pendingUpgradeRequests.length > 0;
   useEffect(() => {
     if (!hasPendingUpgradePayment) return;
     const tick = async () => {
-      const pending = requests.filter((r) => r.status === 'pending_payment_upgrade');
-      for (const r of pending) {
+      for (const r of pendingUpgradeRequests) {
         try {
           const res = await checkTransferPaymentStatus(r.id);
           if (res.paid) {
@@ -115,7 +118,7 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
     tick();
     const id = window.setInterval(tick, 4000);
     return () => window.clearInterval(id);
-  }, [hasPendingUpgradePayment, requests.map((r) => `${r.id}:${r.status}`).join('|')]);
+  }, [hasPendingUpgradePayment, pendingUpgradeRequests]);
 
   const statusTag = (status: string) => {
     if (status === 'pending_partner') return <Tag color="orange">Pending partner</Tag>;

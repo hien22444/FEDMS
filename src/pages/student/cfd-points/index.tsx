@@ -82,7 +82,7 @@ const CFDPoints: React.FC = () => {
     return profile?.violations_current_semester ?? 0;
   }, [cfdData?.student?.violations_current_semester, profile?.violations_current_semester]);
 
-  const penalties = cfdData?.penalties ?? [];
+  const penalties = useMemo(() => cfdData?.penalties ?? [], [cfdData]);
   const totalDeducted = useMemo(
     () => penalties.reduce((sum, p) => sum + (Number(p.points_deducted) || 0), 0),
     [penalties],

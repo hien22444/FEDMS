@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   App,
   Button,
@@ -101,8 +101,17 @@ export default function AdminRoomsPage() {
   const [filterRoomType, setFilterRoomType] = useState<RoomType | undefined>(undefined);
   const [filterStudentType, setFilterStudentType] = useState<string | undefined>(undefined);
   const [filterStatus, setFilterStatus] = useState<RoomStatus | undefined>(undefined);
+  const filterSearchRef = useRef(filterSearch);
+  const filterRoomTypeRef = useRef(filterRoomType);
+  const filterStudentTypeRef = useRef(filterStudentType);
+  const filterStatusRef = useRef(filterStatus);
 
-  const loadDorms = async () => {
+  filterSearchRef.current = filterSearch;
+  filterRoomTypeRef.current = filterRoomType;
+  filterStudentTypeRef.current = filterStudentType;
+  filterStatusRef.current = filterStatus;
+
+  const loadDorms = useCallback(async () => {
     try {
       setLoadingDorms(true);
       const res = await fetchDorms({ page: 1, limit: 200 });
@@ -113,9 +122,9 @@ export default function AdminRoomsPage() {
     } finally {
       setLoadingDorms(false);
     }
-  };
+  }, []);
 
-  const loadBlocks = async () => {
+  const loadBlocks = useCallback(async () => {
     try {
       setLoadingBlocks(true);
       const res = await fetchBlocks({ page: 1, limit: 500 });
@@ -126,16 +135,20 @@ export default function AdminRoomsPage() {
     } finally {
       setLoadingBlocks(false);
     }
-  };
+  }, []);
 
-  const loadRooms = async () => {
+  const loadRooms = useCallback(async () => {
     try {
       setLoadingRooms(true);
       const params: Record<string, string | number | boolean> = { page: 1, limit: 50 };
-      if (filterSearch.trim()) params.search = filterSearch.trim();
-      if (filterRoomType) params.room_type = filterRoomType;
-      if (filterStudentType) params.student_type = filterStudentType;
-      if (filterStatus) params.status = filterStatus;
+      const search = filterSearchRef.current;
+      const roomType = filterRoomTypeRef.current;
+      const studentType = filterStudentTypeRef.current;
+      const status = filterStatusRef.current;
+      if (search.trim()) params.search = search.trim();
+      if (roomType) params.room_type = roomType;
+      if (studentType) params.student_type = studentType;
+      if (status) params.status = status;
 
       const res = await fetchRooms(params);
       const sorted = [...res.items].sort((a, b) => {
@@ -156,25 +169,25 @@ export default function AdminRoomsPage() {
     } finally {
       setLoadingRooms(false);
     }
-  };
+  }, []);
 
-  const loadAllRoomsForCapacity = async () => {
+  const loadAllRoomsForCapacity = useCallback(async () => {
     try {
       const res = await fetchRooms({ page: 1, limit: 1000 });
       setAllRooms(res.items);
     } catch (error: any) {
       console.error(error);
     }
-  };
+  }, []);
 
-  const loadRoomTypePrices = async () => {
+  const loadRoomTypePrices = useCallback(async () => {
     try {
       const res = await fetchRoomTypePricing();
       setRoomTypePrices(res.prices || null);
     } catch (error: any) {
       console.error(error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadDorms();
@@ -182,7 +195,7 @@ export default function AdminRoomsPage() {
     loadRooms();
     loadAllRoomsForCapacity();
     loadRoomTypePrices();
-  }, []);
+  }, [loadDorms, loadBlocks, loadRooms, loadAllRoomsForCapacity, loadRoomTypePrices]);
 
   const openDetails = async (record: Room) => {
     setDetailsRoom(record);
@@ -606,6 +619,10 @@ export default function AdminRoomsPage() {
                 setFilterRoomType(undefined);
                 setFilterStudentType(undefined);
                 setFilterStatus(undefined);
+                filterSearchRef.current = '';
+                filterRoomTypeRef.current = undefined;
+                filterStudentTypeRef.current = undefined;
+                filterStatusRef.current = undefined;
                 loadRooms();
               }}
             >

@@ -113,7 +113,14 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
     };
 
     fetchPenalty();
-  }, [open, report?.id, report?.status, report?.reported_student?.student_code]);
+  }, [
+    open,
+    report,
+    report?.id,
+    report?.status,
+    report?.reported_student?.student_code,
+    report?.report_code,
+  ]);
 
   const handleStartReview = () => {
     setIsReviewing(true);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Table,
   Tag,
@@ -400,71 +400,66 @@ export default function ManagerInvoicesPage() {
     paidAmount: 0,
   });
 
-  const buildFilter = useCallback((): ManagerInvoiceFilter => {
-    const f: ManagerInvoiceFilter = { page, limit: 25 };
-    if (studentCode.trim()) f.student_code = studentCode.trim();
-    if (statusFilter) f.payment_status = statusFilter;
-    if (monthFilter) f.invoice_month = monthFilter;
-    if (roomFilter) f.room_id = roomFilter;
-    else if (blockFilter) f.block_id = blockFilter;
-    return f;
-  }, [
-    page,
-    studentCode,
-    statusFilter,
-    monthFilter,
-    blockFilter,
-    roomFilter,
-  ]);
+  const studentCodeRef = useRef(studentCode);
+  const statusFilterRef = useRef(statusFilter);
+  const monthFilterRef = useRef(monthFilter);
+  const blockFilterRef = useRef(blockFilter);
+  const roomFilterRef = useRef(roomFilter);
 
-  const fetchData = useCallback(
-    async (p = page) => {
-      setLoading(true);
-      try {
-        const f: ManagerInvoiceFilter = { ...buildFilter(), page: p };
-        const res = await getManagerInvoices(f);
-        setInvoices(res.data);
-        setTotal(res.total);
+  studentCodeRef.current = studentCode;
+  statusFilterRef.current = statusFilter;
+  monthFilterRef.current = monthFilter;
+  blockFilterRef.current = blockFilter;
+  roomFilterRef.current = roomFilter;
 
-        // Compute stats from current page (approximation from full list on first load)
-        if (
-          p === 1 &&
-          !studentCode &&
-          !statusFilter &&
-          !monthFilter &&
-          !blockFilter &&
-          !roomFilter
-        ) {
-          const allRes = await getManagerInvoices({ limit: 1000 });
-          const all = allRes.data;
-          setStats({
-            total: all.length,
-            paid: all.filter(i => i.payment_status === 'paid').length,
-            unpaid: all.filter(i => i.payment_status === 'unpaid')
-              .length,
-            overdue: all.filter(i => i.payment_status === 'overdue')
-              .length,
-            totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
-            paidAmount: all
-              .filter(i => i.payment_status === 'paid')
-              .reduce((s, i) => s + i.total_amount, 0),
-          });
-        }
-      } catch {
-        message.error('Failed to load invoices');
-      } finally {
-        setLoading(false);
+  const fetchData = useCallback(async (p = 1) => {
+    setLoading(true);
+    try {
+      const currentStudentCode = studentCodeRef.current.trim();
+      const currentStatusFilter = statusFilterRef.current;
+      const currentMonthFilter = monthFilterRef.current;
+      const currentBlockFilter = blockFilterRef.current;
+      const currentRoomFilter = roomFilterRef.current;
+
+      const f: ManagerInvoiceFilter = { page: p, limit: 25 };
+      if (currentStudentCode) f.student_code = currentStudentCode;
+      if (currentStatusFilter) f.payment_status = currentStatusFilter;
+      if (currentMonthFilter) f.invoice_month = currentMonthFilter;
+      if (currentRoomFilter) f.room_id = currentRoomFilter;
+      else if (currentBlockFilter) f.block_id = currentBlockFilter;
+
+      const res = await getManagerInvoices(f);
+      setInvoices(res.data);
+      setTotal(res.total);
+
+      // Compute stats from current page (approximation from full list on first load)
+      if (
+        p === 1 &&
+        !currentStudentCode &&
+        !currentStatusFilter &&
+        !currentMonthFilter &&
+        !currentBlockFilter &&
+        !currentRoomFilter
+      ) {
+        const allRes = await getManagerInvoices({ limit: 1000 });
+        const all = allRes.data;
+        setStats({
+          total: all.length,
+          paid: all.filter(i => i.payment_status === 'paid').length,
+          unpaid: all.filter(i => i.payment_status === 'unpaid').length,
+          overdue: all.filter(i => i.payment_status === 'overdue').length,
+          totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
+          paidAmount: all
+            .filter(i => i.payment_status === 'paid')
+            .reduce((s, i) => s + i.total_amount, 0),
+        });
       }
-    },
-    [
-      buildFilter,
-      studentCode,
-      statusFilter,
-      monthFilter,
-      blockFilter,
-      roomFilter,
-    ],
-  );
+    } catch {
+      message.error('Failed to load invoices');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const refreshStats = async () => {
     try {
@@ -489,7 +484,7 @@ export default function ManagerInvoicesPage() {
   useEffect(() => {
     fetchData(1);
     setPage(1);
-  }, []);
+  }, [fetchData]);
 
   useEffect(() => {
     fetchBlocks({ limit: 200 })
@@ -515,6 +510,11 @@ export default function ManagerInvoicesPage() {
     setBlockFilter('');
     setRoomFilter('');
     setPage(1);
+    studentCodeRef.current = '';
+    statusFilterRef.current = '';
+    monthFilterRef.current = '';
+    blockFilterRef.current = '';
+    roomFilterRef.current = '';
     fetchData(1);
   };
 
