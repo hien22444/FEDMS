@@ -1,5 +1,17 @@
 import { ROUTES } from '@/constants';
 
+type RequestBody = BodyInit | object | null | undefined;
+type ApiRequestConfig = Omit<RequestInit, 'body'> & {
+  body?: RequestBody;
+};
+
+const isJsonBody = (value: unknown): value is object =>
+  value !== null &&
+  typeof value === 'object' &&
+  !(value instanceof FormData) &&
+  !(value instanceof Blob) &&
+  !(value instanceof URLSearchParams);
+
 class ApiRequest {
   private baseUrl: string;
   private isRefreshing = false;
@@ -38,29 +50,29 @@ class ApiRequest {
 
   private async request<T>(
     url: string,
-    config: RequestInit = {},
+    config: ApiRequestConfig = {},
     isRetry = false,
   ): Promise<T> {
     // Get token from localStorage
     const token = localStorage.getItem('token');
+    const { body, headers: configHeaders, ...rest } = config;
 
     const headers: HeadersInit = {
       Accept: 'application/json',
       'Accept-Language': 'en',
       ...(token && { Authorization: `Bearer ${token}` }),
-      ...(config.headers as Record<string, string>),
+      ...(configHeaders as Record<string, string>),
     };
 
-    if (
-      config.body &&
-      typeof config.body === 'object' &&
-      !(config.body instanceof FormData)
-    ) {
-      config.body = JSON.stringify(config.body);
+    let requestBody: BodyInit | null | undefined = body as BodyInit | null | undefined;
+
+    if (isJsonBody(body)) {
+      requestBody = JSON.stringify(body);
       headers['Content-Type'] = 'application/json';
     }
     const res = await fetch(`${this.baseUrl}/${url}`, {
-      ...config,
+      ...rest,
+      body: requestBody,
       headers,
     });
 
@@ -115,11 +127,11 @@ class ApiRequest {
     return (response as { data?: T }).data as T;
   }
 
-  async get<T>(url: string, config: RequestInit = {}) {
+  async get<T>(url: string, config: ApiRequestConfig = {}) {
     return this.request<T>(url, { ...config, method: 'GET' });
   }
 
-  async post<T>(url: string, body: unknown, config: RequestInit = {}) {
+  async post<T>(url: string, body: RequestBody, config: ApiRequestConfig = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'POST',
@@ -127,7 +139,7 @@ class ApiRequest {
     });
   }
 
-  async put<T>(url: string, body: unknown, config: RequestInit = {}) {
+  async put<T>(url: string, body: RequestBody, config: ApiRequestConfig = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'PUT',
@@ -135,11 +147,11 @@ class ApiRequest {
     });
   }
 
-  async delete<T>(url: string, config: RequestInit = {}) {
+  async delete<T>(url: string, config: ApiRequestConfig = {}) {
     return this.request<T>(url, { ...config, method: 'DELETE' });
   }
 
-  async patch<T>(url: string, body: unknown, config: RequestInit = {}) {
+  async patch<T>(url: string, body: RequestBody, config: ApiRequestConfig = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'PATCH',

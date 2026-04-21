@@ -1364,7 +1364,9 @@ export default function ManagerInvoicesPage() {
                   </div>
                   <Table
                     size='small'
-                    rowKey={r => r.item_type + r.description}
+                    rowKey={(r: { item_type?: string; description?: string }) =>
+                      `${r.item_type ?? ''}${r.description ?? ''}`
+                    }
                     dataSource={detailRecord.line_items}
                     pagination={false}
                     columns={[
