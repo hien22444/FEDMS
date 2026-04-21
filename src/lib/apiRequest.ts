@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { ROUTES } from '@/constants';
 
 class ApiRequest {
@@ -121,7 +119,7 @@ class ApiRequest {
     return this.request<T>(url, { ...config, method: 'GET' });
   }
 
-  async post<T>(url: string, body: any, config: RequestInit = {}) {
+  async post<T>(url: string, body: unknown, config: RequestInit = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'POST',
@@ -129,7 +127,7 @@ class ApiRequest {
     });
   }
 
-  async put<T>(url: string, body: any, config: RequestInit = {}) {
+  async put<T>(url: string, body: unknown, config: RequestInit = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'PUT',
@@ -141,7 +139,7 @@ class ApiRequest {
     return this.request<T>(url, { ...config, method: 'DELETE' });
   }
 
-  async patch<T>(url: string, body: any, config: RequestInit = {}) {
+  async patch<T>(url: string, body: unknown, config: RequestInit = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'PATCH',
