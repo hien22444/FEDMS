@@ -30,7 +30,7 @@ export default function DetectionToast({ notification, onDismiss }: DetectionToa
 
   const handleClick = () => {
     onDismiss();
-    navigate(ROUTES.CAMERA_CHECKIN);
+    navigate(ROUTES.CAMERA_MANAGEMENT);
   };
 
   return (

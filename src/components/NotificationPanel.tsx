@@ -25,7 +25,7 @@ export default function NotificationPanel({
 
   const handleItemClick = () => {
     onClose();
-    navigate(ROUTES.CAMERA_CHECKIN);
+    navigate(ROUTES.CAMERA_MANAGEMENT);
   };
 
   return (

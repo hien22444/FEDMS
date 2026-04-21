@@ -8,7 +8,7 @@ export const ROUTES = {
   // Security
   SECURITY_DASHBOARD: '/security',
   DASHBOARD: '/security',
-  CAMERA_CHECKIN: '/security/camera-checkin',
+  CAMERA_MANAGEMENT: '/security/camera-management',
   CHECKOUT_REQUESTS: '/security/checkout-requests',
   VISITORS: '/security/visitors',
   SECURITY_REPORT_VIOLATION: '/security/report-violation',
