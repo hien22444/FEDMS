@@ -54,7 +54,6 @@ export function useCameraFeed() {
     });
 
     // No cleanup — listeners persist for the app lifecycle
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return state;

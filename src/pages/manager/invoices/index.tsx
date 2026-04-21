@@ -1388,8 +1388,7 @@ export default function ManagerInvoicesPage() {
                         title: 'Description',
                         dataIndex: 'description',
                         key: 'desc',
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        render: (v: string, r: any) =>
+                        render: (v: string, r: { item_type?: string }) =>
                           r.item_type === 'water' ? 'Fine' : v,
                       },
                       {

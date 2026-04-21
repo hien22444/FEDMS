@@ -122,22 +122,22 @@ export default function ViolationListPage() {
   };
 
   const handleDelete = async (id: string) => {
-    Modal.confirm({
-      title: 'Confirm Delete',
-      content: 'Are you sure you want to delete this violation report?',
-      okText: 'Delete',
-      cancelText: 'Cancel',
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await deleteViolationReport(id);
-          message.success('Violation report deleted successfully');
-          fetchData(pagination.page);
-        } catch (error) {
-          message.error('Failed to delete violation report');
-        }
-      },
-    });
+      Modal.confirm({
+        title: 'Confirm Delete',
+        content: 'Are you sure you want to delete this violation report?',
+        okText: 'Delete',
+        cancelText: 'Cancel',
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          try {
+            await deleteViolationReport(id);
+            message.success('Violation report deleted successfully');
+            fetchData(pagination.page);
+          } catch {
+            message.error('Failed to delete violation report');
+          }
+        },
+      });
   };
 
   const handleModalClose = (refreshData?: boolean) => {

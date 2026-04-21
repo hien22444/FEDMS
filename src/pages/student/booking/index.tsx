@@ -273,7 +273,6 @@ const Booking: React.FC = () => {
     if (windowStatus?.dorm_booking_suspended) {
       void loadMyBookings();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowStatus?.dorm_booking_suspended]);
 
   // Release soft lock when navigating away
@@ -282,7 +281,6 @@ const Booking: React.FC = () => {
       if (selectedBed) softUnlockBed(selectedBed.id).catch(() => { });
       if (softLockTimerRef.current) clearTimeout(softLockTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBed]);
 
   // Countdown chỉ bắt đầu khi người dùng click "Click to pay"

@@ -1,5 +1,4 @@
 /* eslint-disable no-useless-escape */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Upload } from 'antd';
 import toast from 'react-hot-toast';
 import { parse } from 'tldts';
@@ -142,17 +141,20 @@ export const beforeUploadFile = async (
 };
 
 // Normalize Ant Design's file input event
-export const normFile = (e: any) => {
+export const normFile = (e: unknown) => {
   if (Array.isArray(e)) {
     return e;
   }
-  return e?.fileList;
+  if (e && typeof e === 'object' && 'fileList' in e) {
+    return (e as { fileList?: unknown[] }).fileList;
+  }
+  return undefined;
 };
 
 // Append empty arrays to FormData to ensure backend receives them
 export const ensureEmptyArrays = (
   formData: FormData,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
 ) => {
   Object.entries(data).forEach(([key, value]) => {
     if (Array.isArray(value) && value.length === 0) {

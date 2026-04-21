@@ -32,7 +32,6 @@ export default function ManagerNewsPage() {
     } catch (error: any) {
       console.error(error);
       message.error('Failed to load news list');
-    } finally {
     }
   };
 
@@ -260,4 +259,3 @@ export default function ManagerNewsPage() {
     </div>
   );
 }
-
