@@ -1087,7 +1087,7 @@ export default function ManagerRequestsPage() {
                 <Text type="secondary" className="block mb-1 font-medium">
                   Evidence Imaging
                 </Text>
-                <Text type="disabled">No evidence imaging provided</Text>
+                <Text disabled>No evidence imaging provided</Text>
               </div>
             )}
             <div>

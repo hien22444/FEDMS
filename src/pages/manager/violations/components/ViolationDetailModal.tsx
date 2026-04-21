@@ -52,11 +52,6 @@ const reporterTypeConfig: Record<ReporterType, { label: string }> = {
   [ReporterType.MANAGER]: { label: 'Manager' },
 };
 
-const penaltyTypeConfig: Record<PenaltyType, { label: string; maxPoints: number }> = {
-  [PenaltyType.MINOR]: { label: 'Minor', maxPoints: 2 },
-  [PenaltyType.SEVERE]: { label: 'Severe', maxPoints: 5 },
-};
-
 export default function ViolationDetailModal({ open, report, onClose }: Props) {
   const { modal } = App.useApp();
   const [form] = Form.useForm();

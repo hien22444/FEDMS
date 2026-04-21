@@ -117,7 +117,7 @@ type UnifiedListItem = {
 };
 
 const Requests: React.FC = () => {
-  const { message, modal, notification } = App.useApp();
+  const { message } = App.useApp();
   const { token } = theme.useToken();
   const [searchParams, setSearchParams] = useSearchParams();
   const { width } = useWindowSize();
@@ -733,7 +733,7 @@ const Requests: React.FC = () => {
               </div>
             ) : (
               <div>
-                <Text type="secondary">Evidence:</Text> <Text type="disabled">No evidence images provided</Text>
+                <Text type="secondary">Evidence:</Text> <Text disabled>No evidence images provided</Text>
               </div>
             )}
             <div>
@@ -1825,7 +1825,6 @@ const MaintenanceForm: React.FC<{
   openRequest?: StudentMaintenanceRequest | null;
 }> = ({ onSuccess, openRequest = null }) => {
   const { message } = App.useApp();
-  const { token } = theme.useToken();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
@@ -2305,7 +2304,6 @@ const OtherRequestForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) =
 
 // ─── Checkout Request Form ───
 const CheckoutRequestForm: React.FC<{ onSuccess: () => void; onClose: () => void }> = ({ onSuccess, onClose }) => {
-  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
