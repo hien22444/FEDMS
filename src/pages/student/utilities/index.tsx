@@ -22,6 +22,16 @@ const formatMonthYear = (value?: string | Date) =>
         year: 'numeric',
       }).format(new Date(value))
     : '-';
+const formatInvoiceMonth = (value?: string) => {
+  if (!value) return '-';
+  const [year, month] = value.split('-').map(Number);
+  if (!year || !month) return value;
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'UTC',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+};
 
 const statusColor: Record<string, string> = {
   unpaid: 'red',
@@ -155,12 +165,7 @@ const Utilities = () => {
         title: 'Month',
         dataIndex: 'invoice_month',
         key: 'invoice_month',
-        render: (value: string) => {
-          const [year, month] = value.split('-');
-          return month && year
-            ? formatMonthYear(new Date(Number(year), Number(month) - 1, 1))
-            : value;
-        },
+        render: (value: string) => formatInvoiceMonth(value),
       },
       {
         title: 'Electricity Fee',
