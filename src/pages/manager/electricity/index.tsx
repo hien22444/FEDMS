@@ -20,8 +20,6 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const getErrorMessage = (error: unknown, fallback: string) =>
   (error as { message?: string })?.message || fallback;
-const formatDateDMY = (value?: string | Date) =>
-  value ? new Intl.DateTimeFormat('en-GB').format(new Date(value)) : '—';
 
 const MONTHS = [
   { label: 'All', value: '' },
