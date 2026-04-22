@@ -105,7 +105,24 @@ const DateConfigPage: React.FC = () => {
     }
   };
 
+  const holdEndDate = holdRange?.[1] ?? null;
+  const newStartDate = newRange?.[0] ?? null;
+
+  // Bed Hold end must be strictly before New Booking start
+  const holdDisabledDate = (current: Dayjs) => {
+    if (!newStartDate) return false;
+    return !current.isBefore(newStartDate, 'day');
+  };
+  const newDisabledDate = (current: Dayjs) => {
+    if (!holdEndDate) return false;
+    return !current.isAfter(holdEndDate, 'day');
+  };
+
   const handleSave = async () => {
+    if (holdEndDate && newStartDate && !holdEndDate.isBefore(newStartDate, 'day')) {
+      toast.error('Bed Hold Period end date must be before New Booking Period start date');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -260,9 +277,10 @@ const DateConfigPage: React.FC = () => {
           onChange={(val) => setHoldRange(val as RangeValue)}
           style={{ width: '100%' }}
           format="DD/MM/YYYY"
-          allowClear
           size="large"
           placeholder={['Start date', 'End date']}
+          allowClear={false}
+          disabledDate={holdDisabledDate}
         />
         {config?.hold_window.start && config?.hold_window.end && (
           <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: 'block' }}>
@@ -301,9 +319,10 @@ const DateConfigPage: React.FC = () => {
           onChange={(val) => setNewRange(val as RangeValue)}
           style={{ width: '100%' }}
           format="DD/MM/YYYY"
-          allowClear
           size="large"
           placeholder={['Start date', 'End date']}
+          allowClear={false}
+          disabledDate={newDisabledDate}
         />
         {config?.new_booking_window.start && config?.new_booking_window.end && (
           <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: 'block' }}>
