@@ -13,10 +13,11 @@ import { brandPalette } from '@/themes/brandPalette';
 
 const { Title, Text } = Typography;
 const formatDateDMY = (value?: string | Date) =>
-  value ? new Intl.DateTimeFormat('en-GB').format(new Date(value)) : '-';
+  value ? new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC' }).format(new Date(value)) : '-';
 const formatMonthYear = (value?: string | Date) =>
   value
     ? new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'UTC',
         month: 'long',
         year: 'numeric',
       }).format(new Date(value))
