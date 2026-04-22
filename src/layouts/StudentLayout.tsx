@@ -17,6 +17,7 @@ import {
 import {
   HomeOutlined,
   FileTextOutlined,
+  BookOutlined,
   CalendarOutlined,
   KeyOutlined,
   ThunderboltOutlined,
@@ -280,6 +281,7 @@ const StudentLayout = () => {
     () => [
       { key: ROUTES.STUDENT_DASHBOARD, icon: <HomeOutlined />, label: 'Home' },
       { key: ROUTES.STUDENT_NEWS, icon: <FileTextOutlined />, label: 'News' },
+      { key: ROUTES.STUDENT_DORM_RULES, icon: <BookOutlined />, label: 'Dorm Rules' },
       { key: ROUTES.STUDENT_SCHEDULE, icon: <CalendarOutlined />, label: 'Room History' },
       { key: ROUTES.STUDENT_BOOKING, icon: <KeyOutlined />, label: 'Booking' },
       { key: ROUTES.STUDENT_UTILITIES, icon: <ThunderboltOutlined />, label: 'Utilities' },
