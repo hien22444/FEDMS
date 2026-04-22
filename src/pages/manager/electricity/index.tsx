@@ -262,7 +262,7 @@ export default function ElectricityPage() {
       dataIndex: 'date',
       key: 'date',
       width: 120,
-      render: (d: string) => formatDateDMY(d),
+      render: (d: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC' }).format(new Date(d)),
     },
     {
       title: 'Meter Reading',
