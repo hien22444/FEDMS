@@ -128,6 +128,8 @@ const Booking: React.FC = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [confirmKeepModal, setConfirmKeepModal] = useState(false);
   const [holdSuccess, setHoldSuccess] = useState(false);
+  const [newBookingSuccess, setNewBookingSuccess] = useState(false);
+  const [newBookingConfirmed, setNewBookingConfirmed] = useState<BookingRequestItem | null>(null);
 
   // ─── Payment state ───
   const [paymentBooking, setPaymentBooking] = useState<BookingRequestItem | null>(null);
@@ -258,12 +260,27 @@ const Booking: React.FC = () => {
       if (windowStatus.window_type === 'hold') {
         loadActiveBooking();
       } else {
+        // Restore hold-bed success from backend signal (survives page refresh)
+        if (windowStatus.already_held) setHoldSuccess(true);
         setCheckingHoldStatus(true);
         loadActiveBooking().then(alreadyHeld => {
           setCheckingHoldStatus(false);
           if (!alreadyHeld) void loadNewBookingStateRef.current?.();
         });
       }
+    } else if (windowStatus && !windowStatus.allowed) {
+      if (windowStatus.already_held) {
+        // New booking window open but student has a hold booking — keep showing bed reserved
+        setHoldSuccess(true);
+      } else if (!windowStatus.already_booked) {
+        // Manager closed all booking windows — clear every session success state.
+        setNewBookingSuccess(false);
+        setNewBookingConfirmed(null);
+        setHoldSuccess(false);
+      }
+      // Still check for confirmed booking to populate success screen data.
+      setCheckingHoldStatus(true);
+      loadActiveBooking().catch(() => { }).finally(() => setCheckingHoldStatus(false));
     }
   }, [windowStatus]);
 
@@ -335,7 +352,8 @@ const Booking: React.FC = () => {
             resetForm();
             setView('form');
           } else {
-            message.success('Payment confirmed! Your booking is approved.');
+            setNewBookingConfirmed(paymentBooking);
+            setNewBookingSuccess(true);
             resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
           }
         }
@@ -365,6 +383,8 @@ const Booking: React.FC = () => {
         resetForm();
         setView('form');
       } else {
+        setNewBookingConfirmed(paymentBooking);
+        setNewBookingSuccess(true);
         resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
       }
     };
@@ -401,6 +421,8 @@ const Booking: React.FC = () => {
           if (windowStatus?.window_type === 'hold') {
             setHoldSuccess(true); resetForm(); setView('form');
           } else {
+            setNewBookingConfirmed(paymentBooking);
+            setNewBookingSuccess(true);
             resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
           }
         }
@@ -448,14 +470,59 @@ const Booking: React.FC = () => {
         (b) => b.status === 'approved' && new Date(b.end_date) > now && (!targetSem || b.semester !== targetSem)
       ) ?? null;
       setActiveBooking(active);
-      // Only flag as already kept if there's an approved, non-checked-out booking for the exact target semester
-      const alreadyKept = active != null && !!targetSem && data.items.some(
-        (b) => b.status === 'approved' && b.semester === targetSem && !b.checkout_date
-      );
-      if (alreadyKept) {
-        setHoldSuccess(true);
+      // Check if student already has an approved booking for the target semester
+      const targetBooking = !!targetSem
+        ? data.items.find((b) => b.status === 'approved' && b.semester === targetSem && !b.checkout_date) ?? null
+        : null;
+
+      if (targetBooking) {
+        // Any approved booking for the target semester always shows the success screen
+        // — covers: New Booking Period open, already_booked, already_held (hold or new booking).
+        if (windowStatus?.window_type === 'new' || windowStatus?.already_booked || windowStatus?.already_held) {
+          setHoldSuccess(false);
+          setNewBookingConfirmed(targetBooking);
+          setNewBookingSuccess(true);
+          return true;
+        }
+
+        if (!active) {
+          // No previous-semester bed (same-semester NB period or first-time student) → new booking
+          setHoldSuccess(false);
+          setNewBookingConfirmed(targetBooking);
+          setNewBookingSuccess(true);
+        } else {
+          // Student has a previous bed: compare bed IDs to distinguish hold vs new booking
+          const sameBed = active.bed?.id != null && targetBooking.bed?.id != null
+            ? active.bed.id === targetBooking.bed.id
+            : null;
+          if (sameBed === true) {
+            // Definitively the same bed → hold booking, ignore any backend already_booked flag
+            setNewBookingSuccess(false);
+            setNewBookingConfirmed(null);
+            setHoldSuccess(true);
+          } else if (sameBed === false) {
+            // Definitively a different bed → new booking
+            setHoldSuccess(false);
+            setNewBookingConfirmed(targetBooking);
+            setNewBookingSuccess(true);
+          } else {
+            // Bed IDs unavailable — fall back to backend flags; default to hold when ambiguous
+            if (windowStatus?.already_held || (!windowStatus?.already_booked && !newBookingSuccess)) {
+              setNewBookingSuccess(false);
+              setNewBookingConfirmed(null);
+              setHoldSuccess(true);
+            } else {
+              setHoldSuccess(false);
+              setNewBookingConfirmed(targetBooking);
+              setNewBookingSuccess(true);
+            }
+          }
+        }
         return true;
       }
+      // No approved booking for target semester — clear any stale success state from a previous semester
+      setNewBookingSuccess(false);
+      setNewBookingConfirmed(null);
       // Restore "Awaiting Payment" state if there's already a pending keepBed booking for the target semester
       const pendingKeep = active != null && !!targetSem
         ? data.items.find(
@@ -471,7 +538,12 @@ const Booking: React.FC = () => {
             return false; // stay on hold-bed view; activeBooking is already set above
           }
           if (statusResult.paid || statusResult.status === 'approved') {
-            setHoldSuccess(true);
+            if (windowStatus?.window_type === 'hold' || windowStatus?.already_held) {
+              setHoldSuccess(true);
+            } else {
+              setNewBookingConfirmed(pendingKeep);
+              setNewBookingSuccess(true);
+            }
             return true;
           }
         } catch { /* booking already deleted or network error — fall through to restore view */ }
@@ -511,10 +583,30 @@ const Booking: React.FC = () => {
             return;
           }
           if (statusResult.paid || statusResult.status === 'approved') {
+            setNewBookingConfirmed(pending);
+            setNewBookingSuccess(true);
             resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
             return;
           }
         } catch { /* booking already deleted or network error — fall through to restore view */ }
+
+        // Webhook may not have processed yet (user just returned from PayOS).
+        // Wait 2 s and retry once to avoid a brief payment-view flash on successful payments.
+        await new Promise<void>(r => setTimeout(r, 2000));
+        try {
+          const retryResult = await checkPaymentStatus(pending.id);
+          if (retryResult.status === 'cancelled' || retryResult.status === 'expired') {
+            await cancelBookingRequest(pending.id).catch(() => { });
+            loadRoomTypes();
+            return;
+          }
+          if (retryResult.paid || retryResult.status === 'approved') {
+            setNewBookingConfirmed(pending);
+            setNewBookingSuccess(true);
+            resetForm(); setView('form'); setActiveTab('my'); loadMyBookings();
+            return;
+          }
+        } catch { /* fall through to restore payment view */ }
 
         // Still genuinely awaiting payment: restore payment view
         setPaymentBooking(pending);
@@ -1379,30 +1471,120 @@ const Booking: React.FC = () => {
     );
   };
 
-  // ─── Render: Already Held (holdSuccess but window changed to 'new') ───
-  const renderAlreadyHeld = () => {
-    const dormName = activeBooking?.room?.block?.dorm?.dorm_name ?? '—';
-    const blockCode = activeBooking?.room?.block?.block_code ?? '';
-    const roomNum = activeBooking?.room?.room_number ?? '—';
-    const bedNum = activeBooking?.bed?.bed_number;
-    const semLabel = semester?.semester?.replace('-', ' - ') ?? '—';
+  // ─── Render: New Booking Success ───
+  const renderNewBookingSuccess = () => {
+    const b = newBookingConfirmed;
+    const dormName = b?.room?.block?.dorm?.dorm_name ?? '—';
+    const dormCode = b?.room?.block?.dorm?.dorm_code ?? '';
+    const blockCode = b?.room?.block?.block_code ?? '';
+    const roomNum = b?.room?.room_number ?? '—';
+    const bedNum = b?.bed?.bed_number ?? b?.bed_transfer?.bed_number;
+    const semLabel = b?.semester?.replace('-', ' - ') ?? '—';
+    const floor = b?.room?.floor;
+    const roomType = b?.room?.room_type ?? '';
+    const roomLabel = dormCode && blockCode ? `${dormCode}${blockCode}-${roomNum}` : roomNum;
+    const beds = parseInt(roomType.split('_')[0], 10);
+    const roomTypeLabel = !isNaN(beds)
+      ? `${beds}-bed · ${roomType.includes('international') ? 'International' : 'Domestic'}`
+      : roomType || '—';
+
+    const detailItem = (label: string, value: React.ReactNode) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Text style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+          {label}
+        </Text>
+        <Text strong style={{ fontSize: 14, color: '#1f2937' }}>{value}</Text>
+      </div>
+    );
+
     return (
       <div style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '60vh',
-        textAlign: 'center',
-        padding: '40px 20px',
+        minHeight: '70vh',
+        padding: isTablet ? '48px 20px' : '32px 16px',
       }}>
-        <CheckCircleOutlined style={{ fontSize: 64, color: '#52c41a', marginBottom: 24 }} />
-        <Title level={3} style={{ color: '#1a3c6e', marginBottom: 8 }}>
-          You successfully reserved your bed for the term {semLabel}
+        {/* Success icon */}
+        <div style={{
+          width: 88,
+          height: 88,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 20,
+          boxShadow: '0 8px 32px rgba(250,140,22,0.22)',
+        }}>
+          <CheckCircleOutlined style={{ fontSize: 44, color: brandPalette.primary }} />
+        </div>
+
+        <Title level={2} style={{ color: '#1a3c6e', margin: '0 0 6px', fontWeight: 700, textAlign: 'center' }}>
+          Booking Confirmed!
         </Title>
-        <Text type="secondary" style={{ fontSize: 15, marginBottom: 16 }}>
-          {dormName} · {blockCode}-{roomNum}{bedNum != null ? ` · Bed ${bedNum}` : ''}
+        <Text style={{ color: '#6b7280', fontSize: 15, marginBottom: 32, textAlign: 'center' }}>
+          Your dormitory room has been successfully reserved.
         </Text>
+
+        {/* Detail card */}
+        <Card
+          style={{
+            width: '100%',
+            maxWidth: 520,
+            borderRadius: 16,
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+            overflow: 'hidden',
+          }}
+          styles={{ body: { padding: 0 } }}
+        >
+          {/* Card banner */}
+          <div style={{
+            background: `linear-gradient(135deg, ${brandPalette.primary} 0%, #ff9a3c 100%)`,
+            padding: '22px 28px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <div>
+              <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, display: 'block', marginBottom: 2 }}>
+                Room
+              </Text>
+              <Text style={{ color: '#fff', fontSize: 24, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                {roomLabel}
+              </Text>
+            </div>
+            {bedNum != null && (
+              <div style={{
+                background: 'rgba(255,255,255,0.18)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: 12,
+                padding: '10px 20px',
+                textAlign: 'center',
+              }}>
+                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, display: 'block' }}>BED</Text>
+                <Text style={{ color: '#fff', fontSize: 22, fontWeight: 700 }}>#{bedNum}</Text>
+              </div>
+            )}
+          </div>
+
+          {/* Details grid */}
+          <div style={{ padding: '24px 28px' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isTablet ? '1fr 1fr' : '1fr',
+              gap: '18px 32px',
+            }}>
+              {detailItem('Dormitory', dormName)}
+              {detailItem('Floor', floor != null ? `Floor ${floor}` : '—')}
+              {detailItem('Semester', semLabel)}
+              {detailItem('Room Type', roomTypeLabel)}
+            </div>
+          </div>
+        </Card>
+
 
       </div>
     );
@@ -1553,20 +1735,22 @@ const Booking: React.FC = () => {
       )}
 
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        {!windowStatus?.allowed ? renderNotStarted() : (
-          holdSuccess && windowStatus.window_type !== 'hold' ? renderAlreadyHeld() :
-            windowStatus.window_type === 'hold' ? renderHoldBed() : (
-              <Tabs
-                activeKey={activeTab}
-                onChange={setActiveTab}
-                centered={!isTablet}
-                items={[
-                  { key: 'new', label: 'New Booking', children: renderBookingForm() },
-                  { key: 'my', label: 'My Requests', children: renderMyRequests() },
-                ]}
-              />
-            )
-        )}
+        {(newBookingSuccess || windowStatus?.already_booked || windowStatus?.already_held)
+          ? renderNewBookingSuccess() :
+          !windowStatus?.allowed ? renderNotStarted() :
+            windowStatus.window_type === 'hold' ? renderHoldBed() :
+              (
+                <Tabs
+                  activeKey={activeTab}
+                  onChange={setActiveTab}
+                  centered={!isTablet}
+                  items={[
+                    { key: 'new', label: 'New Booking', children: renderBookingForm() },
+                    { key: 'my', label: 'My Requests', children: renderMyRequests() },
+                  ]}
+                />
+              )
+        }
       </div>
     </div>
   );

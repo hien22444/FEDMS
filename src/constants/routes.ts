@@ -28,6 +28,7 @@ export const ROUTES = {
   STUDENT_MAINTENANCE: '/student/maintenance',
   STUDENT_PROFILE: '/student/profile',
   STUDENT_CFD_POINTS: '/student/cfd-points',
+  STUDENT_DORM_RULES: '/student/dorm-rules',
   STUDENT_GUIDELINES: '/student/guidelines',
   STUDENT_FAQ: '/student/faq',
   STUDENT_NOTIFICATIONS: '/student/notifications',

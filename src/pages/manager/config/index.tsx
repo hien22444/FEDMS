@@ -18,6 +18,7 @@ import {
   ClockCircleOutlined,
   BookOutlined,
   InfoCircleOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { getDateConfig, updateDateConfig } from '@/lib/actions';
@@ -63,6 +64,12 @@ const semRank = (name: string | null, year: number | null) => {
   return year * 10 + SEMESTER_ORDER[name];
 };
 
+/** Sequential index across years: Spring-2026=0, Summer-2026=1, Fall-2026=2, Spring-2027=3, … */
+const semSequential = (name: string | null, year: number | null): number => {
+  if (!name || !year || !SEMESTER_ORDER[name]) return 0;
+  return year * 3 + (SEMESTER_ORDER[name] - 1);
+};
+
 const SectionLabel: React.FC<{ text: string }> = ({ text }) => (
   <Text style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13, color: '#374151' }}>
     {text}
@@ -105,7 +112,24 @@ const DateConfigPage: React.FC = () => {
     }
   };
 
+  const holdEndDate = holdRange?.[1] ?? null;
+  const newStartDate = newRange?.[0] ?? null;
+
+  // Bed Hold end must be strictly before New Booking start
+  const holdDisabledDate = (current: Dayjs) => {
+    if (!newStartDate) return false;
+    return !current.isBefore(newStartDate, 'day');
+  };
+  const newDisabledDate = (current: Dayjs) => {
+    if (!holdEndDate) return false;
+    return !current.isAfter(holdEndDate, 'day');
+  };
+
   const handleSave = async () => {
+    if (holdEndDate && newStartDate && !holdEndDate.isBefore(newStartDate, 'day')) {
+      toast.error('Bed Hold Period end date must be before New Booking Period start date');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -143,6 +167,12 @@ const DateConfigPage: React.FC = () => {
   const holdStatus = getWindowStatus(config?.hold_window.start ?? null, config?.hold_window.end ?? null);
   const newStatus  = getWindowStatus(config?.new_booking_window.start ?? null, config?.new_booking_window.end ?? null);
   const targetLabel = targetSemester && targetYear ? `${targetSemester}-${targetYear}` : null;
+
+  const cur = getCurrentSemester();
+  const semAhead = (targetSemester && targetYear)
+    ? semSequential(targetSemester, targetYear) - semSequential(cur.name, cur.year)
+    : null;
+  const isTooFarAhead = semAhead !== null && semAhead > 1;
 
   return (
     <div className="space-y-6">
@@ -228,11 +258,26 @@ const DateConfigPage: React.FC = () => {
             style={{ marginTop: 16, borderRadius: 8 }}
           />
         )}
+
+        {isTooFarAhead && (
+          <Alert
+            type="warning"
+            showIcon
+            icon={<WarningOutlined />}
+            style={{ marginTop: 16, borderRadius: 8 }}
+            message={
+              <span style={{ fontWeight: 600 }}>
+                Target semester is {semAhead} semester{semAhead! > 1 ? 's' : ''} ahead of the current semester ({cur.name}-{cur.year})
+              </span>
+            }
+            description={`Booking periods are typically opened for the immediately next semester. The selected target (${targetLabel}) skips ${semAhead! - 1} semester${semAhead! - 1 > 1 ? 's' : ''}. Please confirm this is intentional before saving.`}
+          />
+        )}
       </Card>
 
       {/* ── 2. Bed Hold Period ── */}
       <Card
-        style={{ borderRadius: 10, border: '1px solid #e8e8e8' }}
+        style={{ borderRadius: 10, border: isTooFarAhead ? '1.5px solid #faad14' : '1px solid #e8e8e8' }}
         bodyStyle={{ padding: 28 }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -245,13 +290,20 @@ const DateConfigPage: React.FC = () => {
               Period when students with an active contract can re-book their current bed for the next semester.
             </Text>
           </div>
-          <Tag
-            color={holdStatus.color}
-            icon={<CheckCircleOutlined />}
-            style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6 }}
-          >
-            {holdStatus.label}
-          </Tag>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            {isTooFarAhead && (
+              <Tag color="warning" icon={<WarningOutlined />} style={{ fontSize: 12, borderRadius: 6 }}>
+                {semAhead} sem ahead
+              </Tag>
+            )}
+            <Tag
+              color={holdStatus.color}
+              icon={<CheckCircleOutlined />}
+              style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6 }}
+            >
+              {holdStatus.label}
+            </Tag>
+          </div>
         </div>
 
         <SectionLabel text="Date Range" />
@@ -260,9 +312,10 @@ const DateConfigPage: React.FC = () => {
           onChange={(val) => setHoldRange(val as RangeValue)}
           style={{ width: '100%' }}
           format="DD/MM/YYYY"
-          allowClear
           size="large"
           placeholder={['Start date', 'End date']}
+          allowClear={false}
+          disabledDate={holdDisabledDate}
         />
         {config?.hold_window.start && config?.hold_window.end && (
           <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: 'block' }}>
@@ -273,7 +326,7 @@ const DateConfigPage: React.FC = () => {
 
       {/* ── 3. New Booking Period ── */}
       <Card
-        style={{ borderRadius: 10, border: '1px solid #e8e8e8' }}
+        style={{ borderRadius: 10, border: isTooFarAhead ? '1.5px solid #faad14' : '1px solid #e8e8e8' }}
         bodyStyle={{ padding: 28 }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -286,13 +339,20 @@ const DateConfigPage: React.FC = () => {
               Period when students without an active bed can book a new room.
             </Text>
           </div>
-          <Tag
-            color={newStatus.color}
-            icon={<CheckCircleOutlined />}
-            style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6 }}
-          >
-            {newStatus.label}
-          </Tag>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            {isTooFarAhead && (
+              <Tag color="warning" icon={<WarningOutlined />} style={{ fontSize: 12, borderRadius: 6 }}>
+                {semAhead} sem ahead
+              </Tag>
+            )}
+            <Tag
+              color={newStatus.color}
+              icon={<CheckCircleOutlined />}
+              style={{ fontSize: 13, padding: '4px 12px', borderRadius: 6 }}
+            >
+              {newStatus.label}
+            </Tag>
+          </div>
         </div>
 
         <SectionLabel text="Date Range" />
@@ -301,9 +361,10 @@ const DateConfigPage: React.FC = () => {
           onChange={(val) => setNewRange(val as RangeValue)}
           style={{ width: '100%' }}
           format="DD/MM/YYYY"
-          allowClear
           size="large"
           placeholder={['Start date', 'End date']}
+          allowClear={false}
+          disabledDate={newDisabledDate}
         />
         {config?.new_booking_window.start && config?.new_booking_window.end && (
           <Text type="secondary" style={{ fontSize: 12, marginTop: 6, display: 'block' }}>

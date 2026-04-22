@@ -77,6 +77,7 @@ const UtilitiesPage = lazy(() => import('@/pages/student/utilities'));
 const PaymentPage = lazy(() => import('@/pages/student/payment'));
 const RequestsPage = lazy(() => import('@/pages/student/requests'));
 const CFDPage = lazy(() => import('@/pages/student/cfd-points'));
+const DormRulesPage = lazy(() => import('@/pages/student/dorm-rules'));
 const GuidelinesPage = lazy(() => import('@/pages/student/guidelines'));
 const MaintenancePage = lazy(() => import('@/pages/student/maintenance'));
 const FAQPage = lazy(() => import('@/pages/student/faq'));
@@ -169,6 +170,10 @@ const router = createBrowserRouter([
               {
                 path: ROUTES.STUDENT_CFD_POINTS,
                 element: <CFDPage />,
+              },
+              {
+                path: ROUTES.STUDENT_DORM_RULES,
+                element: <DormRulesPage />,
               },
               {
                 path: ROUTES.STUDENT_GUIDELINES,
