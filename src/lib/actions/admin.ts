@@ -752,6 +752,12 @@ export const getDormRuleFileAccessUrl = async (
   return api.get<DormRuleFileAccessUrlResponse>(`agents/dorm-rules/files/${id}/access-url${query}`);
 };
 
+export const downloadDormRuleFile = async (id: string): Promise<Blob> => {
+  return api.get<Blob>(`agents/dorm-rules/files/${id}/download`, {
+    responseType: 'blob',
+  });
+};
+
 export const uploadDormRuleFile = async (file: File): Promise<DormRuleFile> => {
   const formData = new FormData();
   formData.append('file', file);
