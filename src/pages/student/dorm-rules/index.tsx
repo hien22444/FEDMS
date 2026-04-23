@@ -10,7 +10,7 @@ import {
   StarFilled,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { fetchDormRuleFiles, type DormRuleFile } from '@/lib/actions/admin';
+import { fetchDormRuleFiles, getDormRuleFileAccessUrl, type DormRuleFile } from '@/lib/actions/admin';
 
 const { Title, Text } = Typography;
 
@@ -66,19 +66,43 @@ export default function StudentDormRulesPage() {
     [files]
   );
 
-  const openFile = (file: DormRuleFile) => {
-    window.open(file.file_url, '_blank', 'noopener,noreferrer');
+  const openFile = async (file: DormRuleFile) => {
+    const tab = window.open('', '_blank');
+
+    try {
+      const { url } = await getDormRuleFileAccessUrl(file.id, false);
+
+      if (tab) {
+        tab.opener = null;
+        tab.location.href = url;
+        return;
+      }
+
+      window.location.href = url;
+    } catch (err: unknown) {
+      if (tab) {
+        tab.close();
+      }
+      const e = err as { message?: string };
+      setError(e?.message || 'Failed to open dorm rule file');
+    }
   };
 
-  const downloadFile = (file: DormRuleFile) => {
-    const link = document.createElement('a');
-    link.href = file.file_url;
-    link.download = file.original_name;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  const downloadFile = async (file: DormRuleFile) => {
+    try {
+      const { url } = await getDormRuleFileAccessUrl(file.id, true);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.original_name;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setError(e?.message || 'Failed to download dorm rule file');
+    }
   };
 
   return (
