@@ -23,6 +23,7 @@ import {
   fetchDormRules,
   updateDormRules,
   fetchDormRuleFiles,
+  getDormRuleFileAccessUrl,
   uploadDormRuleFile,
   setDormRuleFileFeatured,
   deleteDormRuleFile,
@@ -239,19 +240,43 @@ export default function AdminDormRulesPage() {
     }
   };
 
-  const handleOpenFile = (file: DormRuleFile) => {
-    window.open(file.file_url, '_blank', 'noopener,noreferrer');
+  const handleOpenFile = async (file: DormRuleFile) => {
+    const tab = window.open('', '_blank');
+
+    try {
+      const { url } = await getDormRuleFileAccessUrl(file.id, false);
+
+      if (tab) {
+        tab.opener = null;
+        tab.location.href = url;
+        return;
+      }
+
+      window.location.href = url;
+    } catch (err: unknown) {
+      if (tab) {
+        tab.close();
+      }
+      const e = err as { message?: string };
+      message.error(e?.message || 'Failed to open dorm rule file');
+    }
   };
 
-  const handleDownloadFile = (file: DormRuleFile) => {
-    const link = document.createElement('a');
-    link.href = file.file_url;
-    link.download = file.original_name;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  const handleDownloadFile = async (file: DormRuleFile) => {
+    try {
+      const { url } = await getDormRuleFileAccessUrl(file.id, true);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.original_name;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      message.error(e?.message || 'Failed to download dorm rule file');
+    }
   };
 
   const handleSetFeatured = async (file: DormRuleFile) => {
