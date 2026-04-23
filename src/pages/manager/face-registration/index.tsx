@@ -441,15 +441,6 @@ export default function FaceRegistrationPage() {
                       </div>
                     </div>
                   )}
-
-                  <p className="text-sm">
-                    <span className="text-gray-500">Photo:</span>{' '}
-                    {capturedImage ? (
-                      <Tag color="green">Captured</Tag>
-                    ) : (
-                      <Tag color="orange">Not captured</Tag>
-                    )}
-                  </p>
                 </div>
               ) : (
                 <p className="text-gray-400 text-sm">Select a student to begin</p>
