@@ -33,6 +33,7 @@ export namespace IFaceRecognition {
     det_score: number;
     is_match: boolean;
     access_log_id: string | null;
+    status_unchanged?: boolean;
   }
 
   export interface FaceDetectionResult {

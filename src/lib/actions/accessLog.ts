@@ -30,7 +30,7 @@ export const createManualLog = async (data: {
   name: string;
   idCard: string;
   type: 'check_in' | 'check_out';
-  reason: 'visitor' | 'other';
+  reason: 'camera_failed' | 'other';
   notes?: string;
 }) => {
   return api.post<IFaceRecognition.AccessLog>('access-logs/manual', data);
