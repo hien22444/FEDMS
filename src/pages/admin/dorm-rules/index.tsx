@@ -24,6 +24,7 @@ import {
   updateDormRules,
   fetchDormRuleFiles,
   getDormRuleFileAccessUrl,
+  downloadDormRuleFile,
   uploadDormRuleFile,
   setDormRuleFileFeatured,
   deleteDormRuleFile,
@@ -264,15 +265,15 @@ export default function AdminDormRulesPage() {
 
   const handleDownloadFile = async (file: DormRuleFile) => {
     try {
-      const { url } = await getDormRuleFileAccessUrl(file.id, true);
+      const blob = await downloadDormRuleFile(file.id);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = file.original_name;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
       link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err: unknown) {
       const e = err as { message?: string };
       message.error(e?.message || 'Failed to download dorm rule file');

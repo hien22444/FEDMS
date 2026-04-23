@@ -3,6 +3,7 @@ import { ROUTES } from '@/constants';
 type RequestBody = BodyInit | object | null | undefined;
 type ApiRequestConfig = Omit<RequestInit, 'body'> & {
   body?: RequestBody;
+  responseType?: 'json' | 'blob';
 };
 
 const isJsonBody = (value: unknown): value is object =>
@@ -48,6 +49,25 @@ class ApiRequest {
     }
   }
 
+  private async extractErrorMessage(res: Response): Promise<string> {
+    const contentType = res.headers.get('content-type') || '';
+
+    try {
+      const cloned = res.clone();
+
+      if (contentType.includes('application/json')) {
+        const response = await cloned.json();
+        const msg = response?.message;
+        return Array.isArray(msg) ? msg.join(', ') : (msg || res.statusText || 'An error occurred');
+      }
+
+      const text = await cloned.text();
+      return text || res.statusText || 'An error occurred';
+    } catch {
+      return res.statusText || 'An error occurred';
+    }
+  }
+
   private async request<T>(
     url: string,
     config: ApiRequestConfig = {},
@@ -83,6 +103,49 @@ class ApiRequest {
       headers,
     });
 
+    if (res.status === 401 && !isRetry) {
+      // Try to refresh the token (deduplicate concurrent refresh attempts)
+      if (!this.isRefreshing) {
+        this.isRefreshing = true;
+        this.refreshPromise = this.tryRefreshToken().finally(() => {
+          this.isRefreshing = false;
+          this.refreshPromise = null;
+        });
+      }
+
+      const refreshed = await this.refreshPromise;
+      if (refreshed) {
+        // Retry the original request with the new token
+        return this.request<T>(url, { ...config, headers: {} }, true);
+      }
+
+      // Refresh failed — clear tokens and redirect
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+
+      if (!window.location.pathname.includes('/signin') &&
+          !window.location.pathname.includes('/auth/google/callback') &&
+          !window.location.pathname.includes('/admin/login')) {
+        window.location.href = ROUTES.SIGN_IN;
+      }
+      return Promise.reject({
+        statusCode: res.status,
+        message: res.statusText || 'Unauthorized',
+      });
+    }
+
+    if (config.responseType === 'blob') {
+      if (!res.ok) {
+        const messageStr = await this.extractErrorMessage(res);
+        throw {
+          statusCode: res.status,
+          message: messageStr,
+        };
+      }
+
+      return (await res.blob()) as T;
+    }
+
     let response: { success?: boolean; message?: string | string[]; data?: T };
     try {
       response = await res.json();
@@ -98,34 +161,6 @@ class ApiRequest {
         statusCode: res.status,
         message: messageStr,
       };
-
-      if (res.status === 401 && !isRetry) {
-        // Try to refresh the token (deduplicate concurrent refresh attempts)
-        if (!this.isRefreshing) {
-          this.isRefreshing = true;
-          this.refreshPromise = this.tryRefreshToken().finally(() => {
-            this.isRefreshing = false;
-            this.refreshPromise = null;
-          });
-        }
-
-        const refreshed = await this.refreshPromise;
-        if (refreshed) {
-          // Retry the original request with the new token
-          return this.request<T>(url, { ...config, headers: {} }, true);
-        }
-
-        // Refresh failed — clear tokens and redirect
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-
-        if (!window.location.pathname.includes('/signin') &&
-            !window.location.pathname.includes('/auth/google/callback') &&
-            !window.location.pathname.includes('/admin/login')) {
-          window.location.href = ROUTES.SIGN_IN;
-        }
-        return Promise.reject(error);
-      }
 
       throw error;
     }
