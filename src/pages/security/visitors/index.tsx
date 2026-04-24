@@ -14,7 +14,6 @@ import {
   getAllVisitorRequests,
   approveVisitorRequest,
   rejectVisitorRequest,
-  completeVisitorRequest,
   getActiveVisitors,
   checkinVisitor,
   checkoutVisitor,
@@ -31,6 +30,10 @@ const VisitorsPage = () => {
   const [loading, setLoading] = useState(false);
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [checkoutModal, setCheckoutModal] = useState<{
+    checkinId: string;
+    visitorName: string;
+  } | null>(null);
   const [notice, setNotice] = useState<{ type: NoticeType; message: string } | null>(null);
 
   const fetchRequests = useCallback(async () => {
@@ -98,17 +101,6 @@ const VisitorsPage = () => {
     }
   };
 
-  const handleComplete = async (id: string) => {
-    try {
-      await completeVisitorRequest(id);
-      fetchRequests();
-      fetchActive();
-      setNotice({ type: 'success', message: 'Visitor request completed.' });
-    } catch (err: any) {
-      setNotice({ type: 'error', message: err?.message || 'Failed to complete.' });
-    }
-  };
-
   const handleCheckin = async (requestId: string, visitorId: string, timeFrom: string, timeTo: string) => {
     const now = new Date();
     const [fh, fm] = timeFrom.split(':').map(Number);
@@ -131,12 +123,17 @@ const VisitorsPage = () => {
     }
   };
 
-  const handleCheckout = async (checkinId: string) => {
+  const confirmCheckout = async () => {
+    if (!checkoutModal) return;
     try {
-      await checkoutVisitor(checkinId);
+      await checkoutVisitor(checkoutModal.checkinId);
+      setCheckoutModal(null);
       fetchActive();
       fetchRequests();
-      setNotice({ type: 'success', message: 'Visitor checked out successfully.' });
+      setNotice({
+        type: 'success',
+        message: 'Visitor checked out successfully. The request is completed when no active visitors remain.',
+      });
     } catch (err: any) {
       setNotice({ type: 'error', message: err?.message || 'Failed to check out.' });
     }
@@ -159,6 +156,16 @@ const VisitorsPage = () => {
     } catch {
       return dateStr;
     }
+  };
+
+  const isVisitDateToday = (dateStr: string) => {
+    const visitDate = new Date(dateStr);
+    const today = new Date();
+    return (
+      visitDate.getFullYear() === today.getFullYear() &&
+      visitDate.getMonth() === today.getMonth() &&
+      visitDate.getDate() === today.getDate()
+    );
   };
 
   return (
@@ -365,7 +372,12 @@ const VisitorsPage = () => {
                                   {formatTime(v.checkin.check_in_time)}
                                 </span>
                                 <button
-                                  onClick={() => handleCheckout(v.checkin!.id)}
+                                  onClick={() =>
+                                    setCheckoutModal({
+                                      checkinId: v.checkin!.id,
+                                      visitorName: v.full_name,
+                                    })
+                                  }
                                   className="bg-red-500 text-white px-3 py-1 rounded text-xs font-medium hover:bg-red-600 flex items-center gap-1"
                                 >
                                   <RiLogoutCircleLine />
@@ -375,6 +387,10 @@ const VisitorsPage = () => {
                             ) : v.checkin ? (
                               <span className="text-gray-400 text-xs flex items-center gap-1">
                                 <RiCheckDoubleLine className="w-3 h-3" /> Checked out
+                              </span>
+                            ) : !isVisitDateToday(req.visit_date) ? (
+                              <span className="text-gray-400 text-xs">
+                                Check-in available on {formatDate(req.visit_date)}
                               </span>
                             ) : (
                               <button
@@ -388,6 +404,36 @@ const VisitorsPage = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {req.status === 'completed' && req.visitors.length > 0 && (
+                    <div className="mt-3 border-t pt-3">
+                      <p className="text-xs text-gray-500 mb-2">Visitor Visit Details:</p>
+                      <div className="space-y-2">
+                        {req.visitors.map((v) => (
+                          <div
+                            key={v.id}
+                            className="rounded-lg border border-blue-100 bg-white/70 px-3 py-2 text-sm"
+                          >
+                            <div className="font-medium text-gray-900">{v.full_name}</div>
+                            <div className="mt-1 grid grid-cols-1 gap-1 text-gray-600 md:grid-cols-2">
+                              <span>
+                                Check-in:{' '}
+                                <span className="font-medium text-gray-800">
+                                  {v.checkin?.check_in_time ? formatTime(v.checkin.check_in_time) : '-'}
+                                </span>
+                              </span>
+                              <span>
+                                Check-out:{' '}
+                                <span className="font-medium text-gray-800">
+                                  {v.checkin?.check_out_time ? formatTime(v.checkin.check_out_time) : '-'}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -411,15 +457,6 @@ const VisitorsPage = () => {
                         Reject
                       </button>
                     </>
-                  )}
-                  {req.status === 'approved' && (
-                    <button
-                      onClick={() => handleComplete(req.id)}
-                      className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 flex items-center gap-1"
-                    >
-                      <RiCheckDoubleLine className="w-4 h-4" />
-                      Complete
-                    </button>
                   )}
                 </div>
               </div>
@@ -486,7 +523,12 @@ const VisitorsPage = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleCheckout(av.id)}
+                  onClick={() =>
+                    setCheckoutModal({
+                      checkinId: av.id,
+                      visitorName: av.visitor?.full_name || 'this visitor',
+                    })
+                  }
                   className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 whitespace-nowrap flex items-center gap-1"
                 >
                   <RiLogoutCircleLine className="w-4 h-4" />
@@ -501,6 +543,32 @@ const VisitorsPage = () => {
               No visitors currently in dormitory
             </div>
           )}
+        </div>
+      )}
+
+      {checkoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white p-6">
+            <h3 className="text-lg font-bold text-gray-900">Confirm Visitor Check-out</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Check out <span className="font-medium text-gray-900">{checkoutModal.visitorName}</span> now.
+              The request will be marked as completed when no active visitors remain.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setCheckoutModal(null)}
+                className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmCheckout}
+                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
+              >
+                Confirm Check Out
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
