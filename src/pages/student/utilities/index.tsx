@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Descriptions, Empty, Modal, Spin, Table, Tag, Typography, message, theme } from 'antd';
 import { ThunderboltOutlined, FileTextOutlined } from '@ant-design/icons';
 import { getMyEWUsages, type MyEWRecord } from '@/lib/actions/ewUsage';
@@ -10,6 +10,8 @@ import {
 } from '@/lib/actions/invoice';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { brandPalette } from '@/themes/brandPalette';
+import { connectSocket } from '@/lib/socket';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 const formatDateDMY = (value?: string | Date) =>
@@ -51,21 +53,33 @@ const Utilities = () => {
   const { token } = theme.useToken();
   const { width } = useWindowSize();
   const isTablet = width >= 768;
+  const location = useLocation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [blockName, setBlockName] = useState<string | null>(null);
   const [roomNumber, setRoomNumber] = useState<string | null>(null);
   const [records, setRecords] = useState<MyEWRecord[]>([]);
   const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
-  const [checkingInvoiceId, setCheckingInvoiceId] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<MyEWRecord | null>(null);
   const [noRoom, setNoRoom] = useState(false);
 
-  const replaceInvoice = (invoice: StudentInvoice) => {
+  const replaceInvoice = (invoice: Partial<StudentInvoice> & { id: string }) => {
     setInvoices((current) =>
-      current.map((item) => (item.id === invoice.id ? invoice : item))
+      current.map((item) => (item.id === invoice.id ? { ...item, ...invoice } : item))
     );
   };
+
+  const loadEWInvoices = useCallback(async () => {
+    const data = await getMyInvoices();
+    const ewInvoices = data
+      .filter((invoice) => invoice.invoice_code.startsWith('EW-'))
+      .sort(
+        (left, right) =>
+          new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+      );
+    setInvoices(ewInvoices);
+  }, []);
 
   useEffect(() => {
     const fetchEW = getMyEWUsages()
@@ -77,20 +91,89 @@ const Utilities = () => {
       })
       .catch(() => setNoRoom(true));
 
-    const fetchInvoices = getMyInvoices()
-      .then((data) => {
-        const ewInvoices = data
-          .filter((invoice) => invoice.invoice_code.startsWith('EW-'))
-          .sort(
-            (left, right) =>
-              new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
-          );
-        setInvoices(ewInvoices);
-      })
-      .catch(() => {});
+    const fetchInvoices = loadEWInvoices().catch(() => {});
 
     Promise.all([fetchEW, fetchInvoices]).finally(() => setLoading(false));
-  }, []);
+  }, [loadEWInvoices]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const paymentResult = params.get('payment');
+    const invoiceId = params.get('invoice');
+    if (!invoiceId || !paymentResult) return;
+    if (!['success', 'cancelled'].includes(paymentResult)) return;
+
+    let active = true;
+
+    const syncReturnedPayment = async () => {
+      try {
+        const result = await getInvoicePaymentStatus(invoiceId);
+        if (!active) return;
+
+        replaceInvoice({
+          ...result.invoice,
+          payos: result.payos ?? result.invoice.payos ?? null,
+        });
+
+        if (result.paid) {
+          message.success('Payment confirmed');
+        } else if (result.status === 'cancelled') {
+          message.warning(result.message || 'Payment was cancelled');
+        } else {
+          message.info(result.message || 'Payment is still pending');
+        }
+      } catch (err) {
+        if (!active) return;
+        message.error((err as { message?: string })?.message || 'Failed to refresh payment status');
+      } finally {
+        if (active) {
+          navigate('/student/utilities', { replace: true });
+        }
+      }
+    };
+
+    void syncReturnedPayment();
+    return () => {
+      active = false;
+    };
+  }, [location.search, navigate]);
+
+  useEffect(() => {
+    const socket = connectSocket();
+
+    const handleInvoiceUpdated = (payload: {
+      action?: 'created' | 'updated' | 'deleted';
+      invoiceId?: string;
+      invoice_code?: string;
+      payment_status?: StudentInvoice['payment_status'];
+      total_amount?: number;
+      invoice_month?: string;
+    }) => {
+      if (!payload?.invoice_code?.startsWith('EW-') || !payload.invoiceId) return;
+
+      if (payload.action === 'deleted') {
+        setInvoices((current) => current.filter((item) => item.id !== payload.invoiceId));
+        return;
+      }
+
+      if (payload.action === 'created') {
+        void loadEWInvoices().catch(() => {});
+        return;
+      }
+
+      replaceInvoice({
+        id: payload.invoiceId,
+        payment_status: payload.payment_status,
+        total_amount: payload.total_amount,
+        invoice_month: payload.invoice_month,
+      });
+    };
+
+    socket.on('invoice_updated', handleInvoiceUpdated);
+    return () => {
+      socket.off('invoice_updated', handleInvoiceUpdated);
+    };
+  }, [loadEWInvoices]);
 
   const latest = records[0];
   const latestMonthLabel = latest ? formatMonthYear(latest.date) : '-';
@@ -128,34 +211,6 @@ const Utilities = () => {
       message.error((err as { message?: string })?.message || 'Failed to open payment link');
     } finally {
       setPayingInvoiceId(null);
-    }
-  };
-
-  const handleCheckInvoiceStatus = async (invoice: StudentInvoice) => {
-    try {
-      setCheckingInvoiceId(invoice.id);
-      const result = await getInvoicePaymentStatus(invoice.id);
-      replaceInvoice({
-        ...invoice,
-        ...result.invoice,
-        payos: result.payos ?? invoice.payos ?? null,
-      });
-
-      if (result.paid) {
-        message.success('Payment confirmed');
-        return;
-      }
-
-      if (result.status === 'cancelled') {
-        message.warning(result.message || 'Payment was cancelled');
-        return;
-      }
-
-      message.info(result.message || 'Payment is still pending');
-    } catch (err) {
-      message.error((err as { message?: string })?.message || 'Failed to check payment status');
-    } finally {
-      setCheckingInvoiceId(null);
     }
   };
 
@@ -216,14 +271,6 @@ const Utilities = () => {
               disabled={!canPayInvoice(invoice)}
             >
               Pay Now
-            </Button>
-            <Button
-              size="small"
-              onClick={() => handleCheckInvoiceStatus(invoice)}
-              loading={checkingInvoiceId === invoice.id}
-              disabled={!canPayInvoice(invoice)}
-            >
-              Check Status
             </Button>
           </div>
         ),
