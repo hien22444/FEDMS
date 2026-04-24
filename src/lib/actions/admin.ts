@@ -740,6 +740,24 @@ export const fetchDormRuleFiles = async (): Promise<DormRuleFileListResponse> =>
   return api.get<DormRuleFileListResponse>('agents/dorm-rules/files');
 };
 
+export interface DormRuleFileAccessUrlResponse {
+  url: string;
+}
+
+export const getDormRuleFileAccessUrl = async (
+  id: string,
+  attachment = false
+): Promise<DormRuleFileAccessUrlResponse> => {
+  const query = attachment ? '?attachment=true' : '';
+  return api.get<DormRuleFileAccessUrlResponse>(`agents/dorm-rules/files/${id}/access-url${query}`);
+};
+
+export const downloadDormRuleFile = async (id: string): Promise<Blob> => {
+  return api.get<Blob>(`agents/dorm-rules/files/${id}/download`, {
+    responseType: 'blob',
+  });
+};
+
 export const uploadDormRuleFile = async (file: File): Promise<DormRuleFile> => {
   const formData = new FormData();
   formData.append('file', file);
