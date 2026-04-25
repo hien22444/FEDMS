@@ -53,8 +53,17 @@ export function useCameraFeed() {
       setState((prev) => ({ ...prev, recentLogs: recentLogsRef.current }));
     });
 
+    socket.on('access_log_updated', (data: { _id: string; face_snapshot_url: string }) => {
+      // Patch the matching log with the new snapshot URL (emitted after Cloudinary upload)
+      recentLogsRef.current = recentLogsRef.current.map((log) => {
+        const rawId = (log as unknown as { _id?: string })._id;
+        const matches = rawId === data._id || log.id === data._id;
+        return matches ? { ...log, face_snapshot_url: data.face_snapshot_url } : log;
+      });
+      setState((prev) => ({ ...prev, recentLogs: recentLogsRef.current }));
+    });
+
     // No cleanup — listeners persist for the app lifecycle
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return state;

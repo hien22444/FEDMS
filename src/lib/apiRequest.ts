@@ -1,6 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { ROUTES } from '@/constants';
+
+type RequestBody = BodyInit | object | null | undefined;
+type ApiRequestConfig = Omit<RequestInit, 'body'> & {
+  body?: RequestBody;
+  responseType?: 'json' | 'blob';
+};
+
+const isJsonBody = (value: unknown): value is object =>
+  value !== null &&
+  typeof value === 'object' &&
+  !(value instanceof FormData) &&
+  !(value instanceof Blob) &&
+  !(value instanceof URLSearchParams);
 
 class ApiRequest {
   private baseUrl: string;
@@ -38,33 +49,102 @@ class ApiRequest {
     }
   }
 
+  private async extractErrorMessage(res: Response): Promise<string> {
+    const contentType = res.headers.get('content-type') || '';
+
+    try {
+      const cloned = res.clone();
+
+      if (contentType.includes('application/json')) {
+        const response = await cloned.json();
+        const msg = response?.message;
+        return Array.isArray(msg) ? msg.join(', ') : (msg || res.statusText || 'An error occurred');
+      }
+
+      const text = await cloned.text();
+      return text || res.statusText || 'An error occurred';
+    } catch {
+      return res.statusText || 'An error occurred';
+    }
+  }
+
   private async request<T>(
     url: string,
-    config: RequestInit = {},
+    config: ApiRequestConfig = {},
     isRetry = false,
   ): Promise<T> {
-    // Get token from localStorage
     const token = localStorage.getItem('token');
+    const { body, headers: configHeaders, ...rest } = config;
 
-    const headers: HeadersInit = {
+    const headers = new Headers({
       Accept: 'application/json',
       'Accept-Language': 'en',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...(config.headers as Record<string, string>),
-    };
+      ...(configHeaders as Record<string, string>),
+    });
 
-    if (
-      config.body &&
-      typeof config.body === 'object' &&
-      !(config.body instanceof FormData)
-    ) {
-      config.body = JSON.stringify(config.body);
-      headers['Content-Type'] = 'application/json';
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
     }
+
+    let requestBody: BodyInit | null | undefined = body as BodyInit | null | undefined;
+
+    if (isJsonBody(body)) {
+      requestBody = JSON.stringify(body);
+      headers.set('Content-Type', 'application/json');
+    } else if ((body as unknown) instanceof FormData) {
+      // For FormData, we MUST NOT set Content-Type manually.
+      // fetch will automatically set it to 'multipart/form-data; boundary=...'
+      headers.delete('Content-Type');
+    }
+
     const res = await fetch(`${this.baseUrl}/${url}`, {
-      ...config,
+      ...rest,
+      body: requestBody,
       headers,
     });
+
+    if (res.status === 401 && !isRetry) {
+      // Try to refresh the token (deduplicate concurrent refresh attempts)
+      if (!this.isRefreshing) {
+        this.isRefreshing = true;
+        this.refreshPromise = this.tryRefreshToken().finally(() => {
+          this.isRefreshing = false;
+          this.refreshPromise = null;
+        });
+      }
+
+      const refreshed = await this.refreshPromise;
+      if (refreshed) {
+        // Retry the original request with the new token
+        return this.request<T>(url, { ...config, headers: {} }, true);
+      }
+
+      // Refresh failed — clear tokens and redirect
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+
+      if (!window.location.pathname.includes('/signin') &&
+          !window.location.pathname.includes('/auth/google/callback') &&
+          !window.location.pathname.includes('/admin/login')) {
+        window.location.href = ROUTES.SIGN_IN;
+      }
+      return Promise.reject({
+        statusCode: res.status,
+        message: res.statusText || 'Unauthorized',
+      });
+    }
+
+    if (config.responseType === 'blob') {
+      if (!res.ok) {
+        const messageStr = await this.extractErrorMessage(res);
+        throw {
+          statusCode: res.status,
+          message: messageStr,
+        };
+      }
+
+      return (await res.blob()) as T;
+    }
 
     let response: { success?: boolean; message?: string | string[]; data?: T };
     try {
@@ -82,34 +162,6 @@ class ApiRequest {
         message: messageStr,
       };
 
-      if (res.status === 401 && !isRetry) {
-        // Try to refresh the token (deduplicate concurrent refresh attempts)
-        if (!this.isRefreshing) {
-          this.isRefreshing = true;
-          this.refreshPromise = this.tryRefreshToken().finally(() => {
-            this.isRefreshing = false;
-            this.refreshPromise = null;
-          });
-        }
-
-        const refreshed = await this.refreshPromise;
-        if (refreshed) {
-          // Retry the original request with the new token
-          return this.request<T>(url, { ...config, headers: {} }, true);
-        }
-
-        // Refresh failed — clear tokens and redirect
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-
-        if (!window.location.pathname.includes('/signin') &&
-            !window.location.pathname.includes('/auth/google/callback') &&
-            !window.location.pathname.includes('/admin/login')) {
-          window.location.href = ROUTES.SIGN_IN;
-        }
-        return Promise.reject(error);
-      }
-
       throw error;
     }
 
@@ -117,11 +169,11 @@ class ApiRequest {
     return (response as { data?: T }).data as T;
   }
 
-  async get<T>(url: string, config: RequestInit = {}) {
+  async get<T>(url: string, config: ApiRequestConfig = {}) {
     return this.request<T>(url, { ...config, method: 'GET' });
   }
 
-  async post<T>(url: string, body: any, config: RequestInit = {}) {
+  async post<T>(url: string, body: RequestBody, config: ApiRequestConfig = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'POST',
@@ -129,7 +181,7 @@ class ApiRequest {
     });
   }
 
-  async put<T>(url: string, body: any, config: RequestInit = {}) {
+  async put<T>(url: string, body: RequestBody, config: ApiRequestConfig = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'PUT',
@@ -137,11 +189,11 @@ class ApiRequest {
     });
   }
 
-  async delete<T>(url: string, config: RequestInit = {}) {
+  async delete<T>(url: string, config: ApiRequestConfig = {}) {
     return this.request<T>(url, { ...config, method: 'DELETE' });
   }
 
-  async patch<T>(url: string, body: any, config: RequestInit = {}) {
+  async patch<T>(url: string, body: RequestBody, config: ApiRequestConfig = {}) {
     return this.request<T>(url, {
       ...config,
       method: 'PATCH',

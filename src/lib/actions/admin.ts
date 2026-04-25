@@ -718,6 +718,60 @@ export const updateDormRules = async (kb: DormRulesKB): Promise<{ message: strin
   return api.put<{ message: string }>('agents/dorm-rules', kb);
 };
 
+export interface DormRuleFile {
+  id: string;
+  original_name: string;
+  file_extension: string;
+  file_url: string;
+  cloudinary_public_id: string;
+  mime_type: string;
+  file_size: number;
+  is_featured: boolean;
+  uploaded_by: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DormRuleFileListResponse {
+  items: DormRuleFile[];
+}
+
+export const fetchDormRuleFiles = async (): Promise<DormRuleFileListResponse> => {
+  return api.get<DormRuleFileListResponse>('agents/dorm-rules/files');
+};
+
+export interface DormRuleFileAccessUrlResponse {
+  url: string;
+}
+
+export const getDormRuleFileAccessUrl = async (
+  id: string,
+  attachment = false
+): Promise<DormRuleFileAccessUrlResponse> => {
+  const query = attachment ? '?attachment=true' : '';
+  return api.get<DormRuleFileAccessUrlResponse>(`agents/dorm-rules/files/${id}/access-url${query}`);
+};
+
+export const downloadDormRuleFile = async (id: string): Promise<Blob> => {
+  return api.get<Blob>(`agents/dorm-rules/files/${id}/download`, {
+    responseType: 'blob',
+  });
+};
+
+export const uploadDormRuleFile = async (file: File): Promise<DormRuleFile> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post<DormRuleFile>('agents/dorm-rules/files', formData);
+};
+
+export const setDormRuleFileFeatured = async (id: string): Promise<DormRuleFile> => {
+  return api.patch<DormRuleFile>(`agents/dorm-rules/files/${id}/feature`, null);
+};
+
+export const deleteDormRuleFile = async (id: string): Promise<{ message: string }> => {
+  return api.delete<{ message: string }>(`agents/dorm-rules/files/${id}`);
+};
+
 export const fetchDashboardStats = async (force = false): Promise<DashboardStatsResponse> => {
   if (!force && _dashboardCache && Date.now() - _dashboardCacheTime < DASHBOARD_CACHE_TTL) {
     return _dashboardCache;

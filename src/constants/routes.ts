@@ -8,7 +8,7 @@ export const ROUTES = {
   // Security
   SECURITY_DASHBOARD: '/security',
   DASHBOARD: '/security',
-  CAMERA_CHECKIN: '/security/camera-checkin',
+  CAMERA_MANAGEMENT: '/security/camera-management',
   CHECKOUT_REQUESTS: '/security/checkout-requests',
   VISITORS: '/security/visitors',
   SECURITY_REPORT_VIOLATION: '/security/report-violation',
@@ -28,6 +28,7 @@ export const ROUTES = {
   STUDENT_MAINTENANCE: '/student/maintenance',
   STUDENT_PROFILE: '/student/profile',
   STUDENT_CFD_POINTS: '/student/cfd-points',
+  STUDENT_DORM_RULES: '/student/dorm-rules',
   STUDENT_GUIDELINES: '/student/guidelines',
   STUDENT_FAQ: '/student/faq',
   STUDENT_NOTIFICATIONS: '/student/notifications',
@@ -61,6 +62,7 @@ export const ROUTES = {
   MANAGER_INVOICES: '/manager/invoices',
   MANAGER_NEWS: '/manager/news',
   MANAGER_CHAT: '/manager/chat',
+  MANAGER_EMAIL_CENTER: '/manager/email',
   MANAGER_SETTINGS: '/manager/settings',
   MANAGER_FACE_REGISTRATION: '/manager/face-registration',
 };

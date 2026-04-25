@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   App,
   Alert,
@@ -87,7 +87,7 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
   const [search, setSearch] = useState('');
   const [form] = Form.useForm();
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetchEquipmentCategories({ page: 1, limit: 100, search });
@@ -97,11 +97,11 @@ function CategoriesTab({ onDataChange }: { onDataChange: () => void }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
 
   useEffect(() => {
     loadData();
-  }, [search]);
+  }, [loadData]);
 
   useEffect(() => {
     if (modalOpen) {
@@ -283,7 +283,7 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
     } catch { /* silent */ }
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const params: Record<string, string | number | boolean> = { page: 1, limit: 100 };
@@ -296,10 +296,10 @@ function TemplatesTab({ onDataChange, refreshKey }: { onDataChange: () => void; 
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, filterCategory]);
 
   useEffect(() => { loadCategories(); }, [refreshKey]);
-  useEffect(() => { loadData(); }, [search, filterCategory, refreshKey]);
+  useEffect(() => { loadData(); }, [loadData, refreshKey]);
 
   useEffect(() => {
     if (modalOpen) {
@@ -516,7 +516,7 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
     } catch { /* silent */ }
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const params: Record<string, string | number | boolean> = { page: 1, limit: 200 };
@@ -528,11 +528,11 @@ function DefaultRoomSetupTab({ onDataChange, refreshKey }: { onDataChange: () =>
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterRoomType]);
 
   useEffect(() => { loadRoomTypes(); }, []);
   useEffect(() => { loadTemplates(); }, [refreshKey]);
-  useEffect(() => { loadData(); }, [filterRoomType, refreshKey]);
+  useEffect(() => { loadData(); }, [loadData, refreshKey]);
 
   useEffect(() => {
     if (modalOpen) {
@@ -1443,9 +1443,11 @@ export default function AdminFacilitiesPage() {
 // Small helper to display total count from API
 function CountDisplay({ fetchFn, refreshKey }: { fetchFn: () => Promise<{ pagination: { total: number } }>; refreshKey: number }) {
   const [count, setCount] = useState<number | null>(null);
+  const fetchFnRef = useRef(fetchFn);
+  fetchFnRef.current = fetchFn;
 
   useEffect(() => {
-    fetchFn()
+    fetchFnRef.current()
       .then((res) => setCount(res.pagination.total))
       .catch(() => setCount(0));
   }, [refreshKey]);

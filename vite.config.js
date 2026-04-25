@@ -16,4 +16,10 @@ export default defineConfig({
             '@public': path.resolve(__dirname, 'public'),
         },
     },
+    build: {
+        // Large vendor chunks are acceptable; route-level code splitting via
+        // React.lazy() handles the real optimization. Custom manualChunks was
+        // causing cross-chunk TDZ / circular-init errors in production.
+        chunkSizeWarningLimit: 2000,
+    },
 });

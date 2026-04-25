@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Table,
   Tag,
@@ -8,6 +8,7 @@ import {
   Space,
   Modal,
   message,
+  Alert,
   Card,
   Row,
   Col,
@@ -15,6 +16,7 @@ import {
   Form,
   InputNumber,
   DatePicker,
+  Switch,
   Descriptions,
   Tabs,
   Tooltip,
@@ -39,8 +41,9 @@ import {
   getManagerInvoices,
   getManagerInvoiceDetail,
   createInvoiceForStudent,
+  createEWInvoiceForStudent,
   createInvoicesForRoom,
-  createInvoicesForBlock,
+  createEWInvoicesForAllBlocks,
   cancelManagerInvoice,
   type ManagerInvoice,
   type ManagerInvoiceFilter,
@@ -214,39 +217,139 @@ const FeeFields = () => {
           </Form.Item>
         </Col>
       </Row>
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item
-            label='Invoice Month'
-            name='invoice_month'
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <DatePicker
-              picker='month'
-              style={{ width: '100%' }}
-              format='MM/YYYY'
-              placeholder='Select month'
-            />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            label='Due Date'
-            name='due_date'
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <DatePicker
-              style={{ width: '100%' }}
-              format='DD/MM/YYYY'
-              disabledDate={current =>
-                current && current.isBefore(dayjs().startOf('day'))
-              }
-            />
-          </Form.Item>
-        </Col>
-      </Row>
+      <InvoicePeriodFields />
     </>
   );
+};
+
+const InvoicePeriodFields = () => (
+  <Row gutter={16}>
+    <Col span={12}>
+      <Form.Item
+        label='Invoice Month'
+        name='invoice_month'
+        rules={[{ required: true, message: 'Required' }]}
+      >
+        <DatePicker
+          picker='month'
+          style={{ width: '100%' }}
+          format='MM/YYYY'
+          placeholder='Select month'
+        />
+      </Form.Item>
+    </Col>
+    <Col span={12}>
+      <Form.Item
+        label='Due Date'
+        name='due_date'
+        rules={[{ required: true, message: 'Required' }]}
+      >
+        <DatePicker
+          style={{ width: '100%' }}
+          format='DD/MM/YYYY'
+          disabledDate={current =>
+            current && current.isBefore(dayjs().startOf('day'))
+          }
+        />
+      </Form.Item>
+    </Col>
+  </Row>
+);
+
+const EWInvoiceFields = () => (
+  <>
+    <div className='mb-3 rounded bg-orange-50 p-3 text-sm text-orange-700'>
+      EW bills will be created from the recalculated electricity and water usage
+      for the selected month. No manual electricity or water amount will be entered here.
+    </div>
+    <Row gutter={16}>
+      <Col span={12}>
+        <Form.Item
+          label='Invoice Month'
+          name='invoice_month'
+          rules={[{ required: true, message: 'Required' }]}
+        >
+          <DatePicker
+            picker='month'
+            style={{ width: '100%' }}
+            format='MM/YYYY'
+            placeholder='Select month'
+            disabledDate={current =>
+              !!current && current.startOf('month').isAfter(dayjs().startOf('month'))
+            }
+          />
+        </Form.Item>
+      </Col>
+      <Col span={12}>
+        <Form.Item
+          label='Due Date'
+          name='due_date'
+          rules={[{ required: true, message: 'Required' }]}
+        >
+          <DatePicker
+            style={{ width: '100%' }}
+            format='DD/MM/YYYY'
+            disabledDate={current =>
+              current && current.isBefore(dayjs().startOf('day'))
+            }
+          />
+        </Form.Item>
+      </Col>
+    </Row>
+  </>
+);
+
+const buildCreateInvoiceErrorMessage = (
+  error: unknown,
+  context: 'student-manual' | 'student-ew' | 'room' | 'block-ew',
+) => {
+  const typedError = error as {
+    message?: string;
+    errorFields?: unknown[];
+  };
+
+  if (typedError?.errorFields?.length) {
+    return {
+      type: 'warning' as const,
+      message: 'Please complete the required fields before creating the invoice.',
+    };
+  }
+
+  if (typedError?.message?.trim()) {
+    return {
+      type: 'error' as const,
+      message: typedError.message.trim(),
+    };
+  }
+
+  if (context === 'block-ew') {
+    return {
+      type: 'warning' as const,
+      message:
+        'Cannot create EW invoices for the selected month. Make sure EW usage has been imported and recalculated for that month, and that invoices have not already been created.',
+    };
+  }
+
+  if (context === 'student-ew') {
+    return {
+      type: 'warning' as const,
+      message:
+        'Cannot create the EW invoice for this student. Make sure EW usage has been imported and recalculated for the selected month.',
+    };
+  }
+
+  if (context === 'room') {
+    return {
+      type: 'warning' as const,
+      message:
+        'Cannot create invoices for the selected room. Please check the room, invoice month, due date, and active contracts.',
+    };
+  }
+
+  return {
+    type: 'error' as const,
+    message: 'Action failed. Please try again.',
+  };
 };
 
 export default function ManagerInvoicesPage() {
@@ -270,9 +373,14 @@ export default function ManagerInvoicesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createTab, setCreateTab] = useState('student');
+  const [createFeedback, setCreateFeedback] = useState<{
+    type: 'success' | 'error' | 'warning';
+    message: string;
+  } | null>(null);
   const [studentForm] = Form.useForm();
   const [roomForm] = Form.useForm();
   const [blockForm] = Form.useForm();
+  const studentEWMode = Form.useWatch('create_ew_bills', studentForm);
 
   const [bulkResult, setBulkResult] =
     useState<BulkInvoiceResult | null>(null);
@@ -292,71 +400,66 @@ export default function ManagerInvoicesPage() {
     paidAmount: 0,
   });
 
-  const buildFilter = useCallback((): ManagerInvoiceFilter => {
-    const f: ManagerInvoiceFilter = { page, limit: 25 };
-    if (studentCode.trim()) f.student_code = studentCode.trim();
-    if (statusFilter) f.payment_status = statusFilter;
-    if (monthFilter) f.invoice_month = monthFilter;
-    if (roomFilter) f.room_id = roomFilter;
-    else if (blockFilter) f.block_id = blockFilter;
-    return f;
-  }, [
-    page,
-    studentCode,
-    statusFilter,
-    monthFilter,
-    blockFilter,
-    roomFilter,
-  ]);
+  const studentCodeRef = useRef(studentCode);
+  const statusFilterRef = useRef(statusFilter);
+  const monthFilterRef = useRef(monthFilter);
+  const blockFilterRef = useRef(blockFilter);
+  const roomFilterRef = useRef(roomFilter);
 
-  const fetchData = useCallback(
-    async (p = page) => {
-      setLoading(true);
-      try {
-        const f: ManagerInvoiceFilter = { ...buildFilter(), page: p };
-        const res = await getManagerInvoices(f);
-        setInvoices(res.data);
-        setTotal(res.total);
+  studentCodeRef.current = studentCode;
+  statusFilterRef.current = statusFilter;
+  monthFilterRef.current = monthFilter;
+  blockFilterRef.current = blockFilter;
+  roomFilterRef.current = roomFilter;
 
-        // Compute stats from current page (approximation from full list on first load)
-        if (
-          p === 1 &&
-          !studentCode &&
-          !statusFilter &&
-          !monthFilter &&
-          !blockFilter &&
-          !roomFilter
-        ) {
-          const allRes = await getManagerInvoices({ limit: 1000 });
-          const all = allRes.data;
-          setStats({
-            total: all.length,
-            paid: all.filter(i => i.payment_status === 'paid').length,
-            unpaid: all.filter(i => i.payment_status === 'unpaid')
-              .length,
-            overdue: all.filter(i => i.payment_status === 'overdue')
-              .length,
-            totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
-            paidAmount: all
-              .filter(i => i.payment_status === 'paid')
-              .reduce((s, i) => s + i.total_amount, 0),
-          });
-        }
-      } catch {
-        message.error('Failed to load invoices');
-      } finally {
-        setLoading(false);
+  const fetchData = useCallback(async (p = 1) => {
+    setLoading(true);
+    try {
+      const currentStudentCode = studentCodeRef.current.trim();
+      const currentStatusFilter = statusFilterRef.current;
+      const currentMonthFilter = monthFilterRef.current;
+      const currentBlockFilter = blockFilterRef.current;
+      const currentRoomFilter = roomFilterRef.current;
+
+      const f: ManagerInvoiceFilter = { page: p, limit: 25 };
+      if (currentStudentCode) f.student_code = currentStudentCode;
+      if (currentStatusFilter) f.payment_status = currentStatusFilter;
+      if (currentMonthFilter) f.invoice_month = currentMonthFilter;
+      if (currentRoomFilter) f.room_id = currentRoomFilter;
+      else if (currentBlockFilter) f.block_id = currentBlockFilter;
+
+      const res = await getManagerInvoices(f);
+      setInvoices(res.data);
+      setTotal(res.total);
+
+      // Compute stats from current page (approximation from full list on first load)
+      if (
+        p === 1 &&
+        !currentStudentCode &&
+        !currentStatusFilter &&
+        !currentMonthFilter &&
+        !currentBlockFilter &&
+        !currentRoomFilter
+      ) {
+        const allRes = await getManagerInvoices({ limit: 1000 });
+        const all = allRes.data;
+        setStats({
+          total: all.length,
+          paid: all.filter(i => i.payment_status === 'paid').length,
+          unpaid: all.filter(i => i.payment_status === 'unpaid').length,
+          overdue: all.filter(i => i.payment_status === 'overdue').length,
+          totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
+          paidAmount: all
+            .filter(i => i.payment_status === 'paid')
+            .reduce((s, i) => s + i.total_amount, 0),
+        });
       }
-    },
-    [
-      buildFilter,
-      studentCode,
-      statusFilter,
-      monthFilter,
-      blockFilter,
-      roomFilter,
-    ],
-  );
+    } catch {
+      message.error('Failed to load invoices');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const refreshStats = async () => {
     try {
@@ -381,7 +484,7 @@ export default function ManagerInvoicesPage() {
   useEffect(() => {
     fetchData(1);
     setPage(1);
-  }, []);
+  }, [fetchData]);
 
   useEffect(() => {
     fetchBlocks({ limit: 200 })
@@ -407,6 +510,11 @@ export default function ManagerInvoicesPage() {
     setBlockFilter('');
     setRoomFilter('');
     setPage(1);
+    studentCodeRef.current = '';
+    statusFilterRef.current = '';
+    monthFilterRef.current = '';
+    blockFilterRef.current = '';
+    roomFilterRef.current = '';
     fetchData(1);
   };
 
@@ -440,9 +548,25 @@ export default function ManagerInvoicesPage() {
 
   const handleCreateSubmit = async () => {
     setCreateLoading(true);
+    setCreateFeedback(null);
     try {
       if (createTab === 'student') {
         const values = await studentForm.validateFields();
+        if (values.create_ew_bills) {
+          const result = await createEWInvoiceForStudent({
+            student_code: values.student_code,
+            invoice_month:
+              values.invoice_month?.format?.('YYYY-MM') ??
+              values.invoice_month,
+            due_date: values.due_date.toISOString(),
+          });
+          message.success(result.message);
+          setCreateFeedback({ type: 'success', message: result.message });
+          closeCreate();
+          fetchData(1);
+          refreshStats();
+          return;
+        }
         const body: CreateInvoiceDto = {
           student_code: values.student_code,
           invoice_month:
@@ -458,6 +582,10 @@ export default function ManagerInvoicesPage() {
         };
         await createInvoiceForStudent(body);
         message.success('Invoice created for student');
+        setCreateFeedback({
+          type: 'success',
+          message: 'Invoice created for student',
+        });
         setCreateOpen(false);
         studentForm.resetFields();
       } else if (createTab === 'room') {
@@ -478,35 +606,46 @@ export default function ManagerInvoicesPage() {
           values.room_id,
           body,
         );
+        setCreateFeedback({
+          type: 'success',
+          message: `Created ${result.created} invoice(s) for the selected room`,
+        });
         setBulkResult(result);
         roomForm.resetFields();
       } else {
         const values = await blockForm.validateFields();
-        const body: BulkInvoiceDto = {
+        const result = await createEWInvoicesForAllBlocks({
           invoice_month:
             values.invoice_month?.format?.('YYYY-MM') ??
             values.invoice_month,
-          room_fee: values.room_fee || 0,
-          electricity_fee: values.electricity_fee || 0,
-          water_fee: values.water_fee || 0,
-          service_fee: values.service_fee || 0,
-          other_fees: values.other_fees || 0,
-          other_fees_description: values.other_fees_description,
           due_date: values.due_date.toISOString(),
-        };
-        const result = await createInvoicesForBlock(
-          values.block_id,
-          body,
-        );
-        setBulkResult(result);
-        blockForm.resetFields();
+        });
+        message.success(result.message);
+        setCreateFeedback({ type: 'success', message: result.message });
+        closeCreate();
+        fetchData(1);
+        refreshStats();
+        return;
       }
 
       fetchData(1);
       refreshStats();
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message;
-      if (msg) message.error(msg);
+      const context =
+        createTab === 'student'
+          ? studentEWMode
+            ? 'student-ew'
+            : 'student-manual'
+          : createTab === 'room'
+            ? 'room'
+            : 'block-ew';
+      const feedback = buildCreateInvoiceErrorMessage(err, context);
+      setCreateFeedback(feedback);
+      if (feedback.type === 'warning') {
+        message.warning(feedback.message);
+      } else {
+        message.error(feedback.message);
+      }
     } finally {
       setCreateLoading(false);
     }
@@ -514,6 +653,7 @@ export default function ManagerInvoicesPage() {
 
   const closeCreate = () => {
     setCreateOpen(false);
+    setCreateFeedback(null);
     setBulkResult(null);
     studentForm.resetFields();
     roomForm.resetFields();
@@ -923,6 +1063,14 @@ export default function ManagerInvoicesPage() {
           )
         }
       >
+        {createFeedback && !bulkResult && (
+          <Alert
+            type={createFeedback.type}
+            showIcon
+            message={createFeedback.message}
+            style={{ marginBottom: 16 }}
+          />
+        )}
         {bulkResult ? (
           <div className='py-4'>
             <div className='flex items-center gap-3 mb-4 p-4 bg-green-50 rounded-lg border border-green-200'>
@@ -989,7 +1137,15 @@ export default function ManagerInvoicesPage() {
                     }
                   />
                 </Form.Item>
-                <FeeFields />
+                <Form.Item
+                  label='EW Bills'
+                  name='create_ew_bills'
+                  valuePropName='checked'
+                  initialValue={false}
+                >
+                  <Switch checkedChildren='EW' unCheckedChildren='Manual' />
+                </Form.Item>
+                {studentEWMode ? <EWInvoiceFields /> : <FeeFields />}
               </Form>
             </TabPane>
 
@@ -1055,34 +1211,11 @@ export default function ManagerInvoicesPage() {
                 layout='vertical'
                 className='mt-4'
               >
-                <Form.Item
-                  label='Select Block'
-                  name='block_id'
-                  rules={[
-                    {
-                      required: true,
-                      message: 'Please select a block',
-                    },
-                  ]}
-                >
-                  <Select
-                    showSearch
-                    placeholder='Select block'
-                    optionFilterProp='children'
-                  >
-                    {blocks.map(b => (
-                      <Option key={b.id} value={b.id}>
-                        {b.block_name || b.block_code}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
                 <div className='mb-3 p-3 bg-orange-50 rounded text-sm text-orange-700'>
-                  Invoices will be created for{' '}
-                  <strong>all active students in all rooms</strong> in
-                  the selected block.
+                  EW invoices will be created for <strong>all active students in all
+                  blocks</strong> that have recalculated EW usage in the selected month.
                 </div>
-                <FeeFields />
+                <EWInvoiceFields />
               </Form>
             </TabPane>
           </Tabs>
@@ -1231,7 +1364,9 @@ export default function ManagerInvoicesPage() {
                   </div>
                   <Table
                     size='small'
-                    rowKey={r => r.item_type + r.description}
+                    rowKey={(r: { item_type?: string; description?: string }) =>
+                      `${r.item_type ?? ''}${r.description ?? ''}`
+                    }
                     dataSource={detailRecord.line_items}
                     pagination={false}
                     columns={[
@@ -1255,8 +1390,7 @@ export default function ManagerInvoicesPage() {
                         title: 'Description',
                         dataIndex: 'description',
                         key: 'desc',
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        render: (v: string, r: any) =>
+                        render: (v: string, r: { item_type?: string }) =>
                           r.item_type === 'water' ? 'Fine' : v,
                       },
                       {

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { connectSocket } from '@/lib/socket';
 import {
   Table,
   Tag,
@@ -62,21 +63,31 @@ export default function ViolationListPage() {
   const [statusFilter, setStatusFilter] = useState<ViolationStatus | undefined>();
   const [typeFilter, setTypeFilter] = useState<ViolationType | undefined>();
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const searchCodeRef = useRef(searchCode);
+  const statusFilterRef = useRef(statusFilter);
+  const typeFilterRef = useRef(typeFilter);
+  const dateRangeRef = useRef(dateRange);
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<IViolation.ViolationReport | null>(null);
 
-  const fetchData = async (page = 1) => {
+  searchCodeRef.current = searchCode;
+  statusFilterRef.current = statusFilter;
+  typeFilterRef.current = typeFilter;
+  dateRangeRef.current = dateRange;
+
+  const fetchData = useCallback(async (page = 1) => {
     setLoading(true);
     try {
+      const currentDateRange = dateRangeRef.current;
       const query: IViolation.ViolationQuery = {
         page,
-        limit: pagination.limit,
-        status: statusFilter,
-        violation_type: typeFilter,
-        student_code: searchCode || undefined,
-        start_date: dateRange?.[0]?.format('YYYY-MM-DD'),
-        end_date: dateRange?.[1]?.format('YYYY-MM-DD'),
+        limit: 10,
+        status: statusFilterRef.current,
+        violation_type: typeFilterRef.current,
+        student_code: searchCodeRef.current || undefined,
+        start_date: currentDateRange?.[0]?.format('YYYY-MM-DD'),
+        end_date: currentDateRange?.[1]?.format('YYYY-MM-DD'),
       };
 
       const response = await getViolationReports(query);
@@ -88,21 +99,39 @@ export default function ViolationListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchStatistics = async () => {
+  const fetchStatistics = useCallback(async () => {
     try {
       const stats = await getViolationStatistics();
       setStatistics(stats);
     } catch (error) {
       console.error('Error fetching statistics:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
     fetchStatistics();
-  }, []);
+  }, [fetchData, fetchStatistics]);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    const handleSync = () => {
+      fetchData(pagination.page);
+      fetchStatistics();
+    };
+
+    socket.on('new_violation_report', handleSync);
+    socket.on('violation_updated', handleSync);
+    socket.on('violation_deleted', handleSync);
+
+    return () => {
+      socket.off('new_violation_report', handleSync);
+      socket.off('violation_updated', handleSync);
+      socket.off('violation_deleted', handleSync);
+    };
+  }, [pagination.page]);
 
   const handleSearch = () => {
     fetchData(1);
@@ -113,6 +142,10 @@ export default function ViolationListPage() {
     setStatusFilter(undefined);
     setTypeFilter(undefined);
     setDateRange(null);
+    searchCodeRef.current = '';
+    statusFilterRef.current = undefined;
+    typeFilterRef.current = undefined;
+    dateRangeRef.current = null;
     fetchData(1);
   };
 
@@ -133,7 +166,7 @@ export default function ViolationListPage() {
           await deleteViolationReport(id);
           message.success('Violation report deleted successfully');
           fetchData(pagination.page);
-        } catch (error) {
+        } catch {
           message.error('Failed to delete violation report');
         }
       },

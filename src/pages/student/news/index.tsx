@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { connectSocket } from '@/lib/socket';
 import { Empty, Input, Skeleton, Tag, message, theme } from 'antd';
 import { CalendarDays, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -49,6 +50,16 @@ export default function StudentNewsPage() {
 
   useEffect(() => {
     loadNews();
+  }, []);
+
+  useEffect(() => {
+    const socket = connectSocket();
+    socket.on('news_updated', () => {
+      loadNews();
+    });
+    return () => {
+      socket.off('news_updated');
+    };
   }, []);
 
   const filteredNews = useMemo(() => {

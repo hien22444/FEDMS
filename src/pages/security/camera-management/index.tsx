@@ -31,7 +31,7 @@ import {
 } from '@/lib/actions/camera';
 import type { IFaceRecognition } from '@/interfaces';
 
-const CameraCheckinPage = () => {
+const CameraManagementPage = () => {
   const { user } = useAuth();
   const {
     isAdminAccessGranted,
@@ -63,7 +63,7 @@ const CameraCheckinPage = () => {
   const [manualName, setManualName] = useState('');
   const [manualIdCard, setManualIdCard] = useState('');
   const [manualType, setManualType] = useState<'check_in' | 'check_out'>('check_in');
-  const [manualReason, setManualReason] = useState<'visitor' | 'other'>('visitor');
+  const [manualReason, setManualReason] = useState<'camera_failed' | 'other'>('camera_failed');
   const [manualLoading, setManualLoading] = useState(false);
 
   // ─── Load initial data ───
@@ -263,7 +263,11 @@ const CameraCheckinPage = () => {
   };
 
   const getLastDetection = (detections: IFaceRecognition.Detection[]) => {
-    return detections.find((d) => d.is_match) || null;
+    return detections.find((d) => d.is_match && !d.status_unchanged) || null;
+  };
+
+  const getUnchangedDetection = (detections: IFaceRecognition.Detection[]) => {
+    return detections.find((d) => d.is_match && d.status_unchanged) || null;
   };
 
   const hasUnknownFace = (detections: IFaceRecognition.Detection[]) => {
@@ -276,7 +280,7 @@ const CameraCheckinPage = () => {
       <div className="flex items-center gap-3">
         <Video className="w-6 h-6 text-[#F36F21]" />
         <h1 className="text-2xl font-bold text-gray-900">
-          Camera Check-In Management
+          Camera Management
         </h1>
       </div>
 
@@ -322,6 +326,7 @@ const CameraCheckinPage = () => {
           detections={feed.checkinDetections}
           status={getCheckinCamera() ? getCameraStatus(getCheckinCamera()!.camera_id) : 'offline'}
           lastDetection={getLastDetection(feed.checkinDetections)}
+          unchangedDetection={getUnchangedDetection(feed.checkinDetections)}
           hasUnknown={hasUnknownFace(feed.checkinDetections)}
           loading={getCheckinCamera() ? loadingCameras[getCheckinCamera()!.camera_id] : false}
           onStart={() => getCheckinCamera() && handleStartCamera(getCheckinCamera()!.camera_id)}
@@ -338,6 +343,7 @@ const CameraCheckinPage = () => {
           detections={feed.checkoutDetections}
           status={getCheckoutCamera() ? getCameraStatus(getCheckoutCamera()!.camera_id) : 'offline'}
           lastDetection={getLastDetection(feed.checkoutDetections)}
+          unchangedDetection={getUnchangedDetection(feed.checkoutDetections)}
           hasUnknown={hasUnknownFace(feed.checkoutDetections)}
           loading={getCheckoutCamera() ? loadingCameras[getCheckoutCamera()!.camera_id] : false}
           onStart={() => getCheckoutCamera() && handleStartCamera(getCheckoutCamera()!.camera_id)}
@@ -489,10 +495,10 @@ const CameraCheckinPage = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
             <select
               value={manualReason}
-              onChange={(e) => setManualReason(e.target.value as 'visitor' | 'other')}
+              onChange={(e) => setManualReason(e.target.value as 'camera_failed' | 'other')}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F36F21]"
             >
-              <option value="visitor">Visitor</option>
+              <option value="camera_failed">Camera Failed</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -609,6 +615,7 @@ interface CameraPanelProps {
   detections: IFaceRecognition.Detection[];
   status: string;
   lastDetection: IFaceRecognition.Detection | null;
+  unchangedDetection: IFaceRecognition.Detection | null;
   hasUnknown: boolean;
   loading?: boolean;
   onStart: () => void;
@@ -624,6 +631,7 @@ function CameraPanel({
   detections,
   status,
   lastDetection,
+  unchangedDetection,
   hasUnknown,
   loading,
   onStart,
@@ -742,9 +750,11 @@ function CameraPanel({
           'p-3 rounded-lg border-2 transition-colors',
           lastDetection
             ? 'bg-green-50 border-green-300'
-            : hasUnknown
-              ? 'bg-red-50 border-red-300'
-              : 'bg-gray-50 border-gray-200'
+            : unchangedDetection
+              ? 'bg-yellow-50 border-yellow-300'
+              : hasUnknown
+                ? 'bg-red-50 border-red-300'
+                : 'bg-gray-50 border-gray-200'
         )}
       >
         <div className="flex items-center gap-3">
@@ -773,6 +783,30 @@ function CameraPanel({
               <div className="flex items-center gap-1.5 bg-green-600 text-white px-3 py-1.5 rounded-lg">
                 <CheckCircle className="w-4 h-4" />
                 <span className="text-sm font-bold tracking-wide">PASS</span>
+              </div>
+            </>
+          ) : unchangedDetection ? (
+            <>
+              {unchangedDetection.avatar_url ? (
+                <img
+                  src={unchangedDetection.avatar_url}
+                  alt=""
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="font-medium text-gray-900">{unchangedDetection.student_name}</p>
+                <p className="text-sm text-gray-500">{unchangedDetection.student_code}</p>
+              </div>
+              <div className="flex items-center gap-1.5 bg-yellow-500 text-white px-3 py-1.5 rounded-lg">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-sm font-bold tracking-wide">
+                  Already {title === 'CHECK-IN' ? 'Checked-In' : 'Checked-Out'}
+                </span>
               </div>
             </>
           ) : hasUnknown ? (
@@ -806,4 +840,4 @@ function CameraPanel({
   );
 }
 
-export default CameraCheckinPage;
+export default CameraManagementPage;

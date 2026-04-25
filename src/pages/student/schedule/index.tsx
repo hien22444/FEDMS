@@ -212,17 +212,22 @@ const Schedule: React.FC = () => {
     {
       title: '',
       key: 'actions',
-      render: (_: unknown, record: BookingRequestItem) => (
-        <Button
-          type="primary"
-          size="small"
-          icon={<TeamOutlined />}
-          onClick={() => setRoommatesBooking(record)}
-          style={{ borderRadius: 6 }}
-        >
-          Roommates
-        </Button>
-      ),
+      render: (_: unknown, record: BookingRequestItem) => {
+        const hasStarted = record.start_date && new Date() >= new Date(record.start_date);
+        const hasCheckedOut = !!record.checkout_date;
+        if (!hasStarted && !hasCheckedOut) return null;
+        return (
+          <Button
+            type="primary"
+            size="small"
+            icon={<TeamOutlined />}
+            onClick={() => setRoommatesBooking(record)}
+            style={{ borderRadius: 6 }}
+          >
+            Roommates
+          </Button>
+        );
+      },
     },
   ];
 

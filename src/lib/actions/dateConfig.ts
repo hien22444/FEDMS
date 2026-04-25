@@ -26,6 +26,10 @@ export interface BookingWindowStatusResponse {
   /** True when another student has already booked/contracted this bed for next semester */
   bed_taken?: boolean;
   bed_taken_reason?: string;
+  /** True when new booking window is open but student already has a contract for the target semester */
+  already_booked?: boolean;
+  /** True when new booking window is open and student has an approved hold-bed booking */
+  already_held?: boolean;
 }
 
 export const getDateConfig = async (): Promise<DateConfigResponse> => {

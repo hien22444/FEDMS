@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,7 +14,7 @@ import {
   X,
   KeyRound,
 } from 'lucide-react';
-import { Button, Form, Input, Modal, message } from 'antd';
+import { Button, Form, Input, Modal, Spin, message } from 'antd';
 import { ROUTES } from '@/constants';
 import { cn } from '@/utils';
 import { useAuth, useSecurityAdminAccess } from '@/contexts';
@@ -67,7 +67,7 @@ const SecurityLayout = () => {
 
   const navItems = [
     { path: ROUTES.DASHBOARD, label: 'Overview', icon: LayoutDashboard },
-    { path: ROUTES.CAMERA_CHECKIN, label: 'Camera Checkin', icon: Camera },
+    { path: ROUTES.CAMERA_MANAGEMENT, label: 'Camera Management', icon: Camera },
     { path: ROUTES.CHECKOUT_REQUESTS, label: 'Checkout Requests', icon: FileText },
     { path: ROUTES.VISITORS, label: 'Visitors', icon: Users },
     { path: ROUTES.SECURITY_REPORT_VIOLATION, label: 'Report Violation', icon: AlertTriangle },
@@ -209,7 +209,15 @@ const SecurityLayout = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <Spin size="large" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
       <Modal

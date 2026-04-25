@@ -23,6 +23,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '@/contexts/AuthContext';
+import { connectSocket } from '@/lib/socket';
 import { getMyPenalties } from '@/lib/actions/violation';
 import type { IViolation } from '@/interfaces';
 import { ViolationType } from '@/interfaces';
@@ -70,6 +71,20 @@ const CFDPoints: React.FC = () => {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const socket = connectSocket();
+
+    const handleCfdUpdated = () => {
+      load();
+    };
+
+    socket.on('cfd_updated', handleCfdUpdated);
+
+    return () => {
+      socket.off('cfd_updated', handleCfdUpdated);
+    };
+  }, [load]);
+
   const behavioralScore = useMemo(() => {
     if (cfdData?.student?.behavioral_score != null) return cfdData.student.behavioral_score;
     return profile?.behavioral_score ?? null;
@@ -82,7 +97,7 @@ const CFDPoints: React.FC = () => {
     return profile?.violations_current_semester ?? 0;
   }, [cfdData?.student?.violations_current_semester, profile?.violations_current_semester]);
 
-  const penalties = cfdData?.penalties ?? [];
+  const penalties = useMemo(() => cfdData?.penalties ?? [], [cfdData]);
   const totalDeducted = useMemo(
     () => penalties.reduce((sum, p) => sum + (Number(p.points_deducted) || 0), 0),
     [penalties],

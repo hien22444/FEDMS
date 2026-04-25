@@ -14,6 +14,7 @@ export interface EWUsage {
   unit: string;
   createdAt: string;
   updatedAt: string;
+  is_reset?: boolean;
   is_latest_editable?: boolean;
 }
 
@@ -40,7 +41,6 @@ export interface EWImportResult {
   failed: number;
   warnings: number;
   errors: { row: number; block: string; error: string }[];
-  billing?: RecalculateResult | null;
 }
 
 export interface CreateEWUsageDto {
@@ -48,7 +48,7 @@ export interface CreateEWUsageDto {
   type: 'electric' | 'water';
   meter_right?: number;
   date: string;
-  term: string;
+  term?: string;
 }
 
 export interface QuickCreateEWUsageDto {
@@ -65,7 +65,6 @@ export interface UpdateEWUsageDto {
   meter_left?: number;
   meter_right?: number;
   date?: string;
-  term?: string;
 }
 
 export const getEWUsages = async (params?: EWUsageFilter): Promise<EWUsagePaginatedResponse> => {
@@ -87,8 +86,13 @@ export const updateEWUsage = async (id: string, body: UpdateEWUsageDto): Promise
   return api.put<EWUsage>(`ew-usages/${id}`, body);
 };
 
-export const resetMeter = async (block: string, type: string, meter_right: number): Promise<EWUsage> => {
-  return api.put<EWUsage>('ew-usages/reset', { block, type, meter_right });
+export const resetMeter = async (
+  block: string,
+  type: string,
+  meter_right: number,
+  date: string
+): Promise<EWUsage> => {
+  return api.put<EWUsage>('ew-usages/reset', { block, type, meter_right, date });
 };
 
 export const importEWUsages = async (file: File): Promise<EWImportResult> => {
@@ -120,6 +124,13 @@ export const exportEWUsages = async (params?: EWUsageFilter): Promise<void> => {
 };
 
 export interface RecalculateResult {
+  recordsCalculated: number;
+  groupsProcessed: number;
+  totalStudents: number;
+  message: string;
+}
+
+export interface EWInvoiceCreateResult {
   invoicesCreated: number;
   invoicesUpdated: number;
   invoicesCancelled?: number;
@@ -127,8 +138,21 @@ export interface RecalculateResult {
   message: string;
 }
 
-export const recalculateEWUsages = async (): Promise<RecalculateResult> => {
-  return api.post<RecalculateResult>('ew-usages/recalculate', {});
+export interface EWInvoiceCreateDto {
+  block?: string;
+  month: number | string;
+  year: number | string;
+  student_id?: string;
+}
+
+export const recalculateEWUsages = async (
+  body?: { block?: string; month?: number | string; year?: number | string }
+): Promise<RecalculateResult> => {
+  return api.post<RecalculateResult>('ew-usages/recalculate', body || {});
+};
+
+export const createEWInvoices = async (body: EWInvoiceCreateDto): Promise<EWInvoiceCreateResult> => {
+  return api.post<EWInvoiceCreateResult>('ew-usages/create-invoices', body);
 };
 
 export interface MyEWRecord {

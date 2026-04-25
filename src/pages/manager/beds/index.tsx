@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Table, Tag, Select, Button, Alert, Modal, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { BedDouble } from 'lucide-react';
@@ -41,6 +41,7 @@ const BED_STATUS_OPTIONS: { label: string; value: BedStatus }[] = [
   { label: 'Reserved', value: 'reserved' },
 ];
 
+const PAGE_SIZE = 50;
 
 export default function ManagerBedsPage() {
   const [beds, setBeds] = useState<Bed[]>([]);
@@ -61,7 +62,6 @@ export default function ManagerBedsPage() {
   // Pagination
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const PAGE_SIZE = 50;
 
   useEffect(() => {
     fetchDorms({ page: 1, limit: 100 }).then((r) => setDorms(r.items)).catch(() => {});
@@ -86,7 +86,7 @@ export default function ManagerBedsPage() {
     }
   }, [filterBlock]);
 
-  const loadBeds = async (p = page) => {
+  const loadBeds = useCallback(async (p = 1) => {
     try {
       setLoading(true);
       setErrorMsg(null);
@@ -104,9 +104,9 @@ export default function ManagerBedsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterDorm, filterBlock, filterRoom, filterStatus]);
 
-  useEffect(() => { setPage(1); loadBeds(1); }, [filterDorm, filterBlock, filterRoom, filterStatus]);
+  useEffect(() => { setPage(1); loadBeds(1); }, [loadBeds]);
 
   const handleStatusToggle = (bed: Bed, newStatus: BedStatus) => {
     setConfirmTarget({ bed, newStatus });
@@ -120,7 +120,7 @@ export default function ManagerBedsPage() {
       setConfirmTarget(null);
       await updateBedStatus(bed.id, newStatus);
       message.success(`Bed #${bed.bed_id} → ${newStatus}`);
-      loadBeds();
+      loadBeds(page);
     } catch (err: any) {
       message.error(err?.message || 'Failed to update bed status');
     } finally {
@@ -269,7 +269,7 @@ export default function ManagerBedsPage() {
             options={BED_STATUS_OPTIONS}
             style={{ minWidth: 150 }}
           />
-          <Button onClick={() => loadBeds()}>Refresh</Button>
+          <Button onClick={() => loadBeds(page)}>Refresh</Button>
         </div>
       </div>
 
@@ -278,7 +278,10 @@ export default function ManagerBedsPage() {
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3 mb-4">
         {BED_STATUS_OPTIONS.map((opt) => {
-          const count = beds.filter((b) => b.status === opt.value).length;
+          const count = beds.filter((b) => {
+            const displayStatus = (b.status === 'occupied' && b.upcoming_contract) ? 'reserved' : b.status;
+            return displayStatus === opt.value;
+          }).length;
           return (
             <div key={opt.value} className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm text-center">
               <Tag color={BED_STATUS_COLOR[opt.value]} className="mb-1">{opt.label}</Tag>
