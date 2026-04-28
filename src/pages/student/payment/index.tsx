@@ -793,7 +793,7 @@ const MonthlyBillCard: React.FC<{ invoice: StudentInvoice; onPaid: () => void }>
   const [detailOpen, setDetailOpen] = useState(false);
   const isOverdue =
     invoice.payment_status === 'overdue' ||
-    (invoice.payment_status === 'unpaid' && new Date(invoice.due_date) < new Date());
+    (invoice.payment_status === 'unpaid' && new Date(invoice.due_date).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0));
 
   const handlePay = async () => {
     setPaying(true);
@@ -1376,7 +1376,7 @@ const Payment: React.FC = () => {
         </Row>
 
         {/* ── Pending Invoices ── */}
-        <div style={{ marginBottom: 32 }}>
+        {(pending.length > 0 || transferPending.length > 0) && <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <Title level={4} style={{ margin: 0 }}>Pending Invoices</Title>
             {pendingCountCombined > 0 && (
@@ -1422,7 +1422,7 @@ const Payment: React.FC = () => {
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
         {/* ── Monthly Bills (manager-created invoices, pending only) ── */}
         {managerPending.length > 0 && (
