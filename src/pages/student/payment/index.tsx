@@ -793,7 +793,7 @@ const MonthlyBillCard: React.FC<{ invoice: StudentInvoice; onPaid: () => void }>
   const [detailOpen, setDetailOpen] = useState(false);
   const isOverdue =
     invoice.payment_status === 'overdue' ||
-    (invoice.payment_status === 'unpaid' && new Date(invoice.due_date) < new Date());
+    (invoice.payment_status === 'unpaid' && new Date(invoice.due_date).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0));
 
   const handlePay = async () => {
     setPaying(true);
@@ -1017,7 +1017,12 @@ const Payment: React.FC = () => {
   const mergedHistoryRows = useMemo((): PaymentHistoryRow[] => {
     const bookingRows: PaymentHistoryRow[] = history.map((b) => ({ kind: 'booking', item: b }));
     const transferRows: PaymentHistoryRow[] = transferHistory.map((t) => ({ kind: 'transfer', item: t }));
-    const invoiceRows: PaymentHistoryRow[] = managerPaid.map((inv) => ({ kind: 'invoice', item: inv }));
+    const bookingInvoiceCodes = new Set(
+      history.map((b) => b.invoice?.invoice_code).filter(Boolean)
+    );
+    const invoiceRows: PaymentHistoryRow[] = managerPaid
+      .filter((inv) => !bookingInvoiceCodes.has(inv.invoice_code))
+      .map((inv) => ({ kind: 'invoice', item: inv }));
     const merged = [...bookingRows, ...transferRows, ...invoiceRows];
     merged.sort((a, b) => {
       const ta = a.kind === 'invoice' ? a.item.createdAt : a.item.requested_at;
@@ -1371,7 +1376,7 @@ const Payment: React.FC = () => {
         </Row>
 
         {/* ── Pending Invoices ── */}
-        <div style={{ marginBottom: 32 }}>
+        {(pending.length > 0 || transferPending.length > 0) && <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <Title level={4} style={{ margin: 0 }}>Pending Invoices</Title>
             {pendingCountCombined > 0 && (
@@ -1417,7 +1422,7 @@ const Payment: React.FC = () => {
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
         {/* ── Monthly Bills (manager-created invoices, pending only) ── */}
         {managerPending.length > 0 && (
