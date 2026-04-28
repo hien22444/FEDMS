@@ -76,3 +76,4 @@ export * from './ewUsage';
 export * from './checkoutRequest';
 export * from './agent';
 export * from './email';
+export * from './contractExtension';

@@ -1017,7 +1017,12 @@ const Payment: React.FC = () => {
   const mergedHistoryRows = useMemo((): PaymentHistoryRow[] => {
     const bookingRows: PaymentHistoryRow[] = history.map((b) => ({ kind: 'booking', item: b }));
     const transferRows: PaymentHistoryRow[] = transferHistory.map((t) => ({ kind: 'transfer', item: t }));
-    const invoiceRows: PaymentHistoryRow[] = managerPaid.map((inv) => ({ kind: 'invoice', item: inv }));
+    const bookingInvoiceCodes = new Set(
+      history.map((b) => b.invoice?.invoice_code).filter(Boolean)
+    );
+    const invoiceRows: PaymentHistoryRow[] = managerPaid
+      .filter((inv) => !bookingInvoiceCodes.has(inv.invoice_code))
+      .map((inv) => ({ kind: 'invoice', item: inv }));
     const merged = [...bookingRows, ...transferRows, ...invoiceRows];
     merged.sort((a, b) => {
       const ta = a.kind === 'invoice' ? a.item.createdAt : a.item.requested_at;
