@@ -984,6 +984,16 @@ const Payment: React.FC = () => {
     () => transferRequests.filter(isTransferPaymentHistoryRow),
     [transferRequests]
   );
+  const historyLinkedInvoiceCodes = useMemo(
+    () =>
+      new Set(
+        [
+          ...history.map((b) => b.invoice?.invoice_code),
+          ...transferHistory.map((t) => transferHistoryInvoiceCode(t)),
+        ].filter((code): code is string => Boolean(code))
+      ),
+    [history, transferHistory]
+  );
 
   const upgradeSupplementTotal = useMemo(
     () =>
@@ -1009,19 +1019,16 @@ const Payment: React.FC = () => {
       .filter((t) => t.status === 'approved')
       .reduce((s, t) => s + transferSupplementAmount(t), 0);
     const managerInvPaid = managerPaid
-      .filter((inv) => inv.payment_status === 'paid')
+      .filter((inv) => inv.payment_status === 'paid' && !historyLinkedInvoiceCodes.has(inv.invoice_code))
       .reduce((s, inv) => s + inv.total_amount, 0);
     return bookingPaid + transferPaid + managerInvPaid;
-  }, [history, transferHistory, managerPaid]);
+  }, [history, transferHistory, managerPaid, historyLinkedInvoiceCodes]);
 
   const mergedHistoryRows = useMemo((): PaymentHistoryRow[] => {
     const bookingRows: PaymentHistoryRow[] = history.map((b) => ({ kind: 'booking', item: b }));
     const transferRows: PaymentHistoryRow[] = transferHistory.map((t) => ({ kind: 'transfer', item: t }));
-    const bookingInvoiceCodes = new Set(
-      history.map((b) => b.invoice?.invoice_code).filter(Boolean)
-    );
     const invoiceRows: PaymentHistoryRow[] = managerPaid
-      .filter((inv) => !bookingInvoiceCodes.has(inv.invoice_code))
+      .filter((inv) => !historyLinkedInvoiceCodes.has(inv.invoice_code))
       .map((inv) => ({ kind: 'invoice', item: inv }));
     const merged = [...bookingRows, ...transferRows, ...invoiceRows];
     merged.sort((a, b) => {
@@ -1030,7 +1037,7 @@ const Payment: React.FC = () => {
       return new Date(tb).getTime() - new Date(ta).getTime();
     });
     return merged;
-  }, [history, transferHistory, managerPaid]);
+  }, [history, transferHistory, managerPaid, historyLinkedInvoiceCodes]);
 
   const load = async () => {
     setLoading(true);
@@ -1176,7 +1183,7 @@ const Payment: React.FC = () => {
     }
   };
 
-  // ─── History table columns (booking + change-bed supplement + monthly invoice) ───
+  // ─── History table columns (booking + change-bed supplement + invoice) ───
   const historyColumns: ColumnsType<PaymentHistoryRow> = [
     {
       title: 'Invoice',
@@ -1186,12 +1193,7 @@ const Payment: React.FC = () => {
           return <Text strong style={{ fontFamily: 'monospace' }}>{code ?? '—'}</Text>;
         }
         if (row.kind === 'invoice') {
-          return (
-            <Space direction="vertical" size={2}>
-              <Text strong style={{ fontFamily: 'monospace' }}>{row.item.invoice_code}</Text>
-              <Tag color="cyan" style={{ margin: 0 }}>Monthly Bill</Tag>
-            </Space>
-          );
+          return <Text strong style={{ fontFamily: 'monospace' }}>{row.item.invoice_code}</Text>;
         }
         return (
           <Space direction="vertical" size={2}>
