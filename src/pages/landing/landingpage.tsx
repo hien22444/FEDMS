@@ -68,7 +68,7 @@ const LandingPage = () => {
             alt="DMS logo"
             className="w-12 h-12 rounded-lg object-cover"
           />
-          <span className="text-xl font-bold tracking-tight transition-colors group-hover:text-[#F37021]">DMS</span>
+          <span className="text-xl font-bold tracking-tight transition-colors group-hover:text-[#F37021]">FUDA Dormitory</span>
         </Link>
 
         <div className="flex items-center gap-4">
@@ -91,7 +91,7 @@ const LandingPage = () => {
             Exclusive for FPT University Students
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
-            Smart FPT Dormitory <br />
+            Smart FUDA Dormitory <br />
             <span className="text-gray-800">Experience</span>
           </h1>
           <p className="text-gray-500 text-lg max-w-xl leading-relaxed">

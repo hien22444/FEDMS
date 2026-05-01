@@ -109,7 +109,7 @@ const SignInPage = () => {
             </div>
             <div>
               <span style={{ fontSize: '24px', fontWeight: 'bold', color: token.colorPrimary }}>
-                FPT
+                FUDA
               </span>
               <span style={{ fontSize: '24px', fontWeight: 'bold', color: token.colorText }}>
                 {' '}Dormitory
@@ -127,7 +127,7 @@ const SignInPage = () => {
                 marginBottom: '8px',
               }}
             >
-              Welcome to FPT Dormitory
+              Welcome to FUDA Dormitory
             </h1>
             <p style={{ color: token.colorTextSecondary }}>
               Sign in to manage your room and dormitory services
@@ -371,7 +371,7 @@ const SignInPage = () => {
                 marginBottom: '24px',
               }}
             >
-              FPT Dormitory - Your Second Home
+              FUDA Dormitory - Your Second Home
             </h2>
             <p
               style={{

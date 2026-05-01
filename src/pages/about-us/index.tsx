@@ -47,7 +47,9 @@ export default function AboutUsPage() {
       <nav className="flex items-center justify-between px-8 py-4 bg-white sticky top-0 z-50 shadow-sm">
         <Link to={ROUTES.LANDING} className="flex items-center gap-2">
           <img src="/images/logo.png" alt="DMS logo" className="w-12 h-12 rounded-lg object-cover" />
-          <span className="text-xl font-bold tracking-tight">DMS</span>
+          <span className="text-xl font-bold tracking-tight transition-colors hover:text-[#F37021]">
+            FUDA Dormitory
+          </span>
         </Link>
         <Link
           to={ROUTES.SIGN_IN}

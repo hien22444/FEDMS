@@ -135,7 +135,7 @@ export default function StudentNewsDetailPage() {
                     <Text strong>Dormitory Management</Text>
                     <br />
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      FPT Dormitory
+                      FUDA Dormitory
                     </Text>
                   </div>
                 </Space>

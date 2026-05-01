@@ -48,9 +48,16 @@ export default function CreateViolationPage() {
   const [selectedStudent, setSelectedStudent] = useState<IViolation.SearchStudentResult | null>(
     null
   );
+  const [selectedStudents, setSelectedStudents] = useState<IViolation.SearchStudentResult[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [fileList, setFileList] = useState<any[]>([]);
-  const maxDeductiblePoints = Math.max(0, Number(selectedStudent?.behavioral_score) || 0);
+  const maxDeductiblePoints =
+    selectedStudents.length > 0
+      ? Math.max(
+          0,
+          Math.floor(Math.min(...selectedStudents.map((s) => Number(s.behavioral_score) || 0)))
+        )
+      : 0;
 
   const handleSearchStudent = async () => {
     if (!studentCode.trim()) {
@@ -66,7 +73,6 @@ export default function CreateViolationPage() {
       const student = await searchStudentByCode(studentCode.trim().toUpperCase());
       if (student) {
         setSelectedStudent(student);
-        form.setFieldsValue({ student_code: student.student_code });
       } else {
         setSearchError(`Student not found with code "${studentCode}"`);
       }
@@ -78,9 +84,26 @@ export default function CreateViolationPage() {
     }
   };
 
+  const handleAddStudent = () => {
+    if (!selectedStudent) return;
+    const exists = selectedStudents.some((s) => s.student_code === selectedStudent.student_code);
+    if (exists) {
+      message.info(`Student ${selectedStudent.student_code} is already added`);
+      return;
+    }
+    setSelectedStudents((prev) => [...prev, selectedStudent]);
+    setSelectedStudent(null);
+    setStudentCode('');
+    setSearchError(null);
+  };
+
+  const handleRemoveStudent = (studentCodeToRemove: string) => {
+    setSelectedStudents((prev) => prev.filter((s) => s.student_code !== studentCodeToRemove));
+  };
+
   const handleSubmit = async (values: CreateFormValues) => {
-    if (!selectedStudent) {
-      message.error('Please search and select a student');
+    if (selectedStudents.length === 0) {
+      message.error('Please add at least one student');
       return;
     }
 
@@ -88,9 +111,21 @@ export default function CreateViolationPage() {
       violationTypeOptions.find((opt) => opt.value === values.violation_type)?.label ||
       values.violation_type;
 
-    const autoDescription =
+    const baseDescription =
       values.violation_other_detail ||
       `Manager created violation: ${violationLabel}`;
+
+    const studentsDetailBlock =
+      selectedStudents.length > 1
+        ? `\n\nBatch deduction applied to ${selectedStudents.length} students:\n${selectedStudents
+            .map(
+              (student, idx) =>
+                `${idx + 1}. ${student.student_code} - ${student.full_name} (Current score: ${student.behavioral_score}/10)`
+            )
+            .join('\n')}`
+        : '';
+
+    const sharedDescription = `${baseDescription}${studentsDetailBlock}`;
 
     const evidence_urls = fileList
       .map(f => {
@@ -101,35 +136,18 @@ export default function CreateViolationPage() {
       })
       .filter(Boolean) as string[];
 
-    const data: IViolation.CreateViolationDto = {
-      student_code: selectedStudent.student_code,
-      reporter_type: ReporterType.MANAGER,
-      violation_type: values.violation_type,
-      violation_other_detail: values.violation_other_detail,
-      description: autoDescription,
-      violation_date: dayjs(values.violation_date).format('YYYY-MM-DD'),
-      location: values.location,
-      evidence_urls,
-    };
-
-    if (values.initial_points_deducted) {
-      data.initial_penalty = {
-        penalty_type: values.initial_points_deducted > 2 ? PenaltyType.SEVERE : PenaltyType.MINOR,
-        points_deducted: values.initial_points_deducted,
-        reason: values.initial_penalty_reason || undefined,
-      };
-    }
-
     modal.confirm({
       title: 'Confirm violation and CFD deduction',
       content: (
         <div>
-          <p>Are you sure you want to create this violation for the student below?</p>
+          <p>Are you sure you want to create this violation for the selected students below?</p>
           <p>
-            <strong>Student code:</strong> {selectedStudent.student_code}
+            <strong>Total students:</strong> {selectedStudents.length}
           </p>
           <p>
-            <strong>Student name:</strong> {selectedStudent.full_name}
+            <strong>Student codes:</strong>{' '}
+            {selectedStudents.slice(0, 6).map((s) => s.student_code).join(', ')}
+            {selectedStudents.length > 6 ? ', ...' : ''}
           </p>
           <p>
             <strong>Violation type:</strong> {violationLabel}
@@ -139,9 +157,9 @@ export default function CreateViolationPage() {
               <strong>Location:</strong> {values.location}
             </p>
           )}
-          {data.initial_penalty && (
+          {values.initial_points_deducted && (
             <p>
-              <strong>CFD points to deduct:</strong> -{data.initial_penalty.points_deducted}
+              <strong>CFD points to deduct:</strong> -{values.initial_points_deducted}
             </p>
           )}
           {values.initial_penalty_reason && (
@@ -160,12 +178,35 @@ export default function CreateViolationPage() {
       onOk: async () => {
         setLoading(true);
         try {
+          const data: IViolation.CreateViolationDto = {
+            student_codes: selectedStudents.map((student) => student.student_code),
+            reporter_type: ReporterType.MANAGER,
+            violation_type: values.violation_type,
+            violation_other_detail: values.violation_other_detail,
+            description: sharedDescription,
+            violation_date: dayjs(values.violation_date).format('YYYY-MM-DD'),
+            location: values.location,
+            evidence_urls,
+          };
+
+          if (values.initial_points_deducted) {
+            data.initial_penalty = {
+              penalty_type:
+                values.initial_points_deducted > 2 ? PenaltyType.SEVERE : PenaltyType.MINOR,
+              points_deducted: values.initial_points_deducted,
+              reason: values.initial_penalty_reason || undefined,
+            };
+          }
+
           await createViolationReport(data);
-          message.success('Violation report created successfully');
+          message.success(
+            `Violation report created successfully for ${selectedStudents.length} students`
+          );
           navigate('/manager/violations');
         } catch (error) {
           console.error('Error creating violation:', error);
-          message.error('Failed to create violation report');
+          const errMsg = (error as { message?: string })?.message || 'Failed to create violation report';
+          message.error(errMsg);
         } finally {
           setLoading(false);
         }
@@ -177,7 +218,6 @@ export default function CreateViolationPage() {
     setSelectedStudent(null);
     setStudentCode('');
     setSearchError(null);
-    form.setFieldsValue({ student_code: '' });
   };
 
   return (
@@ -233,10 +273,15 @@ export default function CreateViolationPage() {
             {selectedStudent && (
               <div className="border rounded-lg p-4 bg-green-50 border-green-200">
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-sm font-medium text-green-700">Selected Student</span>
-                  <Button type="link" danger size="small" onClick={handleClearStudent}>
-                    Clear
-                  </Button>
+                  <span className="text-sm font-medium text-green-700">Found Student</span>
+                  <Space>
+                    <Button type="primary" size="small" onClick={handleAddStudent}>
+                      Add
+                    </Button>
+                    <Button type="link" danger size="small" onClick={handleClearStudent}>
+                      Clear
+                    </Button>
+                  </Space>
                 </div>
                 <Descriptions column={1} size="small">
                   <Descriptions.Item label="Full Name">
@@ -265,6 +310,29 @@ export default function CreateViolationPage() {
                 </Descriptions>
               </div>
             )}
+
+            {selectedStudents.length > 0 && (
+              <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+                <div className="text-sm font-medium text-blue-700 mb-2">
+                  Students to penalize ({selectedStudents.length})
+                </div>
+                <Space wrap>
+                  {selectedStudents.map((student) => (
+                    <Tag
+                      key={student.student_code}
+                      closable
+                      onClose={(e) => {
+                        e.preventDefault();
+                        handleRemoveStudent(student.student_code);
+                      }}
+                      color="blue"
+                    >
+                      {student.student_code} - {student.full_name}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -279,10 +347,6 @@ export default function CreateViolationPage() {
               violation_date: dayjs(),
             }}
           >
-            <Form.Item name="student_code" hidden>
-              <Input />
-            </Form.Item>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Form.Item
                 name="violation_type"
@@ -361,15 +425,19 @@ export default function CreateViolationPage() {
                   { required: true, message: 'Please enter points to deduct' },
                   {
                     type: 'number',
-                    min: 0.5,
-                    message: 'Points must be at least 0.5',
+                    min: 1,
+                    message: 'Points must be at least 1',
                   },
                   {
                     validator: async (_, value) => {
                       if (value == null) return;
+                      if (selectedStudents.length === 0) return;
+                      if (!Number.isInteger(value)) {
+                        throw new Error('Only integer points are allowed (e.g. 1, 2, 3).');
+                      }
                       if (value > maxDeductiblePoints) {
                         throw new Error(
-                          `Points to deduct cannot exceed current score (${maxDeductiblePoints}).`
+                          `Points to deduct cannot exceed lowest current score among selected students (${maxDeductiblePoints}).`
                         );
                       }
                     },
@@ -377,11 +445,12 @@ export default function CreateViolationPage() {
                 ]}
               >
                 <InputNumber
-                  min={0.5}
+                  min={1}
                   max={maxDeductiblePoints > 0 ? maxDeductiblePoints : undefined}
-                  step={0.5}
+                  step={1}
+                  precision={0}
                   style={{ width: '100%' }}
-                  placeholder="e.g. 1.0"
+                  placeholder="e.g. 1"
                 />
               </Form.Item>
 
@@ -403,9 +472,9 @@ export default function CreateViolationPage() {
                 type="primary"
                 htmlType="submit"
                 loading={loading}
-                disabled={!selectedStudent}
+                disabled={selectedStudents.length === 0}
               >
-                Create Violation
+                Create Violation(s)
               </Button>
             </div>
           </Form>
