@@ -57,6 +57,9 @@ export default function ElectricityPage() {
 
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [recalcResult, setRecalcResult] = useState<RecalculateResult | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportForm] = Form.useForm();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<EWUsage | null>(null);
@@ -103,21 +106,32 @@ export default function ElectricityPage() {
 
   const handleSearch = () => { setPage(1); fetchData(1); };
 
-  const handleExport = async () => {
-    if (!filterMonth || !filterYear) {
-      message.warning('Please select both month and year before exporting');
-      return;
-    }
+  const handleOpenExport = () => {
+    exportForm.setFieldsValue({
+      month: filterMonth || undefined,
+      year: filterYear || undefined,
+    });
+    setExportOpen(true);
+  };
 
+  const handleExport = async () => {
     try {
+      const values = await exportForm.validateFields();
+      setExportLoading(true);
       const params: EWUsageFilter = {};
       if (blockName) params.block_name = blockName;
       if (filterType) params.type = filterType as 'electric' | 'water';
-      params.month = filterMonth;
-      params.year = filterYear;
+      params.month = values.month;
+      params.year = values.year;
       await exportEWUsages(params);
+      setExportOpen(false);
+      message.success('Export started');
     } catch (err) {
-      message.error(getErrorMessage(err, 'Export failed'));
+      if (!(err as { errorFields?: unknown[] })?.errorFields) {
+        message.error(getErrorMessage(err, 'Export failed'));
+      }
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -334,7 +348,7 @@ export default function ElectricityPage() {
             Recalculate EW
           </Button>
         </Popconfirm>
-        <Button icon={<ExportOutlined />} onClick={handleExport}>
+        <Button icon={<ExportOutlined />} onClick={handleOpenExport}>
           Export Data
         </Button>
       </Space>
@@ -401,6 +415,44 @@ export default function ElectricityPage() {
         size="small"
         scroll={{ x: 900 }}
       />
+
+      <Modal
+        title="Export EW Data"
+        open={exportOpen}
+        onCancel={() => setExportOpen(false)}
+        onOk={handleExport}
+        confirmLoading={exportLoading}
+        okText="Export"
+        cancelText="Cancel"
+      >
+        <Form form={exportForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item
+            name="month"
+            label="Month"
+            rules={[{ required: true, message: 'Please select a month' }]}
+          >
+            <Select placeholder="Select month">
+              {MONTHS.filter((m) => m.value).map((m) => (
+                <Option key={m.value} value={m.value}>{m.label}</Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="year"
+            label="Year"
+            rules={[{ required: true, message: 'Please select a year' }]}
+          >
+            <Select placeholder="Select year">
+              {YEARS.filter((y) => y.value).map((y) => (
+                <Option key={y.value} value={y.value}>{y.label}</Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Text type="secondary">
+            Export works by selected month and year only. Current filter values for block and type will still be applied.
+          </Text>
+        </Form>
+      </Modal>
 
       {/* Import Modal */}
       <Modal

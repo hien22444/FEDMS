@@ -102,24 +102,17 @@ export const importEWUsages = async (file: File): Promise<EWImportResult> => {
 };
 
 export const exportEWUsages = async (params?: EWUsageFilter): Promise<void> => {
-  const token = localStorage.getItem('token');
-  const baseUrl = import.meta.env.VITE_BASE_URL?.replace(/\/$/, '') ?? '';
   const query = params
     ? '?' + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])).toString()
     : '';
-
-  const res = await fetch(`${baseUrl}/ew-usages/export${query}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!res.ok) throw new Error('Export failed');
-
-  const blob = await res.blob();
+  const blob = await api.get<Blob>(`ew-usages/export${query}`, { responseType: 'blob' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = 'ew-usages.xlsx';
+  document.body.appendChild(a);
   a.click();
+  a.remove();
   URL.revokeObjectURL(url);
 };
 
