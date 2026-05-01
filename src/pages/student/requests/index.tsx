@@ -20,6 +20,7 @@ import {
   Tabs,
   Upload,
   Image,
+  Pagination,
 } from 'antd';
 import {
   FileSearchOutlined,
@@ -65,6 +66,7 @@ import { connectSocket } from '@/lib/socket';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const PAGE_SIZE = 10;
 
 
 type RequestType = 'visitor' | 'maintenance' | 'report' | 'other' | 'checkout' | null;
@@ -142,6 +144,12 @@ const Requests: React.FC = () => {
   const [checkoutRequests, setCheckoutRequests] = useState<StudentCheckoutRequest[]>([]);
   const [checkoutInnerTab, setCheckoutInnerTab] = useState<InnerListTabKey>('list');
   const [selectedCheckout, setSelectedCheckout] = useState<UnifiedListItem | null>(null);
+  const [allPage, setAllPage] = useState(1);
+  const [visitorPage, setVisitorPage] = useState(1);
+  const [maintenancePage, setMaintenancePage] = useState(1);
+  const [reportPage, setReportPage] = useState(1);
+  const [checkoutPage, setCheckoutPage] = useState(1);
+  const [otherPage, setOtherPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [canCreateRequest, setCanCreateRequest] = useState(true);
 
@@ -445,6 +453,15 @@ const Requests: React.FC = () => {
     const list = tab === 'all' ? [...allRequests] : allRequests.filter((r) => r.type === tab);
     return list.sort((a, b) => b.sortTime - a.sortTime);
   };
+
+  useEffect(() => {
+    setAllPage(1);
+    setVisitorPage(1);
+    setMaintenancePage(1);
+    setReportPage(1);
+    setCheckoutPage(1);
+    setOtherPage(1);
+  }, [allRequests.length, otherRequests.length]);
 
   const handleNewRequest = (type: RequestType) => {
     if (!canCreateRequest) {
@@ -888,10 +905,19 @@ const Requests: React.FC = () => {
 
   const renderRequestList = (
     requests: UnifiedListItem[],
-    options?: { showTypeTag?: boolean; onViewDetail?: (item: UnifiedListItem) => void }
+    options?: {
+      showTypeTag?: boolean;
+      onViewDetail?: (item: UnifiedListItem) => void;
+      currentPage?: number;
+      onPageChange?: (page: number) => void;
+    }
   ) => {
     const showTypeTag = options?.showTypeTag ?? false;
     const onViewDetail = options?.onViewDetail;
+    const currentPage = options?.currentPage ?? 1;
+    const onPageChange = options?.onPageChange;
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const pagedRequests = requests.slice(startIndex, startIndex + PAGE_SIZE);
     if (loading) {
       return (
         <div style={{ textAlign: 'center', padding: '48px' }}>
@@ -912,7 +938,7 @@ const Requests: React.FC = () => {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {requests.map((req) => (
+        {pagedRequests.map((req) => (
           <Card key={`${req.type}-${req.id}`} size="small">
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
               <div
@@ -1043,6 +1069,17 @@ const Requests: React.FC = () => {
             </div>
           </Card>
         ))}
+        {requests.length > PAGE_SIZE && (
+          <div className="flex justify-end pt-2">
+            <Pagination
+              current={currentPage}
+              pageSize={PAGE_SIZE}
+              total={requests.length}
+              showSizeChanger={false}
+              onChange={(page) => onPageChange?.(page)}
+            />
+          </div>
+        )}
       </div>
     );
   };
@@ -1074,6 +1111,8 @@ const Requests: React.FC = () => {
                     <div className="space-y-4">
                       {renderRequestList(filteredRequestsByTab('all'), {
                         showTypeTag: true,
+                        currentPage: allPage,
+                        onPageChange: setAllPage,
                         onViewDetail: (it) => {
                           setSelectedAll(it);
                           setAllInnerTab('detail');
@@ -1125,6 +1164,8 @@ const Requests: React.FC = () => {
                   key: 'list',
                   label: 'My requests',
                   children: renderRequestList(filteredRequestsByTab('visitor'), {
+                    currentPage: visitorPage,
+                    onPageChange: setVisitorPage,
                     onViewDetail: (it) => {
                       setSelectedVisitor(it);
                       setVisitorInnerTab('detail');
@@ -1176,6 +1217,8 @@ const Requests: React.FC = () => {
                   children: (
                     <div className="space-y-4">
                       {renderRequestList(filteredRequestsByTab('maintenance'), {
+                        currentPage: maintenancePage,
+                        onPageChange: setMaintenancePage,
                         onViewDetail: (it) => {
                           setSelectedMaintenance(it);
                           setMaintenanceInnerTab('detail');
@@ -1240,6 +1283,8 @@ const Requests: React.FC = () => {
                   key: 'list',
                   label: 'My requests',
                   children: renderRequestList(filteredRequestsByTab('report'), {
+                    currentPage: reportPage,
+                    onPageChange: setReportPage,
                     onViewDetail: (it) => {
                       setSelectedReport(it);
                       setReportInnerTab('detail');
@@ -1300,7 +1345,9 @@ const Requests: React.FC = () => {
                     </Card>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {otherRequests.map((r) => (
+                      {otherRequests
+                        .slice((otherPage - 1) * PAGE_SIZE, otherPage * PAGE_SIZE)
+                        .map((r) => (
                         <Card key={r.id} size="small">
                           <div
                             style={{
@@ -1350,6 +1397,17 @@ const Requests: React.FC = () => {
                           </div>
                         </Card>
                       ))}
+                      {otherRequests.length > PAGE_SIZE && (
+                        <div className="flex justify-end pt-2">
+                          <Pagination
+                            current={otherPage}
+                            pageSize={PAGE_SIZE}
+                            total={otherRequests.length}
+                            showSizeChanger={false}
+                            onChange={setOtherPage}
+                          />
+                        </div>
+                      )}
                     </div>
                   ),
                 },
@@ -1479,6 +1537,8 @@ const Requests: React.FC = () => {
                   key: 'list',
                   label: 'My requests',
                   children: renderRequestList(filteredRequestsByTab('checkout'), {
+                    currentPage: checkoutPage,
+                    onPageChange: setCheckoutPage,
                     onViewDetail: (it) => {
                       setSelectedCheckout(it);
                       setCheckoutInnerTab('detail');

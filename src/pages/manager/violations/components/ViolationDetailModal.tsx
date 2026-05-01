@@ -65,6 +65,11 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
     null,
   );
   const [penalizeStudentLoading, setPenalizeStudentLoading] = useState(false);
+  const maxDeductiblePoints = (() => {
+    const score =
+      penalizeStudent?.behavioral_score ?? report?.reported_student?.behavioral_score ?? 0;
+    return Math.max(0, Number(score) || 0);
+  })();
 
   const canReview =
     report?.status === ViolationStatus.NEW || report?.status === ViolationStatus.UNDER_REVIEW;
@@ -493,12 +498,22 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
                   label="Points to Deduct"
                   rules={[
                     { required: true, message: 'Please enter points to deduct' },
-                    { type: 'number', min: 0.5, max: 5, message: 'Points must be between 0.5 and 5' },
+                    { type: 'number', min: 0.5, message: 'Points must be at least 0.5' },
+                    {
+                      validator: async (_, value) => {
+                        if (value == null) return;
+                        if (value > maxDeductiblePoints) {
+                          throw new Error(
+                            `Points to deduct cannot exceed current score (${maxDeductiblePoints}).`,
+                          );
+                        }
+                      },
+                    },
                   ]}
                 >
                   <InputNumber
                     min={0.5}
-                    max={5}
+                    max={maxDeductiblePoints > 0 ? maxDeductiblePoints : undefined}
                     step={0.5}
                     style={{ width: '100%' }}
                     placeholder="Enter points to deduct"
