@@ -104,12 +104,17 @@ export default function ElectricityPage() {
   const handleSearch = () => { setPage(1); fetchData(1); };
 
   const handleExport = async () => {
+    if (!filterMonth || !filterYear) {
+      message.warning('Please select both month and year before exporting');
+      return;
+    }
+
     try {
       const params: EWUsageFilter = {};
       if (blockName) params.block_name = blockName;
       if (filterType) params.type = filterType as 'electric' | 'water';
-      if (filterMonth) params.month = filterMonth;
-      if (filterYear) params.year = filterYear;
+      params.month = filterMonth;
+      params.year = filterYear;
       await exportEWUsages(params);
     } catch (err) {
       message.error(getErrorMessage(err, 'Export failed'));
