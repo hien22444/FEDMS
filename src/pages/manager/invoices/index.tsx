@@ -443,11 +443,12 @@ export default function ManagerInvoicesPage() {
       ) {
         const allRes = await getManagerInvoices({ limit: 1000 });
         const all = allRes.data;
+        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
         setStats({
           total: all.length,
           paid: all.filter(i => i.payment_status === 'paid').length,
-          unpaid: all.filter(i => i.payment_status === 'unpaid').length,
-          overdue: all.filter(i => i.payment_status === 'overdue').length,
+          unpaid: all.filter(i => i.payment_status === 'unpaid' && new Date(i.due_date) >= todayStart).length,
+          overdue: all.filter(i => i.payment_status === 'unpaid' && new Date(i.due_date) < todayStart).length,
           totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
           paidAmount: all
             .filter(i => i.payment_status === 'paid')
@@ -465,12 +466,12 @@ export default function ManagerInvoicesPage() {
     try {
       const allRes = await getManagerInvoices({ limit: 1000 });
       const all = allRes.data;
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
       setStats({
         total: allRes.total,
         paid: all.filter(i => i.payment_status === 'paid').length,
-        unpaid: all.filter(i => i.payment_status === 'unpaid').length,
-        overdue: all.filter(i => i.payment_status === 'overdue')
-          .length,
+        unpaid: all.filter(i => i.payment_status === 'unpaid' && new Date(i.due_date) >= todayStart).length,
+        overdue: all.filter(i => i.payment_status === 'unpaid' && new Date(i.due_date) < todayStart).length,
         totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
         paidAmount: all
           .filter(i => i.payment_status === 'paid')
@@ -754,7 +755,7 @@ export default function ManagerInvoicesPage() {
       render: (d: string, record) => {
         const due = dayjs(d);
         const isOverdue =
-          due.isBefore(dayjs()) && record.payment_status === 'unpaid';
+          due.isBefore(dayjs(), 'day') && record.payment_status === 'unpaid';
         return (
           <span
             className={isOverdue ? 'text-red-500 font-medium' : ''}
@@ -1015,7 +1016,7 @@ export default function ManagerInvoicesPage() {
           rowClassName={record =>
             record.payment_status === 'overdue' ||
             (record.payment_status === 'unpaid' &&
-              dayjs(record.due_date).isBefore(dayjs()))
+              dayjs(record.due_date).isBefore(dayjs(), 'day'))
               ? 'bg-red-50'
               : ''
           }

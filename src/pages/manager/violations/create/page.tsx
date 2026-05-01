@@ -50,6 +50,7 @@ export default function CreateViolationPage() {
   );
   const [searchError, setSearchError] = useState<string | null>(null);
   const [fileList, setFileList] = useState<any[]>([]);
+  const maxDeductiblePoints = Math.max(0, Number(selectedStudent?.behavioral_score) || 0);
 
   const handleSearchStudent = async () => {
     if (!studentCode.trim()) {
@@ -361,14 +362,23 @@ export default function CreateViolationPage() {
                   {
                     type: 'number',
                     min: 0.5,
-                    max: 8,
-                    message: 'Points must be between 0.5 and 8',
+                    message: 'Points must be at least 0.5',
+                  },
+                  {
+                    validator: async (_, value) => {
+                      if (value == null) return;
+                      if (value > maxDeductiblePoints) {
+                        throw new Error(
+                          `Points to deduct cannot exceed current score (${maxDeductiblePoints}).`
+                        );
+                      }
+                    },
                   },
                 ]}
               >
                 <InputNumber
                   min={0.5}
-                  max={8}
+                  max={maxDeductiblePoints > 0 ? maxDeductiblePoints : undefined}
                   step={0.5}
                   style={{ width: '100%' }}
                   placeholder="e.g. 1.0"

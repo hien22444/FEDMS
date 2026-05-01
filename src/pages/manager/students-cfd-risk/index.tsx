@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Popconfirm, Space, Table, Tag, Typography, message } from 'antd';
+import { Alert, Button, Card, Space, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   fetchCfdAtRiskStudents,
-  cfdDormExpelStudent,
   type CfdAtRiskStudent,
 } from '@/lib/actions/booking';
 
@@ -23,7 +22,6 @@ const roomLabel = (row: CfdAtRiskStudent) => {
 export default function ManagerStudentsCfdRiskPage() {
   const [rows, setRows] = useState<CfdAtRiskStudent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [expelling, setExpelling] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,20 +39,6 @@ export default function ManagerStudentsCfdRiskPage() {
   useEffect(() => {
     load();
   }, [load]);
-
-  const handleBan = async (code: string) => {
-    setExpelling(code);
-    try {
-      await cfdDormExpelStudent(code);
-      message.success('Security inspection request created. Manager can finalize suspension in Requests after inspection.');
-      await load();
-    } catch (e: unknown) {
-      const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : 'Action failed';
-      message.error(msg);
-    } finally {
-      setExpelling(null);
-    }
-  };
 
   const columns: ColumnsType<CfdAtRiskStudent> = [
     {
@@ -83,24 +67,6 @@ export default function ManagerStudentsCfdRiskPage() {
       render: (_, r) =>
         r.dorm_booking_suspended ? <Tag color="magenta">Suspended</Tag> : <Tag>Not suspended</Tag>,
     },
-    {
-      title: 'Action',
-      key: 'act',
-      width: 120,
-      render: (_, r) => (
-        <Popconfirm
-          title="Start CFD expulsion workflow?"
-          description="Creates a security inspection request first. Final suspension is completed by manager after inspection."
-          okText="Ban"
-          okButtonProps={{ danger: true }}
-          onConfirm={() => handleBan(r.student_code)}
-        >
-          <Button type="primary" danger size="small" loading={expelling === r.student_code}>
-            Ban
-          </Button>
-        </Popconfirm>
-      ),
-    },
   ];
 
   return (
@@ -110,8 +76,7 @@ export default function ManagerStudentsCfdRiskPage() {
           CFD at-risk students
         </Title>
         <Text type="secondary">
-          Students with CFD score ≤ 0. Use <strong>Ban</strong> to start expulsion workflow:
-          security inspection first, then manager finalization.
+          Students with CFD score ≤ 0. Suspension is now automatic when score reaches 0 after CFD deduction.
         </Text>
       </div>
 
@@ -119,7 +84,7 @@ export default function ManagerStudentsCfdRiskPage() {
         type="warning"
         showIcon
         message="Discipline threshold"
-        description="Only students listed here meet the CFD ≤ 0 rule. After Ban is clicked, security must inspect the room and report back before manager can finalize service suspension."
+        description="Only students listed here meet the CFD ≤ 0 rule. No manual Ban action is required."
       />
 
       <Card>
