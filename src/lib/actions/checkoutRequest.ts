@@ -31,6 +31,7 @@ export interface StudentCheckoutRequest {
   expected_checkout_date: string;
   reason: string;
   status: CheckoutRequestStatus | string;
+  request_type?: 'student_checkout' | 'cfd_expel';
   rejection_reason?: string | null;
   requested_at?: string;
   reviewed_at?: string | null;
@@ -44,6 +45,13 @@ export interface StudentCheckoutRequest {
     user?: { email?: string };
   };
   inspection?: CheckoutInspection | null;
+  cfd_snapshot_score?: number | null;
+  penalty_invoice?: {
+    invoice_code?: string;
+    total_amount?: number;
+    payment_status?: string;
+    due_date?: string;
+  } | null;
 }
 
 export interface CreateCheckoutRequestDto {
@@ -111,8 +119,11 @@ export const getAllCheckoutRequests = async (params?: {
   return api.get<CheckoutRequestListResponse>(`checkout-requests${qs ? `?${qs}` : ''}`);
 };
 
-export const completeCheckoutRequest = async (id: string) => {
-  return api.patch<StudentCheckoutRequest>(`checkout-requests/${id}/complete`, {});
+export const completeCheckoutRequest = async (
+  id: string,
+  body?: { damage_found?: boolean; penalty_amount?: number; penalty_note?: string }
+) => {
+  return api.patch<StudentCheckoutRequest>(`checkout-requests/${id}/complete`, body || {});
 };
 
 export const reviewCheckoutRequest = async (

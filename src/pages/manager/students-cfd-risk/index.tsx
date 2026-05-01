@@ -46,7 +46,7 @@ export default function ManagerStudentsCfdRiskPage() {
     setExpelling(code);
     try {
       await cfdDormExpelStudent(code);
-      message.success('Student expelled from bed (if any) and dorm booking suspended. Notification sent.');
+      message.success('Security inspection request created. Manager can finalize suspension in Requests after inspection.');
       await load();
     } catch (e: unknown) {
       const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : 'Action failed';
@@ -89,8 +89,8 @@ export default function ManagerStudentsCfdRiskPage() {
       width: 120,
       render: (_, r) => (
         <Popconfirm
-          title="Expel from dorm bed and suspend booking?"
-          description="Terminates active contract if any, frees the bed, and blocks this student from new bookings. A notification will be sent."
+          title="Start CFD expulsion workflow?"
+          description="Creates a security inspection request first. Final suspension is completed by manager after inspection."
           okText="Ban"
           okButtonProps={{ danger: true }}
           onConfirm={() => handleBan(r.student_code)}
@@ -110,8 +110,8 @@ export default function ManagerStudentsCfdRiskPage() {
           CFD at-risk students
         </Title>
         <Text type="secondary">
-          Students with CFD score ≤ 2. Use <strong>Ban</strong> to check them out from their bed (if
-          occupied), set the bed to available, and suspend dorm booking for their account.
+          Students with CFD score ≤ 0. Use <strong>Ban</strong> to start expulsion workflow:
+          security inspection first, then manager finalization.
         </Text>
       </div>
 
@@ -119,7 +119,7 @@ export default function ManagerStudentsCfdRiskPage() {
         type="warning"
         showIcon
         message="Discipline threshold"
-        description="Only students listed here meet the CFD ≤ 2 rule. The Ban action also sets dorm_booking_suspended so they can still log in but cannot book or keep a bed until management clears the flag in the system."
+        description="Only students listed here meet the CFD ≤ 0 rule. After Ban is clicked, security must inspect the room and report back before manager can finalize service suspension."
       />
 
       <Card>
@@ -134,7 +134,7 @@ export default function ManagerStudentsCfdRiskPage() {
           columns={columns}
           dataSource={rows}
           pagination={{ pageSize: 15, showSizeChanger: true }}
-          locale={{ emptyText: 'No students with CFD ≤ 2' }}
+          locale={{ emptyText: 'No students with CFD ≤ 0' }}
         />
       </Card>
     </div>
