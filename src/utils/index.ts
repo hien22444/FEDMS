@@ -3,6 +3,7 @@ export * from './help';
 export * from './util';
 export * from './socket';
 export * from './iframe-cookie';
+export * from './dorm-time';
 
 export function sendToIframe(type: string, payload: unknown) {
   const iframe = document.getElementById(
