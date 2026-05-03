@@ -82,11 +82,53 @@ const STATUS_CONFIG: Record<
   },
 };
 
+const DORM_TIMEZONE = 'Asia/Ho_Chi_Minh';
+const DORM_DATE_PARTS_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: DORM_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 const formatVND = (amount: number) =>
   new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
   }).format(amount);
+
+const getDormDateKey = (value: string | Date) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const parts = DORM_DATE_PARTS_FORMATTER.formatToParts(date);
+  const year = parts.find(part => part.type === 'year')?.value;
+  const month = parts.find(part => part.type === 'month')?.value;
+  const day = parts.find(part => part.type === 'day')?.value;
+
+  if (!year || !month || !day) return '';
+
+  return `${year}-${month}-${day}`;
+};
+
+const isOverdueInvoice = (
+  invoice: Pick<ManagerInvoice, 'payment_status' | 'due_date'>,
+  todayKey = getDormDateKey(new Date()),
+) =>
+  invoice.payment_status === 'overdue' ||
+  (invoice.payment_status === 'unpaid' &&
+    !!getDormDateKey(invoice.due_date) &&
+    getDormDateKey(invoice.due_date) < todayKey);
+
+const buildInvoiceStats = (all: ManagerInvoice[]) => ({
+  total: all.length,
+  paid: all.filter(i => i.payment_status === 'paid').length,
+  unpaid: all.filter(i => i.payment_status === 'unpaid' && !isOverdueInvoice(i)).length,
+  overdue: all.filter(i => isOverdueInvoice(i)).length,
+  totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
+  paidAmount: all
+    .filter(i => i.payment_status === 'paid')
+    .reduce((s, i) => s + i.total_amount, 0),
+});
 
 const feeFormatter = (v: number | string | undefined) =>
   `${v ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -443,16 +485,7 @@ export default function ManagerInvoicesPage() {
       ) {
         const allRes = await getManagerInvoices({ limit: 1000 });
         const all = allRes.data;
-        setStats({
-          total: all.length,
-          paid: all.filter(i => i.payment_status === 'paid').length,
-          unpaid: all.filter(i => i.payment_status === 'unpaid').length,
-          overdue: all.filter(i => i.payment_status === 'overdue').length,
-          totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
-          paidAmount: all
-            .filter(i => i.payment_status === 'paid')
-            .reduce((s, i) => s + i.total_amount, 0),
-        });
+        setStats(buildInvoiceStats(all));
       }
     } catch {
       message.error('Failed to load invoices');
@@ -466,15 +499,8 @@ export default function ManagerInvoicesPage() {
       const allRes = await getManagerInvoices({ limit: 1000 });
       const all = allRes.data;
       setStats({
+        ...buildInvoiceStats(all),
         total: allRes.total,
-        paid: all.filter(i => i.payment_status === 'paid').length,
-        unpaid: all.filter(i => i.payment_status === 'unpaid').length,
-        overdue: all.filter(i => i.payment_status === 'overdue')
-          .length,
-        totalAmount: all.reduce((s, i) => s + i.total_amount, 0),
-        paidAmount: all
-          .filter(i => i.payment_status === 'paid')
-          .reduce((s, i) => s + i.total_amount, 0),
       });
     } catch {
       /* ignore */
@@ -753,8 +779,7 @@ export default function ManagerInvoicesPage() {
       width: 110,
       render: (d: string, record) => {
         const due = dayjs(d);
-        const isOverdue =
-          due.isBefore(dayjs()) && record.payment_status === 'unpaid';
+        const isOverdue = isOverdueInvoice(record);
         return (
           <span
             className={isOverdue ? 'text-red-500 font-medium' : ''}
@@ -1013,9 +1038,7 @@ export default function ManagerInvoicesPage() {
             },
           }}
           rowClassName={record =>
-            record.payment_status === 'overdue' ||
-            (record.payment_status === 'unpaid' &&
-              dayjs(record.due_date).isBefore(dayjs()))
+            isOverdueInvoice(record)
               ? 'bg-red-50'
               : ''
           }

@@ -1623,8 +1623,8 @@ const Booking: React.FC = () => {
           type="error"
           showIcon
           style={{ marginBottom: 24 }}
-          message="Dormitory booking is not available for your account"
-          description="Because of a prior dormitory rules violation, new bookings and bed renewals are disabled. You can still sign in and use other features. Contact dormitory management if you need help."
+          message="Dormitory services have been suspended for your account."
+          description="You can still sign in, read news, use chat, and view your CFD score, but you cannot book or renew dormitory services."
         />
         <Tabs
           activeKey="my"

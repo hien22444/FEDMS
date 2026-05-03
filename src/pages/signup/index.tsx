@@ -109,7 +109,7 @@ const SignUpPage = () => {
                 marginBottom: '8px',
               }}
             >
-              Register FPT Dormitory Account
+              Register FUDA Dormitory Account
             </h1>
             <p style={{ color: token.colorTextSecondary }}>
               Create an account to manage your room and dormitory services
@@ -404,7 +404,7 @@ const SignUpPage = () => {
                 marginBottom: '24px',
               }}
             >
-              FPT Dormitory - Your Second Home
+              FUDA Dormitory - Your Second Home
             </h2>
             <p
               style={{

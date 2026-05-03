@@ -345,7 +345,7 @@ export default function StudentChatPage() {
               </div>
               <div>
                 <div className="font-semibold text-gray-900 text-sm">Support Center</div>
-                <div className="text-xs text-gray-400">FPT Dormitory</div>
+                <div className="text-xs text-gray-400">FUDA Dormitory</div>
               </div>
             </div>
             {!openConv && (

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { connectSocket } from '@/lib/socket';
-import { Alert, App, Button, Card, Form, Image, Input, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { Alert, App, Button, Card, Form, Image, Input, InputNumber, Modal, Select, Space, Table, Tabs, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { getAllOtherRequests, reviewOtherRequest, type OtherRequestItem } from '@/lib/actions/otherRequest';
 import {
@@ -99,6 +99,8 @@ export default function ManagerRequestsPage() {
   const [checkoutRejectOpen, setCheckoutRejectOpen] = useState(false);
   const [checkoutRejectLoading, setCheckoutRejectLoading] = useState(false);
   const [checkoutRejectForm] = Form.useForm();
+  const [checkoutFinalizeOpen, setCheckoutFinalizeOpen] = useState(false);
+  const [checkoutFinalizeForm] = Form.useForm();
 
   const loadCheckoutData = useCallback(async () => {
     setCheckoutLoading(true);
@@ -371,6 +373,12 @@ export default function ManagerRequestsPage() {
 
   const submitCheckoutComplete = async () => {
     if (!checkoutSelected) return;
+    const isCfdExpel = checkoutSelected.request_type === 'cfd_expel';
+    if (isCfdExpel) {
+      checkoutFinalizeForm.resetFields();
+      setCheckoutFinalizeOpen(true);
+      return;
+    }
     try {
       setCheckoutReviewLoading(true);
       await completeCheckoutRequest(checkoutSelected.id);
@@ -379,6 +387,28 @@ export default function ManagerRequestsPage() {
       loadCheckoutData();
     } catch (e: any) {
       message.error(e?.message || 'Failed to complete checkout');
+    } finally {
+      setCheckoutReviewLoading(false);
+    }
+  };
+
+  const submitCheckoutFinalize = async () => {
+    if (!checkoutSelected) return;
+    try {
+      const values = await checkoutFinalizeForm.validateFields();
+      setCheckoutReviewLoading(true);
+      await completeCheckoutRequest(checkoutSelected.id, {
+        damage_found: !!values.damage_found,
+        penalty_amount: values.damage_found ? Number(values.penalty_amount || 0) : 0,
+        penalty_note: values.penalty_note,
+      });
+      message.success('CFD expulsion finalized. Dorm services suspended for this student.');
+      setCheckoutFinalizeOpen(false);
+      backToCheckoutList();
+      loadCheckoutData();
+    } catch (e: any) {
+      if (e?.errorFields) return;
+      message.error(e?.message || 'Failed to finalize CFD expulsion');
     } finally {
       setCheckoutReviewLoading(false);
     }
@@ -484,7 +514,7 @@ export default function ManagerRequestsPage() {
               )}
               {checkoutSelected.status === 'inspected' && (
                 <Button type="primary" loading={checkoutReviewLoading} onClick={submitCheckoutComplete}>
-                  Complete Checkout
+                  {checkoutSelected.request_type === 'cfd_expel' ? 'Finalize Expulsion' : 'Complete Checkout'}
                 </Button>
               )}
             </Space>
@@ -516,6 +546,12 @@ export default function ManagerRequestsPage() {
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2.5">
             <div><Text type="secondary">Request Code:</Text> <Text strong>{checkoutSelected.request_code}</Text></div>
+            <div>
+              <Text type="secondary">Request Type:</Text>{' '}
+              <Tag color={checkoutSelected.request_type === 'cfd_expel' ? 'red' : 'blue'}>
+                {checkoutSelected.request_type === 'cfd_expel' ? 'CFD Expulsion' : 'Student Checkout'}
+              </Tag>
+            </div>
             <div>
               <Text type="secondary">Student:</Text>{' '}
               <Text>{checkoutSelected.student?.full_name || '-'}</Text>
@@ -1432,6 +1468,53 @@ export default function ManagerRequestsPage() {
             rules={[{ required: true, message: 'Please enter a rejection reason' }]}
           >
             <Input.TextArea rows={4} placeholder="e.g. Contract not eligible for early checkout..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        open={checkoutFinalizeOpen}
+        title="Finalize CFD expulsion"
+        okText="Finalize"
+        okButtonProps={{ danger: true, loading: checkoutReviewLoading }}
+        onCancel={() => setCheckoutFinalizeOpen(false)}
+        onOk={submitCheckoutFinalize}
+        destroyOnClose
+        width={isTablet ? 560 : 'calc(100vw - 24px)'}
+      >
+        <Form form={checkoutFinalizeForm} layout="vertical" initialValues={{ damage_found: false }}>
+          <Form.Item
+            name="damage_found"
+            label="Damage found after inspection?"
+            rules={[{ required: true, message: 'Please choose damage result' }]}
+          >
+            <Select
+              options={[
+                { label: 'No damage', value: false },
+                { label: 'Yes, create penalty invoice', value: true },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            shouldUpdate={(prev, cur) => prev.damage_found !== cur.damage_found}
+            noStyle
+          >
+            {({ getFieldValue }) =>
+              getFieldValue('damage_found') ? (
+                <>
+                  <Form.Item
+                    name="penalty_amount"
+                    label="Penalty amount"
+                    rules={[{ required: true, message: 'Please input penalty amount' }]}
+                  >
+                    <InputNumber min={1} style={{ width: '100%' }} />
+                  </Form.Item>
+                  <Form.Item name="penalty_note" label="Penalty note (optional)">
+                    <Input.TextArea rows={3} placeholder="Damage details and penalty reason..." />
+                  </Form.Item>
+                </>
+              ) : null
+            }
           </Form.Item>
         </Form>
       </Modal>
