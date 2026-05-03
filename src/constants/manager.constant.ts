@@ -65,7 +65,7 @@ export const MANAGER_MENU = [
         children: [
           { key: 'violation-list', label: 'Violation Management', path: '/manager/violations' },
           { key: 'create-violation', label: 'Create Violation', path: '/manager/violations/create' },
-          { key: 'students-cfd-risk', label: 'CFD at-risk (≤2)', path: '/manager/students-cfd-risk' },
+          { key: 'students-cfd-risk', label: 'CFD at-risk', path: '/manager/students-cfd-risk' },
         ],
       },
     ],

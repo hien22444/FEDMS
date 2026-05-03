@@ -65,9 +65,33 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
     null,
   );
   const [penalizeStudentLoading, setPenalizeStudentLoading] = useState(false);
+  const [selectedPenaltyStudents, setSelectedPenaltyStudents] = useState<
+    IViolation.SearchStudentResult[]
+  >([]);
+  const maxDeductiblePoints = (() => {
+    if (selectedPenaltyStudents.length > 0) {
+      return Math.max(
+        0,
+        Math.floor(Math.min(...selectedPenaltyStudents.map((s) => Number(s.behavioral_score) || 0))),
+      );
+    }
+    const score = penalizeStudent?.behavioral_score ?? report?.reported_student?.behavioral_score ?? 0;
+    return Math.max(0, Math.floor(Number(score) || 0));
+  })();
 
   const canReview =
     report?.status === ViolationStatus.NEW || report?.status === ViolationStatus.UNDER_REVIEW;
+  const isBatchReport = !!report?.reported_students && report.reported_students.length > 1;
+  const displayDescription = (() => {
+    const raw = report?.description || '';
+    if (!isBatchReport) return raw;
+    const lines = raw.split('\n');
+    const cutoffIdx = lines.findIndex((line) =>
+      line.toLowerCase().includes('batch deduction applied')
+    );
+    if (cutoffIdx <= 0) return raw;
+    return lines.slice(0, cutoffIdx).join('\n').trim();
+  })();
 
   // Load penalty info for penalized reports
   useEffect(() => {
@@ -118,6 +142,23 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
   ]);
 
   const handleStartReview = () => {
+    const initialTargets =
+      report?.reported_students && report.reported_students.length > 0
+        ? report.reported_students
+        : report?.reported_student
+          ? [report.reported_student]
+          : [];
+
+    setSelectedPenaltyStudents(
+      initialTargets.map((s) => ({
+        id: s.id,
+        student_code: s.student_code,
+        full_name: s.full_name,
+        phone: s.phone,
+        behavioral_score: Number(s.behavioral_score) || 0,
+        violations_current_semester: Number(s.violations_current_semester) || 0,
+      })),
+    );
     setIsReviewing(true);
     setPenalizeStudent(null);
     form.setFieldsValue({
@@ -135,6 +176,7 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
     form.resetFields();
     setSelectedStatus(null);
     setPenalizeStudent(null);
+    setSelectedPenaltyStudents([]);
   };
 
   const handlePenaltyCodeBlur = async () => {
@@ -155,6 +197,26 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
     }
   };
 
+  const handleAddPenaltyStudent = () => {
+    if (!penalizeStudent) return;
+    const exists = selectedPenaltyStudents.some(
+      (student) => student.student_code === penalizeStudent.student_code,
+    );
+    if (exists) {
+      message.info(`Student ${penalizeStudent.student_code} is already added`);
+      return;
+    }
+    setSelectedPenaltyStudents((prev) => [...prev, penalizeStudent]);
+    form.setFieldValue('penalty_student_code', '');
+    setPenalizeStudent(null);
+  };
+
+  const handleRemovePenaltyStudent = (studentCodeToRemove: string) => {
+    setSelectedPenaltyStudents((prev) =>
+      prev.filter((student) => student.student_code !== studentCodeToRemove),
+    );
+  };
+
   const submitReview = async (values: any) => {
     try {
       setLoading(true);
@@ -164,8 +226,13 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
       };
 
       if (values.status === ViolationStatus.RESOLVED_PENALIZED) {
+        if (!selectedPenaltyStudents.length) {
+          message.error('Please add at least one student to penalize');
+          return;
+        }
         reviewData.penalty = {
-          student_code: String(values.penalty_student_code ?? '').trim().toUpperCase(),
+          student_code: selectedPenaltyStudents[0].student_code,
+          student_codes: selectedPenaltyStudents.map((s) => s.student_code),
           penalty_type: values.penalty_type || PenaltyType.MINOR,
           points_deducted: values.points_deducted,
           reason: values.penalty_reason || undefined,
@@ -197,26 +264,26 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
       const values = await form.validateFields();
 
       if (values.status === ViolationStatus.RESOLVED_PENALIZED) {
-        const penaltyStudentCode = String(values.penalty_student_code ?? '')
-          .trim()
-          .toUpperCase();
-        const targetCode =
-          penaltyStudentCode || report?.reported_student?.student_code || 'UNKNOWN';
-        const targetName =
-          penalizeStudent?.full_name ??
-          report?.reported_student?.full_name ??
-          'Unknown student';
+        if (!selectedPenaltyStudents.length) {
+          message.error('Please add at least one student to penalize');
+          return;
+        }
 
         modal.confirm({
           title: 'Confirm CFD penalty',
           content: (
             <div>
-              <p>You are about to deduct CFD points from this student:</p>
+              <p>You are about to deduct CFD points from the following students:</p>
               <p>
-                <strong>Student code:</strong> {targetCode}
+                <strong>Total students:</strong> {selectedPenaltyStudents.length}
               </p>
               <p>
-                <strong>Student name:</strong> {targetName}
+                <strong>Students:</strong>{' '}
+                {selectedPenaltyStudents
+                  .slice(0, 6)
+                  .map((student) => `${student.student_code} - ${student.full_name}`)
+                  .join(', ')}
+                {selectedPenaltyStudents.length > 6 ? ', ...' : ''}
               </p>
               <p>
                 <strong>Points to deduct:</strong> -{values.points_deducted}
@@ -229,7 +296,7 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
           ),
           okText: 'Confirm & Save',
           cancelText: 'Cancel',
-          onOk: () => submitReview({ ...values, penalty_student_code: penaltyStudentCode }),
+          onOk: () => submitReview(values),
         });
       } else {
         await submitReview(values);
@@ -303,57 +370,88 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
           {report.location || 'Not specified'}
         </Descriptions.Item>
 
-        {/* Reporter (left) vs Reported Student (right). For student reports, reported student is only set after manager penalizes. */}
+        {/* Display order: Reporter -> Reporter Type -> Reporter Code -> Description -> Student Code */}
         <Descriptions.Item label="Reporter" span={1}>
           {report.reporter.fullname}
         </Descriptions.Item>
-        <Descriptions.Item label="Reported Student" span={1}>
-          {report.reported_student
-            ? report.reported_student.full_name
-            : report.reporter_type === ReporterType.STUDENT
-              ? 'Pending manager review (assign in Penalize)'
-              : '-'}
-        </Descriptions.Item>
-
         <Descriptions.Item label="Reporter Type" span={1}>
           {reporterTypeConfig[report.reporter_type]?.label || report.reporter_type}
         </Descriptions.Item>
-        <Descriptions.Item label="Student Code" span={1}>
-          {report.reported_student?.student_code ??
-            (report.reporter_type === ReporterType.STUDENT ? '—' : '-')}
-        </Descriptions.Item>
 
-        <Descriptions.Item label="Reporter Code" span={1}>
+        <Descriptions.Item label="Reporter Code" span={2}>
           {report.reporter_code || '-'}
-        </Descriptions.Item>
-        <Descriptions.Item label="CFD Score" span={1}>
-          {report.reported_student ? (
-            report.reported_student.behavioral_score != null ? (
-              <span
-                className={`font-medium ${
-                  report.reported_student.behavioral_score < 5 ? 'text-red-500' : 'text-green-500'
-                }`}
-              >
-                {report.reported_student.behavioral_score}/10
-              </span>
-            ) : (
-              '-'
-            )
-          ) : (
-            report.reporter_type === ReporterType.STUDENT ? '—' : '-'
-          )}
-        </Descriptions.Item>
-
-        <Descriptions.Item label=" " span={1}>
-          {' '}
-        </Descriptions.Item>
-        <Descriptions.Item label="Student Phone" span={1}>
-          {report.reported_student ? (report.reported_student.phone || 'N/A') : (report.reporter_type === ReporterType.STUDENT ? '—' : 'N/A')}
         </Descriptions.Item>
 
         <Descriptions.Item label="Description" span={2}>
-          {report.description}
+          <div className="whitespace-pre-wrap">{displayDescription}</div>
         </Descriptions.Item>
+        <Descriptions.Item label="Student Code" span={2}>
+          {report.reported_students && report.reported_students.length > 0
+            ? report.reported_students.map((s) => s.student_code).join(', ')
+            : report.reported_student?.student_code ??
+              (report.reporter_type === ReporterType.STUDENT ? '—' : '-')}
+        </Descriptions.Item>
+
+        {!isBatchReport && (
+          <Descriptions.Item label="Reported Student" span={1}>
+            {report.reported_student
+              ? report.reported_student.full_name
+              : report.reporter_type === ReporterType.STUDENT
+                ? 'Pending manager review (assign in Penalize)'
+                : '-'}
+          </Descriptions.Item>
+        )}
+        {!isBatchReport && (
+          <Descriptions.Item label="CFD Score" span={1}>
+            {report.reported_student ? (
+              report.reported_student.behavioral_score != null ? (
+                <span
+                  className={`font-medium ${
+                    report.reported_student.behavioral_score < 5 ? 'text-red-500' : 'text-green-500'
+                  }`}
+                >
+                  {report.reported_student.behavioral_score}/10
+                </span>
+              ) : (
+                '-'
+              )
+            ) : (
+              report.reporter_type === ReporterType.STUDENT ? '—' : '-'
+            )}
+          </Descriptions.Item>
+        )}
+
+        {!isBatchReport && (
+          <>
+            <Descriptions.Item label=" " span={1}>
+              {' '}
+            </Descriptions.Item>
+            <Descriptions.Item label="Student Phone" span={1}>
+              {report.reported_student
+                ? report.reported_student.phone || 'N/A'
+                : report.reporter_type === ReporterType.STUDENT
+                  ? '—'
+                  : 'N/A'}
+            </Descriptions.Item>
+          </>
+        )}
+
+        {report.reported_students && report.reported_students.length > 0 && (
+          <Descriptions.Item label="Affected Students" span={2}>
+            <div className="whitespace-pre-wrap">
+              {report.reported_students
+                .map(
+                  (student, index) =>
+                    `${index + 1}. ${student.student_code} - ${student.full_name}${
+                      student.behavioral_score != null
+                        ? ` (${student.behavioral_score}/10)`
+                        : ''
+                    }`
+                )
+                .join('\n')}
+            </div>
+          </Descriptions.Item>
+        )}
 
         {report.status === ViolationStatus.RESOLVED_PENALIZED && (
           <>
@@ -435,11 +533,7 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
               <>
                 <Form.Item
                   name="penalty_student_code"
-                  label="Student Code"
-                  rules={[
-                    { required: true, message: 'Please enter student code' },
-                    { min: 2, message: 'Student code is required' },
-                  ]}
+                  label="Student Code (lookup)"
                 >
                   <Input
                     placeholder="E.g: DE180775"
@@ -457,7 +551,12 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
                 )}
                 {!penalizeStudentLoading && penalizeStudent && (
                   <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3">
-                    <div className="text-sm font-medium text-green-800">Student found</div>
+                    <div className="mb-2 text-sm font-medium text-green-800 flex items-center justify-between">
+                      <span>Student found</span>
+                      <Button type="primary" size="small" onClick={handleAddPenaltyStudent}>
+                        Add
+                      </Button>
+                    </div>
                     <Descriptions column={1} size="small" className="mt-1">
                       <Descriptions.Item label="Full name">
                         {penalizeStudent.full_name}
@@ -488,18 +587,56 @@ export default function ViolationDetailModal({ open, report, onClose }: Props) {
                     </div>
                   )}
 
+                {selectedPenaltyStudents.length > 0 && (
+                  <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                    <div className="text-sm font-medium text-blue-800 mb-2">
+                      Students to penalize ({selectedPenaltyStudents.length})
+                    </div>
+                    <Space wrap>
+                      {selectedPenaltyStudents.map((student) => (
+                        <Tag
+                          key={student.student_code}
+                          closable
+                          color="blue"
+                          onClose={(e) => {
+                            e.preventDefault();
+                            handleRemovePenaltyStudent(student.student_code);
+                          }}
+                        >
+                          {student.student_code} - {student.full_name}
+                        </Tag>
+                      ))}
+                    </Space>
+                  </div>
+                )}
+
                 <Form.Item
                   name="points_deducted"
                   label="Points to Deduct"
                   rules={[
                     { required: true, message: 'Please enter points to deduct' },
-                    { type: 'number', min: 0.5, max: 5, message: 'Points must be between 0.5 and 5' },
+                    { type: 'number', min: 1, message: 'Points must be at least 1' },
+                    {
+                      validator: async (_, value) => {
+                        if (value == null) return;
+                        if (selectedPenaltyStudents.length === 0) return;
+                        if (!Number.isInteger(value)) {
+                          throw new Error('Only integer points are allowed (e.g. 1, 2, 3).');
+                        }
+                        if (value > maxDeductiblePoints) {
+                          throw new Error(
+                            `Points to deduct cannot exceed lowest current score among selected students (${maxDeductiblePoints}).`,
+                          );
+                        }
+                      },
+                    },
                   ]}
                 >
                   <InputNumber
-                    min={0.5}
-                    max={5}
-                    step={0.5}
+                    min={1}
+                    max={maxDeductiblePoints > 0 ? maxDeductiblePoints : undefined}
+                    step={1}
+                    precision={0}
                     style={{ width: '100%' }}
                     placeholder="Enter points to deduct"
                   />

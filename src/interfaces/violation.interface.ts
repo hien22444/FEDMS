@@ -53,6 +53,7 @@ export namespace IViolation {
     id: string;
     report_code: string;
     reported_student?: Student | null;
+    reported_students?: Student[];
     reporter: Reporter;
     reporter_type: ReporterType;
     reporter_code?: string;
@@ -72,6 +73,7 @@ export namespace IViolation {
 
   export interface CreateViolationDto {
     student_code?: string;
+    student_codes?: string[];
     reporter_type: ReporterType;
     violation_type: ViolationType;
     violation_other_detail?: string;
@@ -91,6 +93,7 @@ export namespace IViolation {
     review_notes?: string;
     penalty?: {
       student_code: string;
+      student_codes?: string[];
       penalty_type: PenaltyType;
       points_deducted: number;
       reason?: string;
