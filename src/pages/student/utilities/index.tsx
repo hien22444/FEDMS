@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Descriptions, Empty, Modal, Spin, Table, Tag, Typography, message, theme } from 'antd';
+import { Alert, Button, Card, Descriptions, Empty, Modal, Spin, Table, Tag, Typography, message, theme } from 'antd';
 import { ThunderboltOutlined, FileTextOutlined } from '@ant-design/icons';
 import { getMyEWUsages, type MyEWRecord } from '@/lib/actions/ewUsage';
 import {
@@ -416,38 +416,58 @@ const Utilities = () => {
           }
         >
           {selectedRecord && (
-            <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="Term">{selectedRecord.term}</Descriptions.Item>
-              <Descriptions.Item label="Type">
-                {selectedRecord.type === 'electric' ? 'Electric' : 'Water'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Recorded Date">
-                {formatDateDMY(selectedRecord.date)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Previous Meter">
-                {selectedRecord.meter_left} {selectedRecord.unit}
-              </Descriptions.Item>
-              <Descriptions.Item label="Current Meter">
-                {selectedRecord.meter_right} {selectedRecord.unit}
-              </Descriptions.Item>
-              <Descriptions.Item label="Consumption">
-                {selectedRecord.consumption} {selectedRecord.unit}
-              </Descriptions.Item>
-              <Descriptions.Item label="Unit Price">
-                {selectedRecord.price_per_unit.toLocaleString('en-US')} VND/{selectedRecord.unit}
-              </Descriptions.Item>
-              <Descriptions.Item label="Students">
-                {selectedRecord.occupied_beds}
-              </Descriptions.Item>
-              <Descriptions.Item label="Your Share">
-                <Text strong style={{ color: token.colorError }}>
-                  {selectedRecord.amount.toLocaleString('en-US')} VND
-                </Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Total Block Amount">
-                {selectedRecord.total_amount.toLocaleString('en-US')} VND
-              </Descriptions.Item>
-            </Descriptions>
+            <>
+              {selectedRecord.is_prorated && (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  message="This bill is prorated by active contract days, so your share may not equal the block total divided by the average student count."
+                />
+              )}
+              <Descriptions column={1} size="small" bordered>
+                <Descriptions.Item label="Term">{selectedRecord.term}</Descriptions.Item>
+                <Descriptions.Item label="Type">
+                  {selectedRecord.type === 'electric' ? 'Electric' : 'Water'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Recorded Date">
+                  {formatDateDMY(selectedRecord.date)}
+                </Descriptions.Item>
+                <Descriptions.Item label="Previous Meter">
+                  {selectedRecord.meter_left} {selectedRecord.unit}
+                </Descriptions.Item>
+                <Descriptions.Item label="Current Meter">
+                  {selectedRecord.meter_right} {selectedRecord.unit}
+                </Descriptions.Item>
+                <Descriptions.Item label="Consumption">
+                  {selectedRecord.consumption} {selectedRecord.unit}
+                </Descriptions.Item>
+                <Descriptions.Item label="Unit Price">
+                  {selectedRecord.price_per_unit.toLocaleString('en-US')} VND/{selectedRecord.unit}
+                </Descriptions.Item>
+                <Descriptions.Item label="Billing Participants">
+                  {selectedRecord.billing_students ?? selectedRecord.occupied_beds}
+                </Descriptions.Item>
+                <Descriptions.Item label="Average Occupancy">
+                  {selectedRecord.occupied_beds}
+                </Descriptions.Item>
+                <Descriptions.Item label="Your Active Days">
+                  {(selectedRecord.student_days ?? 0).toLocaleString('en-US')} /{' '}
+                  {(selectedRecord.billing_days ?? 0).toLocaleString('en-US')} days
+                </Descriptions.Item>
+                <Descriptions.Item label="Total Student-Days">
+                  {(selectedRecord.total_student_days ?? 0).toLocaleString('en-US')}
+                </Descriptions.Item>
+                <Descriptions.Item label="Your Share">
+                  <Text strong style={{ color: token.colorError }}>
+                    {selectedRecord.amount.toLocaleString('en-US')} VND
+                  </Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Total Block Amount">
+                  {selectedRecord.total_amount.toLocaleString('en-US')} VND
+                </Descriptions.Item>
+              </Descriptions>
+            </>
           )}
         </Modal>
 

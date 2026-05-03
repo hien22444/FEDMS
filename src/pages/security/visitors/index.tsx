@@ -9,7 +9,7 @@ import {
   RiLoginCircleLine,
   RiLogoutCircleLine,
 } from 'react-icons/ri';
-import { cn } from '@/utils';
+import { cn, DORM_TIMEZONE, getDormDateKey, getDormTimeMinutes } from '@/utils';
 import {
   getAllVisitorRequests,
   approveVisitorRequest,
@@ -102,10 +102,13 @@ const VisitorsPage = () => {
   };
 
   const handleCheckin = async (requestId: string, visitorId: string, timeFrom: string, timeTo: string) => {
-    const now = new Date();
     const [fh, fm] = timeFrom.split(':').map(Number);
     const [th, tm] = timeTo.split(':').map(Number);
-    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const nowMin = getDormTimeMinutes();
+    if (nowMin === null) {
+      setNotice({ type: 'error', message: 'Failed to read the current Vietnam time.' });
+      return;
+    }
     if (nowMin < fh * 60 + fm || nowMin > th * 60 + tm) {
       setNotice({
         type: 'warning',
@@ -141,7 +144,9 @@ const VisitorsPage = () => {
 
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString('en-GB');
+      return new Date(dateStr).toLocaleDateString('en-GB', {
+        timeZone: DORM_TIMEZONE,
+      });
     } catch {
       return dateStr;
     }
@@ -150,6 +155,7 @@ const VisitorsPage = () => {
   const formatTime = (dateStr: string) => {
     try {
       return new Date(dateStr).toLocaleTimeString('en-GB', {
+        timeZone: DORM_TIMEZONE,
         hour: '2-digit',
         minute: '2-digit',
       });
@@ -159,13 +165,7 @@ const VisitorsPage = () => {
   };
 
   const isVisitDateToday = (dateStr: string) => {
-    const visitDate = new Date(dateStr);
-    const today = new Date();
-    return (
-      visitDate.getFullYear() === today.getFullYear() &&
-      visitDate.getMonth() === today.getMonth() &&
-      visitDate.getDate() === today.getDate()
-    );
+    return getDormDateKey(dateStr) === getDormDateKey(new Date());
   };
 
   return (
