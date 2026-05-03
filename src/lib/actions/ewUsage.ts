@@ -159,8 +159,13 @@ export interface MyEWRecord {
   unit: string;
   price_per_unit: number;
   occupied_beds: number;
+  billing_students?: number;
+  billing_days?: number;
+  total_student_days?: number;
+  student_days?: number;
+  is_prorated?: boolean;
   total_amount: number;   // total amount for the entire block
-  amount: number;         // amount charged to the student after splitting by occupied beds
+  amount: number;         // amount charged to the student after splitting by active contract days
 }
 
 export interface MyEWUsageResponse {
