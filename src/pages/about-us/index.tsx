@@ -11,33 +11,33 @@ type Member = {
 const teamMembers: Member[] = [
   {
     role: 'Mentor',
-    name: 'Mentor Name',
+    name: 'Trần Văn Hoàng',
     studentId: 'N/A',
-    image: '/images/logo.jpg',
+    image: '/images/avatar/avatar.jpg',
   },
   {
     role: 'Leader',
     name: 'Trần Trịnh Hiến',
-    studentId: 'SE000001',
-    image: '/images/building.jpg',
+    studentId: 'DE180775',
+    image: '/images/avatar/hien.jpg',
   },
   {
     role: 'Member',
     name: 'Phan Thanh Tùng',
     studentId: 'DE170779',
-    image: '/images/tung1.jpg',
+    image: '/images/avatar/tung2.jpg',
   },
   {
     role: 'Member',
     name: 'Phạm Thanh Tùng',
-    studentId: 'SE000003',
-    image: '/images/building%201.jpg',
+    studentId: 'DE180798',
+    image: '/images/avatar/tungp.png',
   },
   {
     role: 'Member',
     name: 'Phạm Ngọc Lâm',
-    studentId: 'SE000004',
-    image: '/images/building%202.jpg',
+    studentId: 'DE160196',
+    image: '/images/avatar/lam.jpg',
   },
 ];
 
