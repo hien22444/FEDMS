@@ -6,7 +6,17 @@ export interface INotification {
   title: string;
   message: string;
   notification_type: 'info' | 'warning' | 'error' | 'success';
-  category: 'payment' | 'booking' | 'maintenance' | 'violation' | 'visitor' | 'equipment' | 'general' | 'chat';
+  category:
+    | 'payment'
+    | 'booking'
+    | 'maintenance'
+    | 'violation'
+    | 'visitor'
+    | 'equipment'
+    | 'general'
+    | 'chat'
+    | 'checkout'
+    | 'access';
   is_read: boolean;
   related_id?: string;
   created_at: string;
@@ -26,4 +36,8 @@ export const markAllNotificationsRead = async () => {
 
 export const deleteNotification = async (id: string) => {
   return api.delete<{ message: string }>(`notifications/${id}`);
+};
+
+export const clearAllNotifications = async () => {
+  return api.delete<{ message: string }>('notifications/clear-all');
 };

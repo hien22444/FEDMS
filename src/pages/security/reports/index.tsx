@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { DatePicker, Select, message } from 'antd';
 import dayjs from 'dayjs';
-import { cn } from '@/utils';
+import { cn, DORM_TIMEZONE } from '@/utils';
 import {
   getAccessLogs,
   getReportStats,
@@ -23,6 +23,21 @@ import type { IFaceRecognition } from '@/interfaces';
 const { RangePicker } = DatePicker;
 
 const PAGE_SIZE_OPTIONS = [50, 70, 100];
+
+const ACCESS_LOG_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en-GB', {
+  timeZone: DORM_TIMEZONE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+const formatAccessLogDateTime = (value: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '-' : ACCESS_LOG_DATE_TIME_FORMATTER.format(date);
+};
 
 const SecurityReportsPage = () => {
   const today = dayjs().format('YYYY-MM-DD');
@@ -279,10 +294,7 @@ const SecurityReportsPage = () => {
                     className="border-b border-gray-50 hover:bg-gray-50"
                   >
                     <td className="py-3 px-2">
-                      {new Date(log.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatAccessLogDateTime(log.createdAt)}
                     </td>
                     <td className="py-2 px-2">
                       {log.face_snapshot_url ? (
