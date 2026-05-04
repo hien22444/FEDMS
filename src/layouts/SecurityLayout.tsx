@@ -21,6 +21,7 @@ import { useAuth, useSecurityAdminAccess } from '@/contexts';
 import { connectSocket } from '@/lib/socket';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { useDetectionNotifications } from '@/hooks/useDetectionNotifications';
+import { useSecurityNotifications } from '@/hooks/useSecurityNotifications';
 import DetectionToast from '@/components/DetectionToast';
 import NotificationPanel from '@/components/NotificationPanel';
 
@@ -38,13 +39,17 @@ const SecurityLayout = () => {
   const [adminAccessLoading, setAdminAccessLoading] = useState(false);
   const [adminForm] = Form.useForm();
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  // Ephemeral toast UI (auto-dismissing) — independent of the persistent panel.
+  const { activeToast, dismissToast } = useDetectionNotifications();
+  // Persistent notifications backed by the Notification API.
   const {
     notifications,
-    activeToast,
     unreadCount,
-    dismissToast,
+    markAsRead,
     markAllRead,
-  } = useDetectionNotifications();
+    removeOne,
+    clearAll,
+  } = useSecurityNotifications();
   const isDesktop = width >= 1024;
 
   // Connect socket so the security user joins the 'security_cameras' room
@@ -130,10 +135,7 @@ const SecurityLayout = () => {
                 ))}
 
               <button
-                onClick={() => {
-                  setNotifPanelOpen(true);
-                  markAllRead();
-                }}
+                onClick={() => setNotifPanelOpen(true)}
                 className="relative p-1 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <Bell className="w-5 h-5 text-gray-600" />
@@ -304,7 +306,10 @@ const SecurityLayout = () => {
         open={notifPanelOpen}
         onClose={() => setNotifPanelOpen(false)}
         notifications={notifications}
+        onMarkAsRead={markAsRead}
         onMarkAllRead={markAllRead}
+        onRemove={removeOne}
+        onClearAll={clearAll}
       />
     </div>
   );
