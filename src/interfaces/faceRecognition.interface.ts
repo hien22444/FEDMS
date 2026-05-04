@@ -98,6 +98,7 @@ export namespace IFaceRecognition {
     totalCheckOuts: number;
     currentlyInside: number;
     manualOverrides: number;
+    unknownAttempts: number;
   }
 
   export interface AccessLogPaginated {

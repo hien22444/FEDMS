@@ -15,6 +15,8 @@ export const getAccessLogs = async (params?: {
   type?: string;
   method?: string;
   date?: string;
+  startDate?: string;
+  endDate?: string;
 }) => {
   const query = new URLSearchParams();
   if (params?.page) query.set('page', params.page.toString());
@@ -22,6 +24,8 @@ export const getAccessLogs = async (params?: {
   if (params?.type) query.set('type', params.type);
   if (params?.method) query.set('method', params.method);
   if (params?.date) query.set('date', params.date);
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
   const qs = query.toString();
   return api.get<IFaceRecognition.AccessLogPaginated>(`access-logs${qs ? `?${qs}` : ''}`);
 };
@@ -36,8 +40,9 @@ export const createManualLog = async (data: {
   return api.post<IFaceRecognition.AccessLog>('access-logs/manual', data);
 };
 
-export const getReportStats = async (date: string) => {
-  return api.get<IFaceRecognition.ReportStats>(`access-logs/report-stats?date=${date}`);
+export const getReportStats = async (startDate: string, endDate: string) => {
+  const query = new URLSearchParams({ startDate, endDate });
+  return api.get<IFaceRecognition.ReportStats>(`access-logs/report-stats?${query.toString()}`);
 };
 
 export const exportAccessLogs = async (params: {

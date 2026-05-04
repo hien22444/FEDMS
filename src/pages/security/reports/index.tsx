@@ -8,6 +8,7 @@ import {
   Download,
   Loader2,
   RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import { DatePicker, Select, message } from 'antd';
 import dayjs from 'dayjs';
@@ -24,10 +25,10 @@ const { RangePicker } = DatePicker;
 const PAGE_SIZE_OPTIONS = [50, 70, 100];
 
 const SecurityReportsPage = () => {
-  const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const today = dayjs().format('YYYY-MM-DD');
+  const [range, setRange] = useState<[string, string]>([today, today]);
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [methodFilter, setMethodFilter] = useState<string | undefined>();
-  const [exportRange, setExportRange] = useState<[string, string] | null>(null);
   const [pageSize, setPageSize] = useState(50);
 
   const [stats, setStats] = useState<IFaceRecognition.ReportStats>({
@@ -35,6 +36,7 @@ const SecurityReportsPage = () => {
     totalCheckOuts: 0,
     currentlyInside: 0,
     manualOverrides: 0,
+    unknownAttempts: 0,
   });
   const [logs, setLogs] = useState<IFaceRecognition.AccessLog[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
@@ -45,14 +47,16 @@ const SecurityReportsPage = () => {
     async (page = 1) => {
       setLoading(true);
       try {
+        const [startDate, endDate] = range;
         const [statsData, logsData] = await Promise.all([
-          getReportStats(date),
+          getReportStats(startDate, endDate),
           getAccessLogs({
             page,
             limit: pageSize,
             type: typeFilter,
             method: methodFilter,
-            date,
+            startDate,
+            endDate,
           }),
         ]);
         if (statsData) setStats(statsData);
@@ -70,7 +74,7 @@ const SecurityReportsPage = () => {
         setLoading(false);
       }
     },
-    [date, typeFilter, methodFilter, pageSize],
+    [range, typeFilter, methodFilter, pageSize],
   );
 
   useEffect(() => {
@@ -80,8 +84,7 @@ const SecurityReportsPage = () => {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const startDate = exportRange ? exportRange[0] : date;
-      const endDate = exportRange ? exportRange[1] : date;
+      const [startDate, endDate] = range;
       await exportAccessLogs({
         startDate,
         endDate,
@@ -105,19 +108,26 @@ const SecurityReportsPage = () => {
       {/* Page Title */}
       <div className="flex items-center gap-3">
         <FileSpreadsheet className="w-6 h-6 text-[#F36F21]" />
-        <h1 className="text-2xl font-bold text-gray-900">Daily Reports</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Camera Reports</h1>
       </div>
 
       {/* Filter Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Date</label>
-            <DatePicker
-              value={dayjs(date)}
-              onChange={(d) => d && setDate(d.format('YYYY-MM-DD'))}
+            <label className="block text-xs font-medium text-gray-500 mb-1">Date Range</label>
+            <RangePicker
+              value={[dayjs(range[0]), dayjs(range[1])]}
+              onChange={(dates) => {
+                if (dates && dates[0] && dates[1]) {
+                  setRange([
+                    dates[0].format('YYYY-MM-DD'),
+                    dates[1].format('YYYY-MM-DD'),
+                  ]);
+                }
+              }}
               allowClear={false}
-              className="w-40"
+              className="w-64"
             />
           </div>
           <div>
@@ -146,31 +156,7 @@ const SecurityReportsPage = () => {
               ]}
             />
           </div>
-          <div className="ml-auto flex items-end gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
-                Export Range
-              </label>
-              <RangePicker
-                value={
-                  exportRange
-                    ? [dayjs(exportRange[0]), dayjs(exportRange[1])]
-                    : null
-                }
-                onChange={(dates) => {
-                  if (dates && dates[0] && dates[1]) {
-                    setExportRange([
-                      dates[0].format('YYYY-MM-DD'),
-                      dates[1].format('YYYY-MM-DD'),
-                    ]);
-                  } else {
-                    setExportRange(null);
-                  }
-                }}
-                placeholder={['Start', 'End']}
-                className="w-56"
-              />
-            </div>
+          <div className="ml-auto flex items-end">
             <button
               onClick={handleExport}
               disabled={exporting}
@@ -188,7 +174,7 @@ const SecurityReportsPage = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="rounded-xl p-6 border-2 bg-green-50 border-green-200">
           <div className="flex items-center gap-2 mb-1">
             <LogIn className="w-5 h-5 text-green-600" />
@@ -216,6 +202,13 @@ const SecurityReportsPage = () => {
             <p className="text-3xl font-bold text-purple-600">{stats.manualOverrides}</p>
           </div>
           <p className="text-sm text-gray-600">Manual Overrides</p>
+        </div>
+        <div className="rounded-xl p-6 border-2 bg-red-50 border-red-200">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <p className="text-3xl font-bold text-red-600">{stats.unknownAttempts}</p>
+          </div>
+          <p className="text-sm text-gray-600">Unknown Attempts</p>
         </div>
       </div>
 
@@ -277,7 +270,10 @@ const SecurityReportsPage = () => {
                   </td>
                 </tr>
               ) : (
-                logs.map((log, i) => (
+                logs.map((log, i) => {
+                  const isUnknown =
+                    log.method === 'face_recognition' && !log.student && !log.visitor_name;
+                  return (
                   <tr
                     key={log.id || i}
                     className="border-b border-gray-50 hover:bg-gray-50"
@@ -311,12 +307,20 @@ const SecurityReportsPage = () => {
                       <span
                         className={cn(
                           'px-2 py-1 rounded-full text-xs font-medium',
-                          log.type === 'check_in'
+                          isUnknown
+                            ? 'bg-red-100 text-red-700'
+                            : log.type === 'check_in'
                             ? 'bg-green-100 text-green-700'
                             : 'bg-blue-100 text-blue-700',
                         )}
                       >
-                        {log.type === 'check_in' ? 'Check In' : 'Check Out'}
+                        {isUnknown
+                          ? log.type === 'check_in'
+                            ? 'Unknown Check-In'
+                            : 'Unknown Check-Out'
+                          : log.type === 'check_in'
+                          ? 'Check In'
+                          : 'Check Out'}
                       </span>
                     </td>
                     <td className="py-3 px-2">
@@ -340,7 +344,8 @@ const SecurityReportsPage = () => {
                       {log.camera_id || '\u2014'}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
