@@ -20,14 +20,12 @@ import {
   Descriptions,
   Tabs,
   Tooltip,
-  Popconfirm,
   Badge,
 } from 'antd';
 import {
   FileTextOutlined,
   PlusOutlined,
   EyeOutlined,
-  StopOutlined,
   DollarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -44,7 +42,6 @@ import {
   createEWInvoiceForStudent,
   createInvoicesForRoom,
   createEWInvoicesForAllBlocks,
-  cancelManagerInvoice,
   type ManagerInvoice,
   type ManagerInvoiceFilter,
   type CreateInvoiceDto,
@@ -558,20 +555,6 @@ export default function ManagerInvoicesPage() {
     }
   };
 
-  const handleCancel = async (id: string) => {
-    try {
-      await cancelManagerInvoice(id);
-      message.success('Invoice cancelled');
-      fetchData(page);
-      refreshStats();
-    } catch (err: unknown) {
-      message.error(
-        (err as { message?: string })?.message ||
-          'Failed to cancel invoice',
-      );
-    }
-  };
-
   const handleCreateSubmit = async () => {
     setCreateLoading(true);
     setCreateFeedback(null);
@@ -810,24 +793,6 @@ export default function ManagerInvoicesPage() {
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
-          {(record.payment_status === 'unpaid' ||
-            record.payment_status === 'overdue') && (
-            <Popconfirm
-              title='Cancel this invoice?'
-              onConfirm={() => handleCancel(record.id)}
-              okText='Yes'
-              cancelText='No'
-              okButtonProps={{ danger: true }}
-            >
-              <Tooltip title='Cancel Invoice'>
-                <Button
-                  type='text'
-                  icon={<StopOutlined />}
-                  className='text-orange-500'
-                />
-              </Tooltip>
-            </Popconfirm>
-          )}
         </Space>
       ),
     },

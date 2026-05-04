@@ -218,17 +218,27 @@ function BedUsageManagementTab() {
   const [yearFilter, setYearFilter] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 
-  const buildSemester = (term: string, year: string) =>
-    term && year ? `${term}-${year}` : '';
+  const buildSemester = (term: string, year: string) => {
+    if (term && year) return `${term}-${year}`;
+    return term || year || '';
+  };
 
   const load = useCallback(
-    async (p = 1, q = search, term = termFilter, year = yearFilter) => {
+    async (
+      p = 1,
+      q = search,
+      term = termFilter,
+      year = yearFilter,
+      range = dateRange
+    ) => {
       try {
         setLoading(true);
         const params: Parameters<typeof getAllBookings>[0] = { page: p, limit: PAGE_SIZE };
         if (q) params.search = q;
         const sem = buildSemester(term, year);
         if (sem) params.semester = sem;
+        if (range?.[0]) params.start_date = range[0].format('YYYY-MM-DD');
+        if (range?.[1]) params.end_date = range[1].format('YYYY-MM-DD');
         const res = await getAllBookings(params);
         setBookings(res.items);
         setTotal(res.pagination.total);
@@ -240,13 +250,13 @@ function BedUsageManagementTab() {
         setLoading(false);
       }
     },
-    [search, termFilter, yearFilter]
+    [search, termFilter, yearFilter, dateRange]
   );
 
   useEffect(() => {
-    load(1, search, termFilter, yearFilter);
+    load(1, search, termFilter, yearFilter, dateRange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, termFilter, yearFilter]);
+  }, [search, termFilter, yearFilter, dateRange]);
 
   const handleSearch = () => {
     setSearch(searchInput);
@@ -260,21 +270,8 @@ function BedUsageManagementTab() {
     setDateRange(null);
   };
 
-  // Client-side date filter on top of server results
-  const filtered = dateRange
-    ? bookings.filter((b) => {
-        const start = dateRange[0] ? dateRange[0].startOf('day') : null;
-        const end = dateRange[1] ? dateRange[1].endOf('day') : null;
-        const checkIn = b.start_date ? dayjs(b.start_date) : null;
-        if (!checkIn) return true;
-        if (start && checkIn.isBefore(start)) return false;
-        if (end && checkIn.isAfter(end)) return false;
-        return true;
-      })
-    : bookings;
-
   const exportManagement = () => {
-    const rows = filtered.map((b) => {
+    const rows = bookings.map((b) => {
       const room = b.room;
       const block = room?.block;
       const dormCode = (block?.dorm as any)?.dorm_code ?? '';
@@ -413,7 +410,7 @@ function BedUsageManagementTab() {
           <Button
             icon={<Download size={14} />}
             onClick={exportManagement}
-            disabled={filtered.length === 0}
+            disabled={bookings.length === 0}
           >
             Export Excel
           </Button>
@@ -433,7 +430,7 @@ function BedUsageManagementTab() {
         <Table<BookingRequestItem>
           rowKey="id"
           loading={loading}
-          dataSource={filtered}
+          dataSource={bookings}
           columns={columns}
           size="small"
           scroll={{ x: 1200 }}

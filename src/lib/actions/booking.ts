@@ -311,11 +311,21 @@ export const getRoommates = async (bookingId: string) => {
   return api.get<RoommateItem[]>(`bookings/${bookingId}/roommates`);
 };
 
-export const getAllBookings = async (params?: { status?: string; search?: string; semester?: string; page?: number; limit?: number }) => {
+export const getAllBookings = async (params?: {
+  status?: string;
+  search?: string;
+  semester?: string;
+  start_date?: string;
+  end_date?: string;
+  page?: number;
+  limit?: number;
+}) => {
   const query = new URLSearchParams();
   if (params?.status) query.set('status', params.status);
   if (params?.search) query.set('search', params.search);
   if (params?.semester) query.set('semester', params.semester);
+  if (params?.start_date) query.set('start_date', params.start_date);
+  if (params?.end_date) query.set('end_date', params.end_date);
   if (params?.page) query.set('page', params.page.toString());
   if (params?.limit) query.set('limit', params.limit.toString());
   const qs = query.toString();
