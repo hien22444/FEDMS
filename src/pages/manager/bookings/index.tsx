@@ -17,6 +17,8 @@ import { getAllBookings, sendEmailToStudent, sendEmailToAllStudents } from '@/li
 import type { BookingRequestItem } from '@/lib/actions';
 import { useWindowSize } from '@/hooks/useWindowSize';
 
+const DEFAULT_PAGE_SIZE = 20;
+
 const statusConfig: Record<string, { color: string; label: string }> = {
   awaiting_payment: { color: 'warning', label: 'Awaiting Payment' },
   approved: { color: 'success', label: 'Approved' },
@@ -31,11 +33,12 @@ const ManagerBookings = () => {
   const [data, setData] = useState<BookingRequestItem[]>([]);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: DEFAULT_PAGE_SIZE,
     total: 0,
   });
   const [search, setSearch] = useState('');
   const searchRef = useRef(search);
+  const pageSizeRef = useRef(DEFAULT_PAGE_SIZE);
   const [emailModal, setEmailModal] = useState<{ open: boolean; bookingId: string; studentName: string } | null>(null);
   const [emailSending, setEmailSending] = useState(false);
   const [emailForm] = Form.useForm();
@@ -45,18 +48,20 @@ const ManagerBookings = () => {
 
   searchRef.current = search;
 
-  const fetchData = useCallback(async (page = 1) => {
+  const fetchData = useCallback(async (page = 1, limit = pageSizeRef.current) => {
     setLoading(true);
     try {
       const res = await getAllBookings({
         page,
-        limit: 10,
+        limit,
         search: searchRef.current.trim() || undefined,
       });
       setData(res.items);
+      pageSizeRef.current = res.pagination.limit || limit;
       setPagination((prev) => ({
         ...prev,
         page: res.pagination.page,
+        limit: res.pagination.limit || limit,
         total: res.pagination.total,
       }));
     } catch {
@@ -264,10 +269,13 @@ const ManagerBookings = () => {
             pageSize: pagination.limit,
             total: pagination.total,
             showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '50', '100'],
             showTotal: (total) => `Total ${total} records`,
             onChange: (page, pageSize) => {
-              setPagination((prev) => ({ ...prev, limit: pageSize ?? prev.limit }));
-              fetchData(page);
+              const nextPageSize = pageSize ?? pageSizeRef.current;
+              pageSizeRef.current = nextPageSize;
+              setPagination((prev) => ({ ...prev, page, limit: nextPageSize }));
+              fetchData(page, nextPageSize);
             },
           }}
         />
