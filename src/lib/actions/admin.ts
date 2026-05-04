@@ -681,24 +681,67 @@ const DASHBOARD_CACHE_TTL = 60_000; // 1 minute
 export interface DormRulesPenalty {
   fine_vnd?: number;
   description?: string;
+  description_en?: string;
+  description_vi?: string;
+  amount?: string;
+  amount_en?: string;
+  amount_vi?: string;
+  first_violation?: string;
+  first_violation_en?: string;
+  first_violation_vi?: string;
+  second_violation?: string;
+  second_violation_en?: string;
+  second_violation_vi?: string;
+  third_violation?: string;
+  third_violation_en?: string;
+  third_violation_vi?: string;
   repeat_penalty?: string;
+  repeat_penalty_en?: string;
+  repeat_penalty_vi?: string;
+  additional_action?: string;
+  additional_action_en?: string;
+  additional_action_vi?: string;
+  compensation?: string;
+  compensation_en?: string;
+  compensation_vi?: string;
+  legal_action?: string;
+  legal_action_en?: string;
+  legal_action_vi?: string;
+  note?: string;
+  note_en?: string;
+  note_vi?: string;
 }
 
 export interface DormRule {
   id: string;
   category: string;
+  source_ref?: string;
   title: string;
+  title_en?: string;
+  title_vi?: string;
   rule: string;
+  rule_en?: string;
+  rule_vi?: string;
   details?: string;
+  details_en?: string;
+  details_vi?: string;
   keywords?: string[];
+  keywords_en?: string[];
+  keywords_vi?: string[];
   example_questions?: string[];
+  example_questions_en?: string[];
+  example_questions_vi?: string[];
   allowed_devices?: string[];
+  allowed_devices_en?: string[];
+  allowed_devices_vi?: string[];
   penalty?: DormRulesPenalty;
 }
 
 export interface DormRulesKB {
   knowledge_base?: {
     source?: string;
+    source_en?: string;
+    decision_number?: string;
     issued_date?: string;
     language?: string;
     version?: string;
