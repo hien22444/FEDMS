@@ -1,4 +1,4 @@
-import { IcArrowRight, IcClose, IcLoading } from '@/constants';
+import { IcArrowRight, IcClose } from '@/constants';
 import { useDebouncedCallback, useToggle } from '@/hooks';
 import {
   answer,
@@ -28,7 +28,10 @@ import {
   BedDouble,
   BotIcon,
   CheckCircle2,
+  ExternalLink,
   FileText,
+  MessageCircle,
+  RefreshCcw,
   ShieldCheck,
   Sparkles,
   Wallet,
@@ -177,6 +180,27 @@ const buildSummaryRows = (meta: AgentMeta) =>
 const getPaymentCheckoutUrl = (meta: AgentMeta) =>
   meta.checkoutUrl || meta.payos?.checkoutUrl || null;
 
+const formatVnd = (value?: number | null) =>
+  `${Number(value || 0).toLocaleString('en-US')} VND`;
+
+const formatRecordDate = (value?: string | null) =>
+  value
+    ? new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC' }).format(
+        new Date(value),
+      )
+    : '—';
+
+const LoadingDots = () => (
+  <div
+    className='flex h-6 items-center gap-1.5 rounded-2xl border border-orange-100 bg-white px-4 py-3 shadow-sm'
+    aria-label='Assistant is loading'
+  >
+    <span className='ai-loading-dot' />
+    <span className='ai-loading-dot ai-loading-dot-delay-1' />
+    <span className='ai-loading-dot ai-loading-dot-delay-2' />
+  </div>
+);
+
 export const Agent = memo(() => {
   const navigate = useNavigate();
   const [open, onToggle] = useToggle();
@@ -190,6 +214,8 @@ export const Agent = memo(() => {
     useState<boolean>(false);
 
   const latestDivRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const requestVersionRef = useRef(0);
 
   const randomId = () => (Math.random() * 9999999).toString();
 
@@ -203,6 +229,12 @@ export const Agent = memo(() => {
   useEffect(() => {
     onScrollToBottom();
   }, [messagesState, currentContent, isStreaming, onScrollToBottom]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   const pushAssistantMessage = (
     content: string,
@@ -227,6 +259,18 @@ export const Agent = memo(() => {
         state: { resumeBookingId },
       });
     }
+  };
+
+  const resetAssistant = () => {
+    requestVersionRef.current += 1;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setMessages([]);
+    setCurrentContent('');
+    setQuestion('');
+    setIsStreaming(false);
+    setPendingBooking(null);
+    setBookingRulesAccepted(false);
   };
 
   const handleAssistantMeta = (meta: AgentMeta) => {
@@ -260,6 +304,12 @@ export const Agent = memo(() => {
   ) => {
     if (!value.trim() || isStreaming) return;
 
+    abortControllerRef.current?.abort();
+    const requestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = requestVersion;
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     setIsStreaming(true);
     setQuestion('');
     setCurrentContent('');
@@ -281,24 +331,53 @@ export const Agent = memo(() => {
     try {
       const fullText = await answer(value, messagesState.slice(-20), {
         assistantState: outgoingAssistantState,
-        onContent: chunk =>
-          setCurrentContent(prev => `${prev}${chunk}`),
+        signal: abortController.signal,
+        onContent: chunk => {
+          if (
+            requestVersionRef.current !== requestVersion ||
+            abortController.signal.aborted
+          ) {
+            return;
+          }
+          setCurrentContent(prev => `${prev}${chunk}`);
+        },
         onMeta: meta => {
+          if (
+            requestVersionRef.current !== requestVersion ||
+            abortController.signal.aborted
+          ) {
+            return;
+          }
           receivedMeta = meta;
           handleAssistantMeta(meta);
         },
       });
 
-      pushAssistantMessage(fullText, receivedMeta);
+      if (
+        requestVersionRef.current === requestVersion &&
+        !abortController.signal.aborted
+      ) {
+        pushAssistantMessage(fullText, receivedMeta);
+      }
     } catch (err) {
+      if (
+        (err instanceof DOMException && err.name === 'AbortError') ||
+        (err instanceof Error && err.name === 'AbortError')
+      ) {
+        return;
+      }
+
       message.error(
         err instanceof Error
           ? err.message
           : 'Failed to get assistant answer',
       );
     } finally {
-      setCurrentContent('');
-      setIsStreaming(false);
+      if (requestVersionRef.current === requestVersion) {
+        abortControllerRef.current = null;
+        setCurrentContent('');
+        setIsStreaming(false);
+      }
     }
   };
 
@@ -653,6 +732,11 @@ export const Agent = memo(() => {
           : meta.room?.source === 'approved_booking'
             ? 'Latest approved booking'
             : 'Assigned room';
+      const utilityRecords = meta.utility?.records || [];
+      const latestMonthLabel =
+        meta.utility?.latest_month_label ||
+        meta.utility?.latest_month_key ||
+        'Latest month';
 
       return (
         <Card
@@ -688,6 +772,9 @@ export const Agent = memo(() => {
           >
             <div className='flex flex-wrap gap-2'>
               <Tag color='blue'>{sourceLabel}</Tag>
+              {meta.utility?.latest_month_key && (
+                <Tag color='cyan'>{latestMonthLabel}</Tag>
+              )}
               {meta.has_data ? (
                 <Tag color='green'>Data found</Tag>
               ) : (
@@ -703,51 +790,148 @@ export const Agent = memo(() => {
                 description='The database does not have any utility readings recorded for this room yet.'
               />
             ) : (
-              <div className='grid gap-2 sm:grid-cols-2'>
-                {[
-                  ['Month', meta.reading?.month || '—'],
-                  [
-                    'Electricity old',
-                    meta.reading?.electricity_old_reading ?? '—',
-                  ],
-                  [
-                    'Electricity new',
-                    meta.reading?.electricity_new_reading ?? '—',
-                  ],
-                  [
-                    'Electricity consumption',
-                    meta.reading?.electricity_consumption ?? '—',
-                  ],
-                  [
-                    'Water old',
-                    meta.reading?.water_old_reading ?? '—',
-                  ],
-                  [
-                    'Water new',
-                    meta.reading?.water_new_reading ?? '—',
-                  ],
-                  [
-                    'Water consumption',
-                    meta.reading?.water_consumption ?? '—',
-                  ],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className='rounded-xl border border-slate-200 bg-slate-50 px-3 py-2'
+              <>
+                <div className='rounded-xl border border-blue-100 bg-blue-50 px-3 py-2'>
+                  <Text
+                    type='secondary'
+                    className='block text-xs uppercase tracking-wide'
                   >
-                    <Text
-                      type='secondary'
-                      className='block text-xs uppercase tracking-wide'
+                    Your latest-month share
+                  </Text>
+                  <Text strong className='block text-lg text-blue-700'>
+                    {formatVnd(meta.utility?.total_amount)}
+                  </Text>
+                </div>
+
+                <div className='grid gap-2 sm:grid-cols-2'>
+                  {utilityRecords.map(record => (
+                    <div
+                      key={`${record.type}-${record.id}`}
+                      className='rounded-xl border border-slate-200 bg-slate-50 px-3 py-2'
                     >
-                      {label}
-                    </Text>
-                    <Text strong className='block break-words'>
-                      {String(value)}
-                    </Text>
-                  </div>
-                ))}
-              </div>
+                      <div className='mb-2 flex items-center justify-between gap-2'>
+                        <Tag
+                          color={
+                            record.type === 'electric' ? 'orange' : 'blue'
+                          }
+                          className='m-0'
+                        >
+                          {record.type === 'electric'
+                            ? 'Electricity'
+                            : 'Water'}
+                        </Tag>
+                        {record.is_prorated && (
+                          <Tag color='purple' className='m-0'>
+                            Prorated
+                          </Tag>
+                        )}
+                      </div>
+
+                      <div className='grid gap-2'>
+                        {[
+                          [
+                            'Recorded date',
+                            formatRecordDate(record.date),
+                          ],
+                          [
+                            'Consumption',
+                            `${record.consumption ?? '—'} ${
+                              record.unit || ''
+                            }`.trim(),
+                          ],
+                          [
+                            'Meter range',
+                            `${record.meter_left ?? '—'} → ${
+                              record.meter_right ?? '—'
+                            }`,
+                          ],
+                          [
+                            'Unit price',
+                            `${formatVnd(record.price_per_unit)} / ${
+                              record.unit || 'unit'
+                            }`,
+                          ],
+                          ['Your share', formatVnd(record.amount)],
+                          [
+                            'Block total',
+                            formatVnd(record.total_amount),
+                          ],
+                        ].map(([label, value]) => (
+                          <div
+                            key={label}
+                            className='flex items-center justify-between gap-3 text-sm'
+                          >
+                            <Text type='secondary'>{label}</Text>
+                            <Text strong className='text-right'>
+                              {value}
+                            </Text>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
+
+            <AntButton
+              icon={<ExternalLink className='size-4' />}
+              onClick={() => navigate(ROUTES.STUDENT_UTILITIES)}
+            >
+              Open Utilities
+            </AntButton>
+          </Space>
+        </Card>
+      );
+    }
+
+    if (meta.type === 'manager_handoff') {
+      return (
+        <Card
+          key={`${messageId}-manager-handoff`}
+          size='small'
+          className='mt-3 overflow-hidden border-amber-200 shadow-sm'
+          bodyStyle={{ padding: 0 }}
+        >
+          <div className='border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-orange-50 p-4'>
+            <div className='flex items-start justify-between gap-3 flex-wrap'>
+              <div>
+                <div className='flex items-center gap-2'>
+                  <MessageCircle className='size-4 text-orange-600' />
+                  <Text strong className='text-base'>
+                    Dorm manager support
+                  </Text>
+                </div>
+                <Text type='secondary'>
+                  A manager can help with dorm-specific questions
+                  outside this assistant&apos;s current scope.
+                </Text>
+              </div>
+              <Tag color='orange'>Manager recommended</Tag>
+            </div>
+          </div>
+
+          <Space
+            direction='vertical'
+            size='middle'
+            className='w-full p-4'
+          >
+            <Alert
+              type='info'
+              showIcon
+              message='Contact the Dorm manager'
+              description='Use student support chat for official guidance about this topic.'
+            />
+            <AntButton
+              type='primary'
+              icon={<MessageCircle className='size-4' />}
+              className='bg-orange-600 hover:!bg-orange-500'
+              onClick={() =>
+                navigate(meta.chat_path || ROUTES.STUDENT_CHAT)
+              }
+            >
+              Contact Dorm manager
+            </AntButton>
           </Space>
         </Card>
       );
@@ -855,6 +1039,13 @@ export const Agent = memo(() => {
                 </div>
               ))}
             </div>
+
+            <AntButton
+              icon={<ExternalLink className='size-4' />}
+              onClick={() => navigate(ROUTES.STUDENT_CFD_POINTS)}
+            >
+              Open Conduct
+            </AntButton>
           </Space>
         </Card>
       );
@@ -952,12 +1143,25 @@ export const Agent = memo(() => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={onToggle}
-              className='rounded-full p-2 hover:bg-gray-100'
-            >
-              <IcClose className='size-5' />
-            </button>
+            <div className='flex items-center gap-1'>
+              <button
+                type='button'
+                aria-label='Reset assistant chat'
+                title='Reset chat'
+                onClick={resetAssistant}
+                className='rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-orange-600'
+              >
+                <RefreshCcw className='size-5' />
+              </button>
+              <button
+                type='button'
+                aria-label='Close assistant'
+                onClick={onToggle}
+                className='rounded-full p-2 hover:bg-gray-100'
+              >
+                <IcClose className='size-5' />
+              </button>
+            </div>
           </div>
 
           <div className='flex-1 overflow-y-auto p-4 pt-24'>
@@ -979,10 +1183,10 @@ export const Agent = memo(() => {
                       {showBubble && (
                         <div
                           className={cn(
-                            'rounded-2xl',
+                            'rounded-2xl px-4 py-3 shadow-sm',
                             isUser
-                              ? 'ml-4 max-w-md bg-gray-surface px-4 py-2 shadow-sm'
-                              : 'max-w-full',
+                              ? 'ml-4 max-w-md bg-gray-surface'
+                              : 'mr-4 max-w-[85%] border border-orange-100 bg-white ring-1 ring-orange-50',
                           )}
                         >
                           <Message content={content} />
@@ -995,14 +1199,13 @@ export const Agent = memo(() => {
                 })}
 
                 {isStreaming && !currentContent && (
-                  <div className='flex items-center gap-2 text-gray-500'>
-                    <IcLoading className='size-5 animate-spin' />
-                    <span className='text-sm'>Thinking...</span>
+                  <div className='flex justify-start'>
+                    <LoadingDots />
                   </div>
                 )}
 
                 {isStreaming && currentContent && (
-                  <div className='max-w-full rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-orange-100'>
+                  <div className='mr-4 max-w-[85%] rounded-2xl border border-orange-100 bg-white px-4 py-3 shadow-sm ring-1 ring-orange-50'>
                     <Message content={currentContent} />
                   </div>
                 )}

@@ -53,6 +53,7 @@ export interface AgentMeta {
     | 'payment_handoff'
     | 'utility_summary'
     | 'conduct_summary'
+    | 'manager_handoff'
     | 'booking_error'
     | 'dorm_rules';
   step?: 'room_type' | 'dorm' | 'floor' | 'block' | 'room' | 'bed';
@@ -77,6 +78,33 @@ export interface AgentMeta {
     source?: string | null;
   } | null;
   has_data?: boolean;
+  chat_path?: string | null;
+  topic?: string | null;
+  utility?: {
+    latest_month_key?: string | null;
+    latest_month_label?: string | null;
+    total_amount?: number | null;
+    record_count?: number | null;
+    records?: Array<{
+      id?: string | null;
+      term?: string | null;
+      date?: string | null;
+      type?: 'electric' | 'water' | string;
+      meter_left?: number | null;
+      meter_right?: number | null;
+      consumption?: number | null;
+      unit?: string | null;
+      price_per_unit?: number | null;
+      occupied_beds?: number | null;
+      billing_students?: number | null;
+      billing_days?: number | null;
+      total_student_days?: number | null;
+      student_days?: number | null;
+      is_prorated?: boolean | null;
+      total_amount?: number | null;
+      amount?: number | null;
+    }>;
+  } | null;
   reading?: {
     month?: string | null;
     electricity_old_reading?: number | null;
@@ -114,6 +142,7 @@ interface AnswerStreamOptions {
   onContent?: (chunk: string, fullText: string) => void;
   onMeta?: (meta: AgentMeta, fullText: string) => void;
   assistantState?: AgentAssistantState;
+  signal?: AbortSignal;
 }
 
 interface IMessage {
@@ -217,6 +246,7 @@ export const answer = async (
 
   const res = await fetch(`${baseUrl}/agents/answer`, {
     method: 'POST',
+    signal: options?.signal,
     headers: {
       Accept: 'text/event-stream',
       'Accept-Language': 'en',
