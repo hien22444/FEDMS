@@ -62,9 +62,6 @@ const isCurrentBooking = (booking: BookingRequestItem, now: Date) => {
   return start <= now && now <= end;
 };
 
-const isUpcomingBooking = (booking: BookingRequestItem, now: Date) =>
-  booking.status === 'approved' && !booking.checkout_date && new Date(booking.start_date) > now;
-
 const StudentDashboard = () => {
   const { token } = theme.useToken();
   const { user, profile } = useAuth();
@@ -126,19 +123,7 @@ const StudentDashboard = () => {
         const currentBooking = bookings.find((booking: BookingRequestItem) =>
           isCurrentBooking(booking, now)
         );
-        const upcomingBooking = bookings
-          .filter((booking: BookingRequestItem) => isUpcomingBooking(booking, now))
-          .sort(
-            (left: BookingRequestItem, right: BookingRequestItem) =>
-              new Date(left.start_date).getTime() - new Date(right.start_date).getTime()
-          )[0];
-        const latestApprovedBooking = bookings
-          .filter((booking: BookingRequestItem) => booking.status === 'approved')
-          .sort(
-            (left: BookingRequestItem, right: BookingRequestItem) =>
-              new Date(right.start_date).getTime() - new Date(left.start_date).getTime()
-          )[0];
-        const contractBooking = currentBooking || upcomingBooking || latestApprovedBooking || null;
+        const contractBooking = currentBooking || null;
 
         setStats({
           electricityValue: electricityRecords.length > 0 ? `${electricityConsumption} kWh` : '--',
@@ -156,11 +141,7 @@ const StudentDashboard = () => {
           contractValue: contractBooking?.semester || 'No contract',
           contractChange: currentBooking
             ? 'Active'
-            : upcomingBooking
-              ? 'Upcoming'
-              : latestApprovedBooking
-                ? latestApprovedBooking.status
-                : 'Not assigned',
+            : 'Not assigned',
           contractChangeType: currentBooking ? 'success' : 'info',
         });
 

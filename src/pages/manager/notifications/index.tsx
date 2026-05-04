@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Typography, Space, theme, Spin, Empty } from 'antd';
-import { DeleteOutlined, CheckOutlined, BellOutlined } from '@ant-design/icons';
+import { CheckOutlined, BellOutlined } from '@ant-design/icons';
 import {
   getMyNotifications,
   markNotificationAsRead,
   markAllNotificationsRead,
-  deleteNotification,
   type INotification,
 } from '@/lib/actions/notification';
 
@@ -91,15 +90,6 @@ const ManagerNotificationsPage: React.FC = () => {
     try {
       await markAllNotificationsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    } catch {
-      // silent
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteNotification(id);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch {
       // silent
     }
@@ -205,14 +195,6 @@ const ManagerNotificationsPage: React.FC = () => {
                         onClick={() => handleMarkRead(notif.id)}
                       />
                     )}
-                    <Button
-                      type="text"
-                      icon={<DeleteOutlined />}
-                      danger
-                      style={{ padding: '8px' }}
-                      title="Delete"
-                      onClick={() => handleDelete(notif.id)}
-                    />
                   </Space>
                 </div>
               </Card>

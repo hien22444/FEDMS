@@ -677,7 +677,7 @@ const BedTransferPage: React.FC<{ embedded?: boolean }> = ({ embedded = false })
         <Form.Item
           name="reason"
           label="Reason"
-          rules={[{ required: true, message: 'Please enter reason' }, { min: 10, message: 'At least 10 characters' }]}
+          rules={[{ required: true, message: 'Please enter reason' }]}
         >
           <TextArea rows={4} placeholder="Explain why you want to change/swap bed..." />
         </Form.Item>

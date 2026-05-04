@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Button, Badge, Popover, Avatar, Dropdown } from 'antd';
-import { RiNotification3Line, RiMenuLine, RiArrowDownSLine } from 'react-icons/ri';
-import type { MenuProps } from 'antd';
+import { Button, Badge, Popover, Avatar } from 'antd';
+import { RiNotification3Line, RiMenuLine } from 'react-icons/ri';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts';
-import { ROUTES } from '@/constants';
 import { getMyNotifications, markAllNotificationsRead, type INotification } from '@/lib/actions/notification';
 import { connectSocket } from '@/lib/socket';
 import { brandPalette } from '@/themes/brandPalette';
@@ -18,7 +16,7 @@ export default function ManagerHeader({
   isDesktop = false,
   onToggleSidebar,
 }: ManagerHeaderProps) {
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [bellOpen, setBellOpen] = useState(false);
@@ -113,23 +111,6 @@ export default function ManagerHeader({
     </div>
   );
 
-  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    if (key === 'logout') {
-      logout();
-      navigate(ROUTES.LANDING);
-      return;
-    }
-
-    navigate('/manager/settings');
-  };
-
-  const userMenuItems: MenuProps['items'] = [
-    { key: 'profile', label: 'My Profile' },
-    { key: 'settings', label: 'Settings' },
-    { type: 'divider' },
-    { key: 'logout', label: 'Logout', danger: true },
-  ];
-
   return (
     <header className="fixed left-0 right-0 top-0 z-20 flex h-16 items-center justify-between bg-white px-4 sm:px-6 lg:left-[280px]">
       <div className="flex min-w-0 items-center">
@@ -154,16 +135,13 @@ export default function ManagerHeader({
           </Badge>
         </Popover>
 
-        <Dropdown menu={{ items: userMenuItems, onClick: handleMenuClick }} trigger={['click']}>
-          <div className="ml-1 flex cursor-pointer items-center gap-2 rounded-xl px-1 py-1 transition hover:bg-gray-50 sm:ml-2">
-            <Avatar src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin" size={36} />
-            <div className="hidden md:block">
-              <p className="text-sm font-medium leading-tight text-gray-900">{user?.fullname || 'Admin User'}</p>
-              <p className="text-xs capitalize text-gray-500">{user?.role || 'Manager'}</p>
-            </div>
-            <RiArrowDownSLine className="h-4 w-4 text-gray-400" />
+        <div className="ml-1 flex items-center gap-2 rounded-xl px-1 py-1 sm:ml-2">
+          <Avatar src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin" size={36} />
+          <div className="hidden md:block">
+            <p className="text-sm font-medium leading-tight text-gray-900">{user?.fullname || 'Admin User'}</p>
+            <p className="text-xs capitalize text-gray-500">{user?.role || 'Manager'}</p>
           </div>
-        </Dropdown>
+        </div>
       </div>
     </header>
   );

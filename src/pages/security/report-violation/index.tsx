@@ -291,10 +291,7 @@ export default function SecurityReportViolationPage() {
             <Form.Item
               name="description"
               label="Description"
-              rules={[
-                { required: true, message: 'Please describe the violation' },
-                { min: 10, message: 'Description must be at least 10 characters' },
-              ]}
+              rules={[{ required: true, message: 'Please describe the violation' }]}
             >
               <Input.TextArea
                 rows={4}

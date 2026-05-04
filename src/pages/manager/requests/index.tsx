@@ -1013,11 +1013,22 @@ export default function ManagerRequestsPage() {
       label: maintenanceDetailTabLabel,
       disabled: !maintenanceSelected,
       children: maintenanceSelected ? (
-        <div className="space-y-6">
+        <Form form={maintenanceForm} layout="vertical" className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button onClick={backToMaintenanceList}>← Back to list</Button>
             {!isMaintenanceTerminal ? (
-              <Space>
+              <Space align="end" wrap>
+                <Form.Item
+                  name="status"
+                  label="Update status"
+                  rules={[{ required: true, message: 'Please select status' }]}
+                  className="mb-0 min-w-[260px]"
+                >
+                  <Select
+                    disabled={isMaintenanceTerminal}
+                    options={getMaintenanceTransitionOptions(maintenanceSelected.status)}
+                  />
+                </Form.Item>
                 <Button type="primary" loading={maintenanceReviewLoading} onClick={submitMaintenanceUpdate}>
                   Save
                 </Button>
@@ -1134,18 +1145,7 @@ export default function ManagerRequestsPage() {
             </div>
           </div>
 
-          <Form form={maintenanceForm} layout="vertical" className="max-w-3xl">
-            <Form.Item
-              name="status"
-              label="Update status"
-              rules={[{ required: true, message: 'Please select status' }]}
-            >
-              <Select
-                disabled={isMaintenanceTerminal}
-                options={getMaintenanceTransitionOptions(maintenanceSelected.status)}
-              />
-            </Form.Item>
-
+          <div className="max-w-3xl">
             {selectedMaintenanceStatus === 'assigned' && (
               <>
                 <Form.Item
@@ -1203,8 +1203,8 @@ export default function ManagerRequestsPage() {
                 <Input.TextArea disabled={isMaintenanceTerminal} rows={4} placeholder="Please provide reason..." />
               </Form.Item>
             )}
-          </Form>
-        </div>
+          </div>
+        </Form>
       ) : (
         <Alert type="info" message="Select a maintenance request to review and update status." />
       ),
@@ -1230,9 +1230,9 @@ export default function ManagerRequestsPage() {
         }}
         items={[
           { key: 'all', label: 'All Requests' },
-          { key: 'other', label: 'Other Requests' },
           { key: 'maintenance', label: 'Maintenance Requests' },
           { key: 'checkout', label: 'Checkout Requests' },
+          { key: 'other', label: 'Other Requests' },
         ]}
       />
 
@@ -1335,21 +1335,23 @@ export default function ManagerRequestsPage() {
             </Title>
             <Text type="secondary">Review student Other Requests and update status.</Text>
           </div>
-          <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
-            <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: isTablet ? 180 : '100%' }}
-              options={[
-                { label: 'All statuses', value: 'all' },
-                { label: 'Pending', value: 'pending' },
-                { label: 'In Review', value: 'in_review' },
-                { label: 'Resolved', value: 'resolved' },
-                { label: 'Rejected', value: 'rejected' },
-              ]}
-            />
-            <Button onClick={loadData} block={!isTablet}>Refresh</Button>
-          </Space>
+          {activeTab !== 'detail' && (
+            <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                style={{ width: isTablet ? 180 : '100%' }}
+                options={[
+                  { label: 'All statuses', value: 'all' },
+                  { label: 'Pending', value: 'pending' },
+                  { label: 'In Review', value: 'in_review' },
+                  { label: 'Resolved', value: 'resolved' },
+                  { label: 'Rejected', value: 'rejected' },
+                ]}
+              />
+              <Button onClick={loadData} block={!isTablet}>Refresh</Button>
+            </Space>
+          )}
         </div>
       )}
 
@@ -1377,23 +1379,25 @@ export default function ManagerRequestsPage() {
               </Title>
               <Text type="secondary">Review student maintenance requests and update status.</Text>
             </div>
-            <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
-              <Select
-                value={maintenanceStatusFilter}
-                onChange={setMaintenanceStatusFilter}
-                style={{ width: isTablet ? 220 : '100%' }}
-                options={[
-                  { label: 'All statuses', value: 'all' },
-                  { label: 'Pending', value: 'pending' },
-                  { label: 'Approved', value: 'approved' },
-                  { label: 'Assigned', value: 'assigned' },
-                  { label: 'In progress', value: 'in_progress' },
-                  { label: 'Completed', value: 'completed' },
-                  { label: 'Rejected', value: 'rejected' },
-                ]}
-              />
-              <Button onClick={loadMaintenanceData} block={!isTablet}>Refresh</Button>
-            </Space>
+            {maintenanceActiveTab !== 'detail' && (
+              <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+                <Select
+                  value={maintenanceStatusFilter}
+                  onChange={setMaintenanceStatusFilter}
+                  style={{ width: isTablet ? 220 : '100%' }}
+                  options={[
+                    { label: 'All statuses', value: 'all' },
+                    { label: 'Pending', value: 'pending' },
+                    { label: 'Approved', value: 'approved' },
+                    { label: 'Assigned', value: 'assigned' },
+                    { label: 'In progress', value: 'in_progress' },
+                    { label: 'Completed', value: 'completed' },
+                    { label: 'Rejected', value: 'rejected' },
+                  ]}
+                />
+                <Button onClick={loadMaintenanceData} block={!isTablet}>Refresh</Button>
+              </Space>
+            )}
           </div>
           <Tabs
             activeKey={maintenanceActiveTab}
@@ -1416,23 +1420,25 @@ export default function ManagerRequestsPage() {
                 <Title level={3} style={{ marginBottom: 4 }}>Checkout Request Management</Title>
                 <Text type="secondary">Review and approve or reject student checkout requests.</Text>
               </div>
-              <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
-                <Select
-                  value={checkoutStatusFilter}
-                  onChange={setCheckoutStatusFilter}
-                  style={{ width: isTablet ? 200 : '100%' }}
-                  options={[
-                    { label: 'All statuses', value: 'all' },
-                    { label: 'Pending', value: 'pending' },
-                    { label: 'Approved', value: 'approved' },
-                    { label: 'Inspected', value: 'inspected' },
-                    { label: 'Completed', value: 'completed' },
-                    { label: 'Rejected', value: 'rejected' },
-                    { label: 'Cancelled', value: 'cancelled' },
-                  ]}
-                />
-                <Button onClick={loadCheckoutData} block={!isTablet}>Refresh</Button>
-              </Space>
+              {checkoutActiveTab !== 'detail' && (
+                <Space direction={isTablet ? 'horizontal' : 'vertical'} style={{ width: isTablet ? 'auto' : '100%' }}>
+                  <Select
+                    value={checkoutStatusFilter}
+                    onChange={setCheckoutStatusFilter}
+                    style={{ width: isTablet ? 200 : '100%' }}
+                    options={[
+                      { label: 'All statuses', value: 'all' },
+                      { label: 'Pending', value: 'pending' },
+                      { label: 'Approved', value: 'approved' },
+                      { label: 'Inspected', value: 'inspected' },
+                      { label: 'Completed', value: 'completed' },
+                      { label: 'Rejected', value: 'rejected' },
+                      { label: 'Cancelled', value: 'cancelled' },
+                    ]}
+                  />
+                  <Button onClick={loadCheckoutData} block={!isTablet}>Refresh</Button>
+                </Space>
+              )}
             </div>
             <Tabs
               activeKey={checkoutActiveTab}
