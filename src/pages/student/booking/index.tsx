@@ -1735,9 +1735,9 @@ const Booking: React.FC = () => {
       )}
 
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        {(newBookingSuccess || windowStatus?.already_booked || windowStatus?.already_held)
-          ? renderNewBookingSuccess() :
-          !windowStatus?.allowed ? renderNotStarted() :
+        {!windowStatus?.allowed ? renderNotStarted() :
+          (newBookingSuccess || windowStatus?.already_booked || windowStatus?.already_held)
+            ? renderNewBookingSuccess() :
             windowStatus.window_type === 'hold' ? renderHoldBed() :
               (
                 <Tabs

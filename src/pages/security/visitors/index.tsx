@@ -8,6 +8,8 @@ import {
   RiFileListLine,
   RiLoginCircleLine,
   RiLogoutCircleLine,
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
 } from 'react-icons/ri';
 import { cn, DORM_TIMEZONE, getDormDateKey, getDormTimeMinutes } from '@/utils';
 import {
@@ -23,9 +25,13 @@ import type { IVisitor } from '@/interfaces';
 type Tab = 'requests' | 'active';
 type NoticeType = 'warning' | 'error' | 'success';
 
+const REQUESTS_PAGE_SIZE = 5;
+
 const VisitorsPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>('requests');
   const [requests, setRequests] = useState<IVisitor.VisitorRequest[]>([]);
+  const [requestsPage, setRequestsPage] = useState(1);
+  const [requestsTotal, setRequestsTotal] = useState(0);
   const [activeVisitors, setActiveVisitors] = useState<IVisitor.ActiveVisitor[]>([]);
   const [loading, setLoading] = useState(false);
   const [rejectModal, setRejectModal] = useState<string | null>(null);
@@ -36,11 +42,13 @@ const VisitorsPage = () => {
   } | null>(null);
   const [notice, setNotice] = useState<{ type: NoticeType; message: string } | null>(null);
 
-  const fetchRequests = useCallback(async () => {
+  const fetchRequests = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const res = await getAllVisitorRequests();
+      const res = await getAllVisitorRequests({ page, limit: REQUESTS_PAGE_SIZE });
       setRequests(res.data || []);
+      setRequestsTotal(res.total || 0);
+      setRequestsPage(res.page || page);
     } catch {
       // API may not be ready
     } finally {
@@ -58,9 +66,12 @@ const VisitorsPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchRequests();
+    fetchRequests(requestsPage);
+  }, [fetchRequests, requestsPage]);
+
+  useEffect(() => {
     fetchActive();
-  }, [fetchRequests, fetchActive]);
+  }, [fetchActive]);
 
   useEffect(() => {
     if (!notice) return;
@@ -70,6 +81,9 @@ const VisitorsPage = () => {
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length;
   const activeCount = activeVisitors.length;
+  const requestsTotalPages = Math.max(1, Math.ceil(requestsTotal / REQUESTS_PAGE_SIZE));
+  const requestsStart = requestsTotal === 0 ? 0 : (requestsPage - 1) * REQUESTS_PAGE_SIZE + 1;
+  const requestsEnd = Math.min(requestsPage * REQUESTS_PAGE_SIZE, requestsTotal);
 
   const getInitials = (name: string) =>
     name
@@ -82,7 +96,7 @@ const VisitorsPage = () => {
   const handleApprove = async (id: string) => {
     try {
       await approveVisitorRequest(id);
-      fetchRequests();
+      fetchRequests(requestsPage);
       setNotice({ type: 'success', message: 'Visitor request approved.' });
     } catch (err: any) {
       setNotice({ type: 'error', message: err?.message || 'Failed to approve.' });
@@ -94,7 +108,7 @@ const VisitorsPage = () => {
       await rejectVisitorRequest(id, rejectReason);
       setRejectModal(null);
       setRejectReason('');
-      fetchRequests();
+      fetchRequests(requestsPage);
       setNotice({ type: 'success', message: 'Visitor request rejected.' });
     } catch (err: any) {
       setNotice({ type: 'error', message: err?.message || 'Failed to reject.' });
@@ -118,7 +132,7 @@ const VisitorsPage = () => {
     }
     try {
       await checkinVisitor(requestId, visitorId);
-      fetchRequests();
+      fetchRequests(requestsPage);
       fetchActive();
       setNotice({ type: 'success', message: 'Visitor checked in successfully.' });
     } catch (err: any) {
@@ -132,7 +146,7 @@ const VisitorsPage = () => {
       await checkoutVisitor(checkoutModal.checkinId);
       setCheckoutModal(null);
       fetchActive();
-      fetchRequests();
+      fetchRequests(requestsPage);
       setNotice({
         type: 'success',
         message: 'Visitor checked out successfully. The request is completed when no active visitors remain.',
@@ -466,6 +480,47 @@ const VisitorsPage = () => {
           {requests.length === 0 && !loading && (
             <div className="text-center py-12 text-gray-500">
               No visitor requests
+            </div>
+          )}
+
+          {requestsTotal > REQUESTS_PAGE_SIZE && (
+            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Showing {requestsStart}-{requestsEnd} of {requestsTotal} visitor requests
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRequestsPage((page) => Math.max(1, page - 1))}
+                  disabled={requestsPage <= 1}
+                  className={cn(
+                    'flex items-center gap-1 rounded-lg border px-3 py-2 font-medium transition-colors',
+                    requestsPage <= 1
+                      ? 'cursor-not-allowed border-gray-200 text-gray-300'
+                      : 'border-gray-300 text-gray-700 hover:border-[#F36F21] hover:text-[#F36F21]'
+                  )}
+                >
+                  <RiArrowLeftSLine className="h-4 w-4" />
+                  Previous
+                </button>
+                <span className="min-w-[96px] text-center font-medium text-gray-700">
+                  Page {requestsPage} / {requestsTotalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRequestsPage((page) => Math.min(requestsTotalPages, page + 1))}
+                  disabled={requestsPage >= requestsTotalPages}
+                  className={cn(
+                    'flex items-center gap-1 rounded-lg border px-3 py-2 font-medium transition-colors',
+                    requestsPage >= requestsTotalPages
+                      ? 'cursor-not-allowed border-gray-200 text-gray-300'
+                      : 'border-gray-300 text-gray-700 hover:border-[#F36F21] hover:text-[#F36F21]'
+                  )}
+                >
+                  Next
+                  <RiArrowRightSLine className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
         </div>

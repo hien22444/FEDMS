@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
   // User list states
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [searchText, setSearchText] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
@@ -361,7 +361,7 @@ export default function AdminUsersPage() {
                       pageSize: pagination.limit,
                       total: pagination.total,
                       showSizeChanger: true,
-                      pageSizeOptions: ['10', '20', '50'],
+                      pageSizeOptions: ['25', '50', '100'],
                       showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} users`,
                       onChange: (page, pageSize) => {
                         setPagination((prev) => ({ ...prev, limit: pageSize }));

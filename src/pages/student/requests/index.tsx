@@ -2037,10 +2037,7 @@ const MaintenanceForm: React.FC<{
       <Form.Item
         name="description"
         label="Description"
-        rules={[
-          { required: true, message: 'Please describe the issue' },
-          { min: 10, message: 'At least 10 characters' },
-        ]}
+        rules={[{ required: true, message: 'Please describe the issue' }]}
       >
         <TextArea rows={4} placeholder="Describe the damage or issue in detail..." size="large" />
       </Form.Item>
@@ -2146,9 +2143,7 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
               violation_type: values.violation_type,
               violation_other_detail: values.violation_other_detail,
               description: values.description,
-              violation_date: values.violation_date
-                ? values.violation_date.format('YYYY-MM-DD')
-                : dayjs().format('YYYY-MM-DD'),
+              violation_date: dayjs().format('YYYY-MM-DD'),
               location: values.location,
               evidence_urls,
             };
@@ -2180,7 +2175,6 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
       layout="vertical"
       initialValues={{
         violation_type: ViolationType.NOISE,
-        violation_date: dayjs(),
       }}
     >
       <Alert
@@ -2189,22 +2183,6 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
         showIcon
         style={{ marginBottom: 16 }}
       />
-
-      <Row gutter={16}>
-        <Col xs={24} md={12}>
-          <Form.Item
-            name="violation_date"
-            label="Violation Date"
-            rules={[{ required: true, message: 'Please select violation date' }]}
-          >
-            <DatePicker
-              style={{ width: '100%' }}
-              format="DD/MM/YYYY"
-              disabledDate={(current) => current && current > dayjs().endOf('day')}
-            />
-          </Form.Item>
-        </Col>
-      </Row>
 
       <Form.Item
         name="violation_type"
@@ -2240,10 +2218,7 @@ const ReportForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) => {
       <Form.Item
         name="description"
         label="Description"
-        rules={[
-          { required: true, message: 'Please enter description' },
-          { min: 10, message: 'Description must be at least 10 characters' },
-        ]}
+        rules={[{ required: true, message: 'Please enter description' }]}
       >
         <TextArea placeholder="Provide detailed description..." rows={4} size="large" />
       </Form.Item>
@@ -2347,10 +2322,7 @@ const OtherRequestForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) =
       <Form.Item
         name="description"
         label="Description"
-        rules={[
-          { required: true, message: 'Please enter description' },
-          { min: 10, message: 'Description must be at least 10 characters' },
-        ]}
+        rules={[{ required: true, message: 'Please enter description' }]}
       >
         <TextArea rows={5} placeholder="Describe your request in detail..." maxLength={3000} />
       </Form.Item>
@@ -2411,10 +2383,7 @@ const CheckoutRequestForm: React.FC<{ onSuccess: () => void; onClose: () => void
       <Form.Item
         name="reason"
         label="Reason for Checkout"
-        rules={[
-          { required: true, message: 'Please enter your reason' },
-          { min: 10, message: 'Reason must be at least 10 characters' },
-        ]}
+        rules={[{ required: true, message: 'Please enter your reason' }]}
       >
         <TextArea
           rows={4}
