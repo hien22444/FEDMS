@@ -15,6 +15,48 @@ interface CameraFeedState {
 // frame went empty. Eliminates flicker between frames that intermittently drop faces.
 const DETECTION_PERSISTENCE_MS = 500;
 
+// After a fresh PASS for a student, keep rendering as PASS for this long even if
+// subsequent frames arrive with status_unchanged: true for the same student.
+// Prevents the green-flash → yellow Already-Checked-In flicker.
+const PASS_HOLD_MS = 2500;
+
+type PassLock = { studentId: string; since: number } | null;
+
+function applyPassHold(
+  detections: IFaceRecognition.Detection[],
+  locks: { checkin: PassLock; checkout: PassLock },
+  side: 'checkin' | 'checkout',
+): IFaceRecognition.Detection[] {
+  const now = Date.now();
+  const currentLock = locks[side];
+
+  return detections.map((d) => {
+    if (!d.is_match || !d.student_id) return d;
+
+    if (d.status_unchanged !== true) {
+      // Fresh PASS — arm/refresh the lock for this student.
+      locks[side] = { studentId: d.student_id, since: now };
+      return d;
+    }
+
+    // status_unchanged === true. Override to PASS if within hold window for same student.
+    if (
+      currentLock &&
+      currentLock.studentId === d.student_id &&
+      now - currentLock.since < PASS_HOLD_MS
+    ) {
+      return { ...d, status_unchanged: false };
+    }
+
+    // Hold expired or different student — drop a stale lock for this student so the
+    // natural transition takes effect.
+    if (currentLock && currentLock.studentId === d.student_id) {
+      locks[side] = null;
+    }
+    return d;
+  });
+}
+
 export function useCameraFeed() {
   const [state, setState] = useState<CameraFeedState>({
     checkinFrame: null,
@@ -28,6 +70,10 @@ export function useCameraFeed() {
   const recentLogsRef = useRef<IFaceRecognition.AccessLog[]>([]);
   const listenersAttached = useRef(false);
   const clearTimers = useRef<{ checkin: ReturnType<typeof setTimeout> | null; checkout: ReturnType<typeof setTimeout> | null }>({
+    checkin: null,
+    checkout: null,
+  });
+  const passLockRef = useRef<{ checkin: PassLock; checkout: PassLock }>({
     checkin: null,
     checkout: null,
   });
@@ -50,11 +96,17 @@ export function useCameraFeed() {
           clearTimeout(clearTimers.current[side]!);
           clearTimers.current[side] = null;
         }
+
+        // Sticky-PASS: hold the green PASS state for PASS_HOLD_MS after a fresh
+        // recognition so the immediate follow-up frames carrying status_unchanged: true
+        // for the same student don't cause a green→yellow flicker.
+        const detections = applyPassHold(data.detections, passLockRef.current, side);
+
         setState((prev) => ({
           ...prev,
           ...(isCheckin
-            ? { checkinFrame: data.frame_base64, checkinDetections: data.detections }
-            : { checkoutFrame: data.frame_base64, checkoutDetections: data.detections }),
+            ? { checkinFrame: data.frame_base64, checkinDetections: detections }
+            : { checkoutFrame: data.frame_base64, checkoutDetections: detections }),
         }));
       } else {
         // Empty frame — keep the last detections visible for DETECTION_PERSISTENCE_MS
