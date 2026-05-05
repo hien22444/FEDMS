@@ -695,7 +695,7 @@ function CameraPanel({
           <img
             src={`data:image/jpeg;base64,${frame}`}
             alt={`${title} feed`}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-500">
